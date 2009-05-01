@@ -47,6 +47,17 @@ namespace NHibernate.Shards
 		/// <returns></returns>
 		ISession EstablishSession();
 
+        ///@param id the id of the Criteria
+        ///@return the Critieria uniquely identified by the given id (unique to the Shard)
+        ICriteria GetCriteriaById(CriteriaId id);
+
+        ///
+        /// @param id the id of the Criteria with which the event should be associated
+        /// @param event the event to add
+        void AddCriteriaEvent(CriteriaId id, ICriteriaEvent @event);
+
+        ICriteria EstablishCriteria(IShardedCriteria shardedCriteria);
+
 		/// <summary>
 		/// @see Criteria#list()
 		/// </summary>
