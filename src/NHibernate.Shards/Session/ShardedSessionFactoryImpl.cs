@@ -341,6 +341,11 @@ namespace NHibernate.Shards.Session
 			return AnyFactory.GetClassMetadata(persistentType);
 		}
 
+		public IClassMetadata GetClassMetadata(string entityName)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Get the <c>CollectionMetadata</c> associated with the named collection role
 		/// </summary>
@@ -351,6 +356,16 @@ namespace NHibernate.Shards.Session
 			return AnyFactory.GetCollectionMetadata(roleName);
 		}
 
+		IDictionary<string, IClassMetadata> ISessionFactory.GetAllClassMetadata()
+		{
+			throw new NotImplementedException();
+		}
+
+		IDictionary<string, ICollectionMetadata> ISessionFactory.GetAllCollectionMetadata()
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Get all <c>ClassMetadata</c> as a <c>IDictionary</c> from <c>Type</c>
 		/// to metadata object
@@ -358,7 +373,8 @@ namespace NHibernate.Shards.Session
 		/// <returns></returns>
 		public IDictionary GetAllClassMetadata()
 		{
-			return AnyFactory.GetAllClassMetadata();
+			throw new NotImplementedException();
+			//return AnyFactory.GetAllClassMetadata();
 		}
 
 		/// <summary>
@@ -368,7 +384,8 @@ namespace NHibernate.Shards.Session
 		/// <returns></returns>
 		public IDictionary GetAllCollectionMetadata()
 		{
-			return AnyFactory.GetAllCollectionMetadata();
+			throw new NotImplementedException();
+			//return AnyFactory.GetAllCollectionMetadata();
 		}
 
 		/// <summary>
@@ -440,6 +457,11 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
+		public void EvictEntity(string entityName, object id)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Evict all entries from the process-level cache.  This method occurs outside
 		/// of any transaction; it performs an immediate "hard" remove, so does not respect
@@ -500,12 +522,27 @@ namespace NHibernate.Shards.Session
 			get { return AnyFactory.ConnectionProvider; }
 		}
 
+		public string TryGetGuessEntityName(System.Type implementor)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Get the SQL <c>Dialect</c>
 		/// </summary>
 		public Dialect.Dialect Dialect
 		{
 			get { return AnyFactory.Dialect; }
+		}
+
+		public IInterceptor Interceptor
+		{
+			get { throw new NotImplementedException(); }
+		}
+
+		public bool IsClosed
+		{
+			get { throw new NotImplementedException(); }
 		}
 
 		/// <summary>
@@ -540,7 +577,11 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public IDictionary Items
 		{
-			get { return AnyFactory.Items; }
+			get
+			{
+				throw new NotImplementedException();
+				//return AnyFactory.Items;
+			}
 		}
 
 		/// <summary>
@@ -583,7 +624,13 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public IEntityPersister GetEntityPersister(System.Type clazz)
 		{
-			return AnyFactory.GetEntityPersister(clazz);
+			throw new NotImplementedException();
+			//return AnyFactory.GetEntityPersister(clazz);
+		}
+
+		IDictionary<string, ICache> ISessionFactoryImplementor.GetAllSecondLevelCacheRegions()
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -608,7 +655,8 @@ namespace NHibernate.Shards.Session
 		/// and throwIfNotFound is true.</exception>
 		public IEntityPersister GetEntityPersister(string className, bool throwIfNotFound)
 		{
-			return AnyFactory.GetEntityPersister(className, throwIfNotFound);
+			//return AnyFactory.GetEntityPersister(className, throwIfNotFound);
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -694,7 +742,11 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public int MaximumFetchDepth
 		{
-			get { return AnyFactory.MaximumFetchDepth; }
+			get
+			{
+				throw new NotImplementedException();
+				//return AnyFactory.MaximumFetchDepth;
+			}
 		}
 
 		/// <summary>
@@ -722,7 +774,11 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public bool IsQueryCacheEnabled
 		{
-			get { return AnyFactory.IsQueryCacheEnabled; }
+			get
+			{
+				throw new NotImplementedException();
+				//return AnyFactory.IsQueryCacheEnabled;
+			}
 		}
 
 		/// <summary>
@@ -751,7 +807,11 @@ namespace NHibernate.Shards.Session
 		/// </remarks>
 		public IsolationLevel Isolation
 		{
-			get { return AnyFactory.Isolation; }
+			get
+			{
+				throw new NotImplementedException();
+				//return AnyFactory.Isolation;
+			}
 		}
 
 		/// <summary>
@@ -759,12 +819,18 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public IIdentifierGenerator GetIdentifierGenerator(System.Type rootClass)
 		{
-			return AnyFactory.GetIdentifierGenerator(rootClass);
+			throw new NotImplementedException();
+			//return AnyFactory.GetIdentifierGenerator(rootClass);
 		}
 
 		public ResultSetMappingDefinition GetResultSetMapping(string resultSetRef)
 		{
 			return AnyFactory.GetResultSetMapping(resultSetRef);
+		}
+
+		public IIdentifierGenerator GetIdentifierGenerator(string rootEntityName)
+		{
+			throw new NotImplementedException();
 		}
 
 		public ITransactionFactory TransactionFactory
@@ -809,6 +875,16 @@ namespace NHibernate.Shards.Session
 			throw new NotImplementedException();
 		}
 
+		ISet<string> ISessionFactoryImplementor.GetCollectionRolesByEntityParticipant(string entityName)
+		{
+			throw new NotImplementedException();
+		}
+
+		public IEntityPersister TryGetEntityPersister(string entityName)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary> 
 		/// Retrieves a set of all the collection roles in which the given entity
 		/// is a participant, as either an index or an element.
@@ -819,7 +895,8 @@ namespace NHibernate.Shards.Session
 		/// </returns>
 		public ISet GetCollectionRolesByEntityParticipant(string entityName)
 		{
-			return AnyFactory.GetCollectionRolesByEntityParticipant(entityName);
+			throw new NotImplementedException();
+			//return AnyFactory.GetCollectionRolesByEntityParticipant(entityName);
 		}
 
 		/// <summary> The cache of table update timestamps</summary>
@@ -830,7 +907,8 @@ namespace NHibernate.Shards.Session
 
 		public IDictionary GetAllSecondLevelCacheRegions()
 		{
-			return AnyFactory.GetAllSecondLevelCacheRegions();
+			throw new NotImplementedException();
+			//return AnyFactory.GetAllSecondLevelCacheRegions();
 		}
 
 		/// <summary> Get a named second-level cache region</summary>
@@ -883,6 +961,11 @@ namespace NHibernate.Shards.Session
 		public IType GetReferencedPropertyType(string className, string propertyName)
 		{
 			return GetReferencedPropertyType(className, propertyName);
+		}
+
+		public bool HasNonIdentifierPropertyNamedId(string className)
+		{
+			throw new NotImplementedException();
 		}
 
 		#endregion

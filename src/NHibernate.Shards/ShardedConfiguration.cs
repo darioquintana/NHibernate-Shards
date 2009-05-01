@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Iesi.Collections.Generic;
 using log4net;
@@ -117,7 +118,7 @@ namespace NHibernate.Shards
 				 sessionFactories.Add(BuildSessionFactory(), virtualShardIds);
 			}
 
-
+			throw new NotImplementedException();
 		}
 
 		private ISessionFactoryImplementor BuildSessionFactory()

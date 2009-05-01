@@ -52,12 +52,12 @@ namespace NHibernate.Shards.Test.Mock
 
 		protected T Stub<T>()
 		{
-			return MockRepository.GenerateStub<T>();
+			return Stub<T>(null);
 		}
 
 		protected T Stub<T>(params object[] parameters)
 		{
-			return MockRepository.GenerateStub<T>(parameters);
+			return (T) MockRepository.GenerateStub(typeof(T) ,parameters);
 		}
 	}
 }

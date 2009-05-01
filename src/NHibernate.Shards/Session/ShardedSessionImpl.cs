@@ -495,6 +495,11 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
+		public object Load(string entityName, object id, LockMode lockMode)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Return the persistent instance of the given entity class with the given identifier,
 		/// assuming that the instance exists.
@@ -552,6 +557,11 @@ namespace NHibernate.Shards.Session
 		/// <param name="id">A valid identifier of an existing persistent instance of the class</param>
 		/// <returns>The persistent instance or proxy</returns>
 		public T Load<T>(object id)
+		{
+			throw new NotImplementedException();
+		}
+
+		public object Load(string entityName, object id)
 		{
 			throw new NotImplementedException();
 		}
@@ -729,6 +739,11 @@ namespace NHibernate.Shards.Session
 		/// </remarks>
 		/// <param name="obj">The instance to be removed</param>
 		public void Delete(object obj)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Delete(string entityName, object obj)
 		{
 			throw new NotImplementedException();
 		}
@@ -1013,6 +1028,16 @@ namespace NHibernate.Shards.Session
 			throw new NotImplementedException();
 		}
 
+		public ICriteria CreateCriteria<T>() where T : class
+		{
+			throw new NotImplementedException();
+		}
+
+		public ICriteria CreateCriteria<T>(string alias) where T : class
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Get the current Unit of Work and return the associated <c>ITransaction</c> object.
 		/// </summary>
@@ -1038,6 +1063,16 @@ namespace NHibernate.Shards.Session
 		/// <param name="alias">The alias of the entity</param>
 		/// <returns>An ICriteria object</returns>
 		public ICriteria CreateCriteria(System.Type persistentClass, string alias)
+		{
+			throw new NotImplementedException();
+		}
+
+		public ICriteria CreateCriteria(string entityName)
+		{
+			throw new NotImplementedException();
+		}
+
+		public ICriteria CreateCriteria(string entityName, string alias)
 		{
 			throw new NotImplementedException();
 		}
@@ -1265,6 +1300,11 @@ namespace NHibernate.Shards.Session
 			throw new NotImplementedException();
 		}
 
+		public EntityMode ActiveEntityMode
+		{
+			get { throw new NotImplementedException(); }
+		}
+
 		/// <summary> Get the statistics for this session.</summary>
 		public ISessionStatistics Statistics
 		{
@@ -1362,17 +1402,18 @@ namespace NHibernate.Shards.Session
 				else
 					clazz = obj.GetType();
 
-				IIdentifierGenerator idGenerator = shard.SessionFactoryImplementor.GetIdentifierGenerator(clazz);
+				throw new NotImplementedException();
+				//IIdentifierGenerator idGenerator = shard.SessionFactoryImplementor.GetIdentifierGenerator(clazz);
 
-				if (idGenerator is IShardEncodingIdentifierGenerator)
-				{
-					return ((IShardEncodingIdentifierGenerator) idGenerator).ExtractShardId(GetIdentifier(obj));
-				}
-				else
-				{
-					// TODO: also use shard resolution strategy if it returns only 1 shard; throw this error in config instead of here
-					throw new HibernateException("Can not use virtual sharding with non-shard resolving id gen");
-				}
+				//if (idGenerator is IShardEncodingIdentifierGenerator)
+				//{
+				//    return ((IShardEncodingIdentifierGenerator) idGenerator).ExtractShardId(GetIdentifier(obj));
+				//}
+				//else
+				//{
+				//    // TODO: also use shard resolution strategy if it returns only 1 shard; throw this error in config instead of here
+				//    throw new HibernateException("Can not use virtual sharding with non-shard resolving id gen");
+				//}
 			}
 		}
 
