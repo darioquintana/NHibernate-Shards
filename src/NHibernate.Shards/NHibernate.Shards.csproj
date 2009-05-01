@@ -81,6 +81,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="BaseHasShardIdList.cs" />
     <Compile Include="Cfg\ConfigurationToShardConfigurationAdapter.cs" />
     <Compile Include="Cfg\IShardConfiguration.cs" />

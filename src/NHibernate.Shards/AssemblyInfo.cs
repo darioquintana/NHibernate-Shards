@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 [assembly: CLSCompliantAttribute(true)]
 [assembly: AssemblyTitleAttribute("NHibernate.Shards")]
 [assembly: AssemblyDescriptionAttribute("NHibernate Shards")]
-[assembly: AssemblyCompanyAttribute("NHibernate.org")]
+[assembly: AssemblyCompanyAttribute("nhforge.org")]
 [assembly: AssemblyProductAttribute("NHibernate.Shards")]
 [assembly: AssemblyCopyrightAttribute("Licensed under LGPL.")]
 [assembly: AssemblyVersionAttribute("2.0.0.1001")]
