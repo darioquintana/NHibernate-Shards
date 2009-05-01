@@ -86,6 +86,7 @@
     <Compile Include="Cfg\IShardConfiguration.cs" />
     <Compile Include="Cfg\ShardedEnvironment.cs" />
     <Compile Include="Criteria\CriteriaId.cs" />
+    <Compile Include="Criteria\ICriteriaEvent.cs" />
     <Compile Include="Criteria\ICriteriaFactory.cs" />
     <Compile Include="Criteria\IShardedCriteria.cs" />
     <Compile Include="CrossShardAssociationException.cs" />

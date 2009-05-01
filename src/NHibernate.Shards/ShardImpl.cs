@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Iesi.Collections.Generic;
 using NHibernate.Engine;
@@ -53,6 +54,21 @@ namespace NHibernate.Shards
 		public ISession EstablishSession()
 		{
 			throw new System.NotImplementedException();
+		}
+
+		public ICriteria GetCriteriaById(CriteriaId id)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void AddCriteriaEvent(CriteriaId id, ICriteriaEvent @event)
+		{
+			throw new NotImplementedException();
+		}
+
+		public ICriteria EstablishCriteria(IShardedCriteria shardedCriteria)
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
