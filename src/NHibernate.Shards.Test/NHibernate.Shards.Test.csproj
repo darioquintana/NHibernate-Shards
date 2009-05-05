@@ -89,6 +89,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Criteria\AddCriterionEventTest.cs" />
+    <Compile Include="Criteria\AddOrderEventTest.cs" />
     <Compile Include="Id\ShardedUUIDGeneratorFixture.cs" />
     <Compile Include="Mock\TestFixtureBaseWithMock.cs" />
     <Compile Include="Strategy\Access\ParallelShardAccessStrategyFixture.cs" />

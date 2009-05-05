@@ -1,4 +1,6 @@
-﻿namespace NHibernate.Shards.Criteria
+﻿using System.Collections.Generic;
+
+namespace NHibernate.Shards.Criteria
 {
     public interface ISubCriteriaFactory
     {
@@ -10,6 +12,6 @@
        * @return a criteria with the given parent and events
        */
         
-        ICriteria CreateSubcriteria(ICriteria parent, Iterable<ICriteriaEvent> events);
+        ICriteria CreateSubcriteria(ICriteria parent, IList<ICriteriaEvent> events);//tenia iterable asi que le puse List
     }
 }

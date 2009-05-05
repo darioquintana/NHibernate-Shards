@@ -1,4 +1,3 @@
-using NHibernate.Shards;
 using NHibernate.Shards.Util;
 using NHibernate.Type;
 
@@ -42,7 +41,7 @@ namespace NHibernate.Shards.Session
 
 				if (shardAware.ShardId == null)
 				{
-					shardAware.ShardId = this.shardIdResolver.GetShardIdForObject(entity);
+					shardAware.ShardId = shardIdResolver.GetShardIdForObject(entity);
 					return true;
 				}
 				

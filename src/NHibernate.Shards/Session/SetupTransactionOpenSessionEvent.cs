@@ -10,7 +10,7 @@ namespace NHibernate.Shards.Session
 
 		public SetupTransactionOpenSessionEvent(IShardedTransaction shardedTtransaction)
 		{
-			this.shardedTransaction = shardedTtransaction;
+			shardedTransaction = shardedTtransaction;
 		}
 
 		public void OnOpenSession(ISession session)

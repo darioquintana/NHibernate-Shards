@@ -47,7 +47,7 @@ namespace NHibernate.Shards.Test.Mock
 
 		protected T Mock<T>()
 		{
-			return Mocks.CreateMock<T>();
+		    return Mocks.StrictMock<T>();
 		}
 
 		protected T Stub<T>()

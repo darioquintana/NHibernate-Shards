@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using NHibernate;
 using NHibernate.Shards.Strategy;
 
 namespace NHibernate.Shards.Session
@@ -44,6 +43,6 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		/// <returns></returns>
 		/// Throws <see cref="HibernateException"/>
-		IShardedSession OpenSession();
+		new IShardedSession OpenSession();
 	}
 }
