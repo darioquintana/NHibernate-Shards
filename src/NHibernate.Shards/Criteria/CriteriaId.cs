@@ -28,19 +28,19 @@ namespace NHibernate.Shards.Criteria
 		{
 			if (this == o)
 				return true;
-			
+
 			if (!(o is CriteriaId))
 				return false;
-			
+
 			CriteriaId criteriaId = (CriteriaId) o;
 
 			if (id != criteriaId.id)
 				return false;
-			
+
 			return true;
 		}
 
-		public override int GetHashCode() 
+		public override int GetHashCode()
 		{
 			return id;
 		}

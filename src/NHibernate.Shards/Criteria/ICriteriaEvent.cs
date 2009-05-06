@@ -1,8 +1,7 @@
 ﻿namespace NHibernate.Shards.Criteria
 {
-    public interface ICriteriaEvent
-    {
-        void OnEvent(ICriteria crit);
-    }
-
+	public interface ICriteriaEvent
+	{
+		void OnEvent(ICriteria crit);
+	}
 }

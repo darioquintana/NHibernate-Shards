@@ -2,24 +2,21 @@
 
 namespace NHibernate.Shards.Criteria
 {
-    public class SetCacheRegionEvent : ICriteriaEvent
-    {   
-        private readonly String cacheRegion;
+	public class SetCacheRegionEvent : ICriteriaEvent
+	{
+		private readonly String cacheRegion;
 
-        /**
-         * Construct a CacheRegionEvent
-         *
-         * @param cacheRegion the cache region we'll set on the {@link Criteria}
-         * when the event fires.
-         */
-        public SetCacheRegionEvent(String cacheRegion) 
-        {
-          this.cacheRegion = cacheRegion;
-        }
-        
-        public void OnEvent(ICriteria crit) 
-        {
-          crit.SetCacheRegion(cacheRegion);
-        }
-    }
+		///<summary>Construct a CacheRegionEvent</summary>
+		/// <param name="cacheRegion">the cache region we'll set on the {@link Criteria}
+		/// when the event fires.</param>
+		public SetCacheRegionEvent(String cacheRegion)
+		{
+			this.cacheRegion = cacheRegion;
+		}
+
+		public void OnEvent(ICriteria crit)
+		{
+			crit.SetCacheRegion(cacheRegion);
+		}
+	}
 }
