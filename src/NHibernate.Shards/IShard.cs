@@ -10,7 +10,7 @@ namespace NHibernate.Shards
 	/// <summary>
 	/// Interface representing a Shard.  A shard is a physical partition (as opposed
 	/// to a virtual partition).  Shards know how to lazily instantiate Sessions
-	/// and Apply {@link OpenSessionEvent}s, {@link CriteriaEvent}s, and {@link QueryEvent}s.
+	/// and Apply <see cref="IOpenSessionEvent"/>, {@link CriteriaEvent}s, and {@link QueryEvent}s.
 	/// Anybody else have a nagging suspicion this can get folded into the Session
 	/// itself?
 	/// </summary>

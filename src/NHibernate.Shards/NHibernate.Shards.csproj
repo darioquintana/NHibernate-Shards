@@ -120,6 +120,7 @@
     <Compile Include="Engine\IShardedSessionImplementor.cs" />
     <Compile Include="Id\IGeneratorRequiringControlSessionProvider.cs" />
     <Compile Include="Id\IShardEncodingIdentifierGenerator.cs" />
+    <Compile Include="Id\ShardedTableHiLoGenerator.cs" />
     <Compile Include="Id\ShardedUUIDGenerator.cs" />
     <Compile Include="IHasShardIdList.cs" />
     <Compile Include="IShard.cs" />
@@ -129,10 +130,14 @@
     <Compile Include="LoadBalance\IShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RandomShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RoundRobinShardLoadBalancer.cs" />
+    <Compile Include="Query\AdHocQueryFactoryImpl.cs" />
+    <Compile Include="Query\ExitOperationsQueryCollector.cs" />
     <Compile Include="Query\IQueryEvent.cs" />
     <Compile Include="Query\IQueryFactory.cs" />
+    <Compile Include="Query\NamedQueryFactoryImpl.cs" />
     <Compile Include="Query\QueryId.cs" />
     <Compile Include="Query\IShardedQuery.cs" />
+    <Compile Include="Query\ShardedQueryImpl.cs" />
     <Compile Include="Session\BaseStatefulInterceptorFactory.cs" />
     <Compile Include="Session\CrossShardRelationshipDetectingInterceptor.cs" />
     <Compile Include="Session\DisableFilterOpenSessionEvent.cs" />

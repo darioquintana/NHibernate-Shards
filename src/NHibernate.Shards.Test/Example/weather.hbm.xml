@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<hibernate-mapping package="org.hibernate.shards.example.model">
+    <class name="WeatherReport" table="WEATHER_REPORT">
+        <id name="reportId" column="REPORT_ID">
+            <generator class="native"/>
+        </id>
+        <property name="continent" column="CONTINENT"/>
+        <property name="latitude" column="LATITUDE"/>
+        <property name="longitude" column="LONGITUDE"/>
+        <property name="temperature" column="TEMPERATURE"/>
+        <property name="reportTime" type="timestamp" column="REPORT_TIME"/>
+    </class>
+</hibernate-mapping>

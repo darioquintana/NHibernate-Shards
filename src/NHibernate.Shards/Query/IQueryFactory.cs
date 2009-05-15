@@ -10,6 +10,6 @@ namespace NHibernate.Shards.Query
 		/// </summary>
 		/// <param name="session"></param>
 		/// <returns></returns>
-		IQuery createQuery(ISession session);
+		IQuery CreateQuery(ISession session);
 	}
 }
