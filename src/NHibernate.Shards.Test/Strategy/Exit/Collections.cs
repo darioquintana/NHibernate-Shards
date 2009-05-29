@@ -27,7 +27,6 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 		}
 
 		/// <summary>
-		/// 
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="listToRandom"></param>

@@ -131,7 +131,7 @@
     <Compile Include="LoadBalance\RandomShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RoundRobinShardLoadBalancer.cs" />
     <Compile Include="Query\AdHocQueryFactoryImpl.cs" />
-    <Compile Include="Query\ExitOperationsQueryCollector.cs" />
+    <Compile Include="Query\IExitOperationsQueryCollector.cs" />
     <Compile Include="Query\IQueryEvent.cs" />
     <Compile Include="Query\IQueryFactory.cs" />
     <Compile Include="Query\NamedQueryFactoryImpl.cs" />

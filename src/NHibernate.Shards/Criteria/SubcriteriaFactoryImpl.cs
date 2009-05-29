@@ -12,4 +12,5 @@ namespace nhibernate.shards.criteria
 			throw new NotImplementedException();
 		}
 	}
+
 }

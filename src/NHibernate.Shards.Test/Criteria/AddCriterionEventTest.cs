@@ -1,24 +1,13 @@
 ﻿using NHibernate.Shards.Criteria;
+using NHibernate.Shards.Test.Mock;
 using NUnit.Framework;
 using Rhino.Mocks;
 
 namespace NHibernate.Shards.Test.Criteria
 {
     [TestFixture]
-    public class AddCriterionEventTest
+    public class AddCriterionEventTest : TestFixtureBaseWithMock
     {
-        protected MockRepository mocks;
-
-        protected MockRepository Mocks
-        {
-            get { return mocks; }
-        }
-
-        protected T Mock<T>()
-        {
-            return Mocks.StrictMock<T>();
-        }
-
         [Test]
         public void TestOnOpenSession()
         {
