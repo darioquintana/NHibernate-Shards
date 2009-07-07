@@ -95,6 +95,7 @@
     <Compile Include="Id\ShardedUUIDGeneratorFixture.cs" />
     <Compile Include="Mock\TestFixtureBaseWithMock.cs" />
     <Compile Include="Example\WeatherReport.cs" />
+    <Compile Include="ShardedConfigurationTest.cs" />
     <Compile Include="ShardImplTest.cs" />
     <Compile Include="Strategy\Access\ParallelShardAccessStrategyFixture.cs" />
     <Compile Include="Strategy\Access\ParallelShardOperationCallableFixture.cs" />
