@@ -10,6 +10,7 @@ using NHibernate.Shards.Session;
 using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Util;
 using NHibernate.Util;
+using Environment=NHibernate.Cfg.Environment;
 
 namespace NHibernate.Shards
 {
@@ -111,7 +112,7 @@ namespace NHibernate.Shards
 				if (virtualShardToShardMap.Count == 0)
 				{
 					// simple case, virtual and physical are the same
-					virtualShardIds = new HashedSet<ShardId>(new [] {new ShardId(shardId)});
+					virtualShardIds = new HashedSet<ShardId>(new[] {new ShardId(shardId)});
 				}
 				else
 				{
@@ -139,7 +140,16 @@ namespace NHibernate.Shards
 
 		private void PopulatePrototypeWithVariableProperties(IShardConfiguration config)
 		{
-			throw new NotImplementedException();
+			safeSet(prototypeConfiguration, Environment.ConnectionString, config.ConnectionString);
+			safeSet(prototypeConfiguration, Environment.CacheRegionPrefix, config.ShardCacheRegionPrefix);
+			safeSet(prototypeConfiguration, Environment.SessionFactoryName, config.ShardSessionFactoryName);
+			safeSet(prototypeConfiguration, ShardedEnvironment.ShardIdProperty, config.ShardId.ToString());
+		}
+
+		private static void safeSet(Configuration config, String key, String value)
+		{
+			if (value != null)
+				config.SetProperty(key, value);
 		}
 
 		private Set<System.Type> DetermineClassesWithoutTopLevelSaveSupport(Configuration configuration)
