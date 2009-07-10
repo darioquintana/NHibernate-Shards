@@ -210,6 +210,7 @@
     <Compile Include="Threading\AtomicInteger.cs" />
     <Compile Include="Threading\SynchronizedCollection.cs" />
     <Compile Include="Transaction\ShardedTransactionImpl.cs" />
+    <Compile Include="Util\Iterables.cs" />
     <Compile Include="Util\Preconditions.cs" />
     <Compile Include="Util\StringUtil.cs" />
   </ItemGroup>

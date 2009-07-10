@@ -163,7 +163,7 @@ namespace NHibernate.Shards.Session
 			IShardStrategyFactory shardStrategyFactory,
 			Set<System.Type> classesWithoutTopLevelSaveSupport,
 			bool checkAllAssociatedObjectsForDifferentShards)
-			: this(new List<ShardId>(sessionFactoryShardIdMap.Values.Cast<ShardId>()), 
+			: this(new List<ShardId>(sessionFactoryShardIdMap.Values.Concatenation().Cast<ShardId>()),
 			sessionFactoryShardIdMap, 
 			shardStrategyFactory, 
 			classesWithoutTopLevelSaveSupport,

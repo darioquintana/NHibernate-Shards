@@ -135,7 +135,7 @@ namespace NHibernate.Shards
 
 		private ISessionFactoryImplementor BuildSessionFactory()
 		{
-			throw new NotImplementedException();
+			return (ISessionFactoryImplementor)prototypeConfiguration.BuildSessionFactory();
 		}
 
 		private void PopulatePrototypeWithVariableProperties(IShardConfiguration config)
