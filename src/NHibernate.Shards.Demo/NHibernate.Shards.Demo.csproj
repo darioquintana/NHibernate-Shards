@@ -74,9 +74,6 @@
     <Compile Include="WeatherReportApp.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="hibernate0.cfg.xml" />
-    <Content Include="hibernate1.cfg.xml" />
-    <Content Include="hibernate2.cfg.xml" />
     <Content Include="weather.hbm.xml" />
   </ItemGroup>
   <ItemGroup>

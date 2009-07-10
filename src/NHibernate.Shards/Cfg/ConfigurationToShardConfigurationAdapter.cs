@@ -2,7 +2,7 @@ using NHibernate.Cfg;
 
 namespace NHibernate.Shards.Cfg
 {
-	public class ConfigurationToShardConfigurationAdapter
+	public class ConfigurationToShardConfigurationAdapter : IShardConfiguration
 	{
 		private readonly Configuration config;
 
@@ -11,24 +11,9 @@ namespace NHibernate.Shards.Cfg
 			this.config = config;
 		}
 
-		//public string getShardUrl()
-		//{
-		//    return config.GetProperty(Environment.URL);
-		//}
-
-		//public string getShardUser()
-		//{
-		//    return config.GetProperty(Environment.USER);
-		//}
-
-		//public string getShardPassword()
-		//{
-		//    return config.GetProperty(Environment.PASS);
-		//}
-
 		public string ShardSessionFactoryName
 		{
-			get {return config.GetProperty(Environment.SessionFactoryName);}
+			get { return config.GetProperty(Environment.SessionFactoryName); }
 		}
 
 		public int ShardId
@@ -36,14 +21,15 @@ namespace NHibernate.Shards.Cfg
 			get { return int.Parse(config.GetProperty(ShardedEnvironment.ShardIdProperty)); }
 		}
 
-		//public string ShardDatasource
-		//{
-		//    get {return config.GetProperty(Environment.DATASOURCE);}
-		//}
 
 		public string ShardCacheRegionPrefix
 		{
 			get { return config.GetProperty(Environment.CacheRegionPrefix); }
+		}
+
+		public string ConnectionString
+		{
+			get { return config.GetProperty(Environment.ConnectionString); }
 		}
 	}
 }

@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
+using NHibernate.ByteCode.LinFu;
 using NHibernate.Cfg;
+using NHibernate.Cfg.Loquacious;
 using NHibernate.Criterion;
+using NHibernate.Dialect;
 using NHibernate.Mapping;
 using NHibernate.Shards.Cfg;
 using NHibernate.Shards.LoadBalance;
@@ -104,14 +108,11 @@ namespace NHibernate.Shards.Demo
 			Configuration prototypeConfig = new Configuration().Configure("hibernate0.cfg.xml");
 			prototypeConfig.AddXmlFile("weather.hbm.xml");
 			IList<IShardConfiguration> shardConfigs = new List<IShardConfiguration>();
-			//shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate0.cfg.xml")));
-			//shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate1.cfg.xml")));
-			//shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate2.cfg.xml")));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate0.cfg.xml")));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate1.cfg.xml")));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate2.cfg.xml")));
 			IShardStrategyFactory shardStrategyFactory = BuildShardStrategyFactory();
-			var shardedConfig = new ShardedConfiguration(
-				prototypeConfig,
-				shardConfigs,
-				shardStrategyFactory);
+			var shardedConfig = new ShardedConfiguration(prototypeConfig, shardConfigs, shardStrategyFactory);
 			return shardedConfig.buildShardedSessionFactory();
 		}
 
@@ -119,10 +120,31 @@ namespace NHibernate.Shards.Demo
 		{
 			return new MyStrategy();
 		}
+
+		private Configuration GetConfigurationTemplate(string connectionString, int shardId)
+		{
+			var cfg = new Configuration();
+			cfg.SessionFactoryName("NHibernateShards" + shardId);
+			cfg.Proxy(p =>
+			          	{
+			          		p.Validation = false;
+			          		p.ProxyFactoryFactory<ProxyFactoryFactory>();
+			          	})
+				.DataBaseIntegration(db =>
+				                     	{
+				                     		db.Dialect<MsSql2008Dialect>();
+				                     		db.ConnectionString = connectionString;
+				                     	})
+				.AddResource("NHibernate.Shards.Demo.weather.hbm.xml", Assembly.GetExecutingAssembly())
+				.SetProperty(ShardedEnvironment.ShardIdProperty, shardId.ToString());
+			return cfg;
+		}
 	}
 
 	public class MyStrategy : IShardStrategyFactory
 	{
+		#region IShardStrategyFactory Members
+
 		public IShardStrategy NewShardStrategy(IList<ShardId> shardIds)
 		{
 			var loadBalancer = new RoundRobinShardLoadBalancer(shardIds);
@@ -131,5 +153,7 @@ namespace NHibernate.Shards.Demo
 			IShardAccessStrategy pas = new SequentialShardAccessStrategy();
 			return new ShardStrategyImpl(pss, prs, pas);
 		}
+
+		#endregion
 	}
 }

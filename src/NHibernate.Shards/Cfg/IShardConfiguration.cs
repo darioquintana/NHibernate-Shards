@@ -9,21 +9,6 @@ namespace NHibernate.Shards.Cfg
 	public interface IShardConfiguration
 	{
 		/// <summary>
-		/// the url of the shard.
-		/// </summary>
-		string ShardUrl { get; }
-
-		/// <summary>
-		/// the user that will be sent to the shard for authentication
-		/// </summary>
-		string ShardUser { get; }
-
-		/// <summary>
-		/// the password that will be sent to the shard for authentication
-		/// </summary>
-		string ShardPassword { get; }
-
-		/// <summary>
 		/// the name that the <see cref="ISessionFactory"/> created from this config will have
 		/// </summary>
 		string ShardSessionFactoryName { get; }
@@ -34,13 +19,13 @@ namespace NHibernate.Shards.Cfg
 		int ShardId { get; }
 
 		/// <summary>
-		/// the datasource for the shard
-		/// </summary>
-		string ShardDatasource { get; }
-
-		/// <summary>
 		/// the cache region prefix for the shard
 		/// </summary>
 		string ShardCacheRegionPrefix { get; }
+
+		/// <summary>
+		/// Connection string of the shard.
+		/// </summary>
+		string ConnectionString { get; }
 	}
 }
