@@ -26,7 +26,7 @@ namespace NHibernate.Shards.Test.Threading
 
 			public void DoSomething()
 			{
-				Stopwatch sw = new Stopwatch();
+				var sw = new Stopwatch();
 				sw.Start();
 
 				cdl.Await();
@@ -40,10 +40,10 @@ namespace NHibernate.Shards.Test.Threading
 		/// <summary>
 		/// The counter could not be initialized in minor then zero.
 		/// </summary>
-		[Test, ExpectedException(typeof(ArgumentException))]
+		[Test]
 		public void MinorZeroException()
 		{
-			CountDownLatch cdl = new CountDownLatch(-1);
+			Assert.Throws<ArgumentException>(() => new CountDownLatch(-1));
 		}
 
 		[Test]
@@ -67,7 +67,7 @@ namespace NHibernate.Shards.Test.Threading
 		[Test]
 		public void SimpleCountDown()
 		{
-			CountDownLatch cdl = new CountDownLatch(3);
+			var cdl = new CountDownLatch(3);
 
 			cdl.CountDown();
 			Assert.AreEqual(2, cdl.Count);
@@ -83,30 +83,11 @@ namespace NHibernate.Shards.Test.Threading
 		}
 
 		[Test]
-		public void WaitingTask2()
-		{
-			CountDownLatch cdl = new CountDownLatch(2);
-			Task task = new Task(cdl);
-			Thread runner = new Thread(task.DoSomething);
-
-			runner.Start();
-			Thread.Sleep(600);
-			cdl.CountDown();
-			Thread.Sleep(600);
-			cdl.CountDown();
-			runner.Join();
-
-			Assert.IsTrue(task.Elapsed >= 1100,"The task should cost more than 1100 millis");
-			Assert.IsTrue(task.Elapsed <= 1300, "The task should cost less than 1300 millis"); 
-			
-		}
-
-		[Test]
 		public void WaitingTask1()
 		{
-			CountDownLatch cdl = new CountDownLatch(1);
-			Task task = new Task(cdl);
-			Thread runner = new Thread(task.DoSomething);
+			var cdl = new CountDownLatch(1);
+			var task = new Task(cdl);
+			var runner = new Thread(task.DoSomething);
 
 			runner.Start();
 			Thread.Sleep(600);
@@ -114,14 +95,32 @@ namespace NHibernate.Shards.Test.Threading
 			runner.Join();
 
 			Assert.IsTrue(task.Elapsed >= 500, "The task should cost more than 500 millis");
-			Assert.IsTrue(task.Elapsed <= 700, "The task should cost less than 700 millis"); 
+			Assert.IsTrue(task.Elapsed <= 700, "The task should cost less than 700 millis");
+		}
+
+		[Test]
+		public void WaitingTask2()
+		{
+			var cdl = new CountDownLatch(2);
+			var task = new Task(cdl);
+			var runner = new Thread(task.DoSomething);
+
+			runner.Start();
+			Thread.Sleep(600);
+			cdl.CountDown();
+			Thread.Sleep(600);
+			cdl.CountDown();
+			runner.Join();
+
+			Assert.IsTrue(task.Elapsed >= 1100, "The task should cost more than 1100 millis");
+			Assert.IsTrue(task.Elapsed <= 1300, "The task should cost less than 1300 millis");
 		}
 
 
 		[Test]
 		public void ZeroArgument()
 		{
-			CountDownLatch cdl = new CountDownLatch(0);
+			var cdl = new CountDownLatch(0);
 		}
 	}
 }
