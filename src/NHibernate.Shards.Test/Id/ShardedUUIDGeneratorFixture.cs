@@ -11,7 +11,7 @@ namespace NHibernate.Shards.Test.Id
 		public void GenerateShardedUUID()
 		{
 			string Id;
-			ShardedUUIDGenerator generator = new ShardedUUIDGenerator();
+			var generator = new ShardedUUIDGenerator();
 
 			ShardedSessionImpl.CurrentSubgraphShardId = new ShardId(13);
 			Id = (string) generator.Generate(null, null);
@@ -26,18 +26,20 @@ namespace NHibernate.Shards.Test.Id
 		public void GetEncodedShardId()
 		{
 			string Id;
-			ShardedUUIDGenerator generator = new ShardedUUIDGenerator();
+			var generator = new ShardedUUIDGenerator();
 
 			ShardedSessionImpl.CurrentSubgraphShardId = new ShardId(25);
-			Id = (string)generator.Generate(null, null);
+			Id = (string) generator.Generate(null, null);
 			Assert.AreEqual(new ShardId(25), generator.ExtractShardId(Id));
 
-			ShardedSessionImpl.CurrentSubgraphShardId = new ShardId(599);;
-			Id = (string)generator.Generate(null, null);
+			ShardedSessionImpl.CurrentSubgraphShardId = new ShardId(599);
+			
+			Id = (string) generator.Generate(null, null);
 			Assert.AreEqual(new ShardId(599), generator.ExtractShardId(Id));
 
-			ShardedSessionImpl.CurrentSubgraphShardId = new ShardId(short.MaxValue); ;
-			Id = (string)generator.Generate(null, null);
+			ShardedSessionImpl.CurrentSubgraphShardId = new ShardId(short.MaxValue);
+			
+			Id = (string) generator.Generate(null, null);
 			Assert.AreEqual(new ShardId(short.MaxValue), generator.ExtractShardId(Id));
 		}
 	}
