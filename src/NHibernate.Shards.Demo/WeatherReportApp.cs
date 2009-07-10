@@ -142,7 +142,7 @@ namespace NHibernate.Shards.Demo
 				                     		db.Dialect<MsSql2008Dialect>();
 				                     		db.ConnectionStringName = connectionStringName;
 				                     	})
-				.AddResource("NHibernate.Shards.Demo.weather.hbm.xml", Assembly.GetExecutingAssembly())
+				.AddResource("NHibernate.Shards.Demo.Mappings.hbm.xml", Assembly.GetExecutingAssembly())
 				.SetProperty(ShardedEnvironment.ShardIdProperty, shardId.ToString());
 			return cfg;
 		}
