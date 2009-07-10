@@ -4,9 +4,13 @@ using NHibernate.Cfg;
 using NHibernate.Criterion;
 using NHibernate.Mapping;
 using NHibernate.Shards.Cfg;
+using NHibernate.Shards.LoadBalance;
 using NHibernate.Shards.Strategy;
+using NHibernate.Shards.Strategy.Access;
+using NHibernate.Shards.Strategy.Resolution;
+using NHibernate.Shards.Strategy.Selection;
 
-namespace NHibernate.Shards.Test.Example
+namespace NHibernate.Shards.Demo
 {
 	internal class WeatherReportApp
 	{
@@ -113,7 +117,19 @@ namespace NHibernate.Shards.Test.Example
 
 		private IShardStrategyFactory BuildShardStrategyFactory()
 		{
-			throw new NotImplementedException();
+			return new MyStrategy();
+		}
+	}
+
+	public class MyStrategy : IShardStrategyFactory
+	{
+		public IShardStrategy NewShardStrategy(IList<ShardId> shardIds)
+		{
+			var loadBalancer = new RoundRobinShardLoadBalancer(shardIds);
+			var pss = new RoundRobinShardSelectionStrategy(loadBalancer);
+			IShardResolutionStrategy prs = new AllShardsShardResolutionStrategy(shardIds);
+			IShardAccessStrategy pas = new SequentialShardAccessStrategy();
+			return new ShardStrategyImpl(pss, prs, pas);
 		}
 	}
 }

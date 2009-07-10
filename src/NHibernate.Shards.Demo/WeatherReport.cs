@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NHibernate.Shards.Test.Example
+namespace NHibernate.Shards.Demo
 {
 	public class WeatherReport
 	{

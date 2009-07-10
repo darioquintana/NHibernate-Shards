@@ -8,7 +8,7 @@ namespace NHibernate.Shards.Strategy
 	/// <summary>
 	/// Actual Implementation of IShardStrategy
 	/// </summary>
-	public class ShardStrategyImpl
+	public class ShardStrategyImpl : IShardStrategy
 	{
 		private readonly IShardAccessStrategy shardAccessStrategy;
 		private readonly IShardResolutionStrategy shardResolutionStrategy;
