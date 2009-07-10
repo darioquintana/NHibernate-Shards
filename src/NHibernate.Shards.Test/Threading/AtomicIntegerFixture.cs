@@ -10,7 +10,7 @@ namespace NHibernate.Shards.Test.Threading
 	{
 		private static void ThreadMethod()
 		{
-			for(int i = 0; i < 100000; i++)
+			for (int i = 0; i < 100000; i++)
 			{
 				new Counter();
 			}
@@ -18,8 +18,8 @@ namespace NHibernate.Shards.Test.Threading
 
 		public void Run()
 		{
-			Thread thread1 = new Thread(ThreadMethod);
-			Thread thread2 = new Thread(ThreadMethod);
+			var thread1 = new Thread(ThreadMethod);
+			var thread2 = new Thread(ThreadMethod);
 			thread1.Start();
 			thread2.Start();
 			thread1.Join();
@@ -33,7 +33,7 @@ namespace NHibernate.Shards.Test.Threading
 
 		public class Counter
 		{
-			private static AtomicInteger safeInteger = new AtomicInteger();
+			private static readonly AtomicInteger safeInteger = new AtomicInteger();
 
 			public Counter()
 			{
@@ -66,7 +66,7 @@ namespace NHibernate.Shards.Test.Threading
 		[Test]
 		public void test01()
 		{
-			AtomicInteger a = new AtomicInteger(1);
+			var a = new AtomicInteger(1);
 			Assert.AreEqual(2, a.IncrementAndGet());
 			Assert.AreEqual(2, a.Value);
 		}
@@ -77,7 +77,7 @@ namespace NHibernate.Shards.Test.Threading
 		[Test]
 		public void test02()
 		{
-			AtomicInteger a = new AtomicInteger(1);
+			var a = new AtomicInteger(1);
 			Assert.AreEqual(0, a.DecrementAndGet());
 			Assert.AreEqual(0, a.Value);
 		}
@@ -88,7 +88,7 @@ namespace NHibernate.Shards.Test.Threading
 		[Test]
 		public void test03()
 		{
-			AtomicInteger a = new AtomicInteger(1);
+			var a = new AtomicInteger(1);
 			Assert.AreEqual(1, a.GetAndIncrement());
 			Assert.AreEqual(2, a.Value);
 		}
@@ -99,7 +99,7 @@ namespace NHibernate.Shards.Test.Threading
 		[Test]
 		public void test04()
 		{
-			AtomicInteger a = new AtomicInteger(1);
+			var a = new AtomicInteger(1);
 			Assert.AreEqual(1, a.GetAndDecrement());
 			Assert.AreEqual(0, a.Value);
 		}

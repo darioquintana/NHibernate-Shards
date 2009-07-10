@@ -2,18 +2,22 @@ using NHibernate.Shards.Threading;
 
 namespace NHibernate.Shards.Test.Threading
 {
-	public class InmediatlyCallable :ICallable<int>
+	public class InmediatlyCallable : ICallable<int>
 	{
+		private int value;
+
 		public InmediatlyCallable(int value)
 		{
 			this.value = value;
 		}
 
-		private int value;
+		#region ICallable<int> Members
 
 		public int Call()
 		{
-			return this.value;
+			return value;
 		}
+
+		#endregion
 	}
 }

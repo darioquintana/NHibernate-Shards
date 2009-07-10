@@ -19,7 +19,7 @@ namespace NHibernate.Shards.Test.Threading
 				Debug.WriteLine("terminó");
 				Assert.Fail("A exception must be throw before");
 			}
-			catch(ThreadInterruptedException)
+			catch (ThreadInterruptedException)
 			{
 			}
 			return default(string);
