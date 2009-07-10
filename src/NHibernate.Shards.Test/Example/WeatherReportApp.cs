@@ -99,10 +99,10 @@ namespace NHibernate.Shards.Test.Example
 		{
 			Configuration prototypeConfig = new Configuration().Configure("hibernate0.cfg.xml");
 			prototypeConfig.AddXmlFile("weather.hbm.xml");
-			IList<IShardConfiguration> shardConfigs = null; // = new ArrayList<IShardConfiguration>;
-			//shardConfigs.Add(ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate0.cfg.xml")));
-			//shardConfigs.Add(ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate1.cfg.xml")));
-			//shardConfigs.Add(ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate2.cfg.xml")));
+			IList<IShardConfiguration> shardConfigs = new List<IShardConfiguration>();
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate0.cfg.xml")));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate1.cfg.xml")));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate2.cfg.xml")));
 			IShardStrategyFactory shardStrategyFactory = BuildShardStrategyFactory();
 			var shardedConfig = new ShardedConfiguration(
 				prototypeConfig,
