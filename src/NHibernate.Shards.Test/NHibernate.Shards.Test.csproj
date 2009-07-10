@@ -91,10 +91,8 @@
   <ItemGroup>
     <Compile Include="Criteria\AddCriterionEventTest.cs" />
     <Compile Include="Criteria\AddOrderEventTest.cs" />
-    <Compile Include="Example\WeatherReportApp.cs" />
     <Compile Include="Id\ShardedUUIDGeneratorFixture.cs" />
     <Compile Include="Mock\TestFixtureBaseWithMock.cs" />
-    <Compile Include="Example\WeatherReport.cs" />
     <Compile Include="ShardedConfigurationTest.cs" />
     <Compile Include="ShardImplTest.cs" />
     <Compile Include="Strategy\Access\ParallelShardAccessStrategyFixture.cs" />
@@ -137,12 +135,6 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Example\hibernate0.cfg.xml" />
-    <Content Include="Example\hibernate1.cfg.xml" />
-    <Content Include="Example\hibernate2.cfg.xml" />
-    <Content Include="Example\weather.hbm.xml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NHibernate.Shards\NHibernate.Shards.csproj">

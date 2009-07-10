@@ -1077,6 +1077,11 @@ namespace NHibernate.Shards.Session
 			throw new NotImplementedException();
 		}
 
+		public IQueryOver<T> QueryOver<T>() where T : class
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Create a new instance of <c>Query</c> for the given query string
 		/// </summary>

@@ -19,6 +19,11 @@ namespace NHibernate.Shards.Criteria
 			throw new NotImplementedException();
 		}
 
+		public ICriteria SetProjection(params IProjection[] projection)
+		{
+			throw new NotImplementedException();
+		}
+
 		public ICriteria Add(ICriterion expression)
 		{
 			throw new NotImplementedException();
@@ -341,11 +346,6 @@ namespace NHibernate.Shards.Criteria
 		}
 
 		ICriteria ICriteria.SetMaxResults(int maxResults)
-		{
-			throw new NotImplementedException();
-		}
-
-		ICriteria ICriteria.SetProjection(IProjection projection)
 		{
 			throw new NotImplementedException();
 		}

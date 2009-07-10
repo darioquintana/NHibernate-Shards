@@ -19,6 +19,11 @@ namespace NHibernate.Shards.Criteria
 			throw new NotImplementedException();
 		}
 
+		public ICriteria SetProjection(params IProjection[] projection)
+		{
+			throw new NotImplementedException();
+		}
+
 		public ICriteria Add(ICriterion expression)
 		{
 			throw new NotImplementedException();
