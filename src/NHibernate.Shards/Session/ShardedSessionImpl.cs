@@ -5,10 +5,8 @@ using System.Data;
 using Iesi.Collections.Generic;
 using log4net;
 using NHibernate.Engine;
-using NHibernate.Id;
 using NHibernate.Proxy;
 using NHibernate.Shards.Engine;
-using NHibernate.Shards.Id;
 using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Strategy.Selection;
 using NHibernate.Stat;
@@ -72,11 +70,11 @@ namespace NHibernate.Shards.Session
 			              bool checkAllAssociatedObjectsForDifferentShards)
 		{
 			this.shardedSessionFactory = shardedSessionFactory;
-			this.shards =
+			shards =
 				BuildShardListFromSessionFactoryShardIdMap(shardedSessionFactory.GetSessionFactoryShardIdMap(),
 				                                           checkAllAssociatedObjectsForDifferentShards, this, interceptor);
 
-			this.shardIdsToShards = BuildShardIdsToShardsMap();
+			shardIdsToShards = BuildShardIdsToShardsMap();
 			this.shardStrategy = shardStrategy;
 			this.classesWithoutTopLevelSaveSupport = classesWithoutTopLevelSaveSupport;
 			this.checkAllAssociatedObjectsForDifferentShards = checkAllAssociatedObjectsForDifferentShards;
@@ -183,7 +181,7 @@ namespace NHibernate.Shards.Session
 			}
 			set
 			{
-				SetFlushModeOpenSessionEvent @event = new SetFlushModeOpenSessionEvent(value);
+				var @event = new SetFlushModeOpenSessionEvent(value);
 				foreach (IShard shard in shards)
 				{
 					if (shard.Session != null)
@@ -219,7 +217,7 @@ namespace NHibernate.Shards.Session
 			}
 			set
 			{
-				SetCacheModeOpenSessionEvent @event = new SetCacheModeOpenSessionEvent(value);
+				var @event = new SetCacheModeOpenSessionEvent(value);
 				foreach (IShard shard in shards)
 				{
 					if (shard.Session != null)
@@ -515,7 +513,7 @@ namespace NHibernate.Shards.Session
 		public object Load(System.Type clazz, object id)
 		{
 			List<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(new
-								 ShardResolutionStrategyDataImpl(clazz, id));
+			                                                                       	ShardResolutionStrategyDataImpl(clazz, id));
 			if (shardIds.Count == 1)
 			{
 				return shardIdsToShards[shardIds[0]].EstablishSession().Load(clazz, id);
@@ -613,7 +611,7 @@ namespace NHibernate.Shards.Session
 			return Save(null, obj);
 		}
 
-		public object Save(string entityName,object  obj)
+		public object Save(string entityName, object obj)
 		{
 			throw new NotImplementedException();
 		}
