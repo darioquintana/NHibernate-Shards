@@ -57,8 +57,8 @@ namespace NHibernate.Shards.Demo
 		{
 			for (int i = 0; i < 3; i++)
 			{
-				new SchemaExport(configurations[0].Configuration).Drop(false, true);
-				new SchemaExport(configurations[0].Configuration).Create(false, true);
+				new SchemaExport(configurations[i].Configuration).Drop(false, true);
+				new SchemaExport(configurations[i].Configuration).Create(false, true);
 			}
 		}
 
