@@ -4,6 +4,7 @@ using Iesi.Collections.Generic;
 using log4net;
 using NHibernate.Cfg;
 using NHibernate.Engine;
+using NHibernate.Mapping;
 using NHibernate.Shards.Cfg;
 using NHibernate.Shards.Session;
 using NHibernate.Shards.Strategy;
@@ -21,7 +22,7 @@ namespace NHibernate.Shards
 	/// </summary>
 	public class ShardedConfiguration
 	{
-		private readonly ILog log = LogManager.GetLogger(typeof(ShardedConfiguration));
+		private readonly ILog log = LogManager.GetLogger(typeof (ShardedConfiguration));
 
 		// the prototype config that we'll use when constructing the shard-specific
 		// configs
@@ -34,22 +35,23 @@ namespace NHibernate.Shards
 		private readonly IShardStrategyFactory shardStrategyFactory;
 
 		// maps virtual shard ids to physical shard ids
-		private readonly Dictionary<int, int> virtualShardToShardMap;
 
 		// maps physical shard ids to sets of virtual shard ids
 		private readonly Dictionary<int, Set<ShardId>> shardToVirtualShardIdMap;
+		private readonly Dictionary<int, int> virtualShardToShardMap;
 
 		#region Ctors
 
 		public ShardedConfiguration(Configuration prototypeConfiguration,
-			IList<IShardConfiguration> shardConfigs,
-			IShardStrategyFactory shardStrategyFactory)
+		                            IList<IShardConfiguration> shardConfigs,
+		                            IShardStrategyFactory shardStrategyFactory)
 			:
-			this(prototypeConfiguration, shardConfigs, shardStrategyFactory, new Dictionary<int, int>())
+				this(prototypeConfiguration, shardConfigs, shardStrategyFactory, new Dictionary<int, int>())
 		{
 		}
 
-		public ShardedConfiguration(Configuration prototypeConfiguration, IList<IShardConfiguration> shardConfigs, IShardStrategyFactory shardStrategyFactory, Dictionary<int, int> virtualShardToShardMap)
+		public ShardedConfiguration(Configuration prototypeConfiguration, IList<IShardConfiguration> shardConfigs,
+		                            IShardStrategyFactory shardStrategyFactory, Dictionary<int, int> virtualShardToShardMap)
 		{
 			Preconditions.CheckNotNull(prototypeConfiguration);
 			Preconditions.CheckNotNull(shardConfigs);
@@ -67,7 +69,7 @@ namespace NHibernate.Shards
 				// build the map from shard to set of virtual shards
 				shardToVirtualShardIdMap = new Dictionary<int, Set<ShardId>>();
 
-				foreach (KeyValuePair<int, int> pair in virtualShardToShardMap)
+				foreach (var pair in virtualShardToShardMap)
 				{
 					Set<ShardId> set = shardToVirtualShardIdMap[(pair.Value)];
 					// see if we already have a set of virtual shards
@@ -94,52 +96,77 @@ namespace NHibernate.Shards
 			// since all configs get their mappings from the prototype config, and we
 			// get the set of classes that don't support top-level saves from the mappings,
 			// we can get the set from the prototype and then just reuse it.
-			Set<System.Type> classesWithoutTopLevelSaveSupport = DetermineClassesWithoutTopLevelSaveSupport(prototypeConfiguration);
+			Set<System.Type> classesWithoutTopLevelSaveSupport =
+				DetermineClassesWithoutTopLevelSaveSupport(prototypeConfiguration);
 
 			foreach (IShardConfiguration config in shardConfigs)
 			{
 				PopulatePrototypeWithVariableProperties(config);
 				// get the shardId from the shard-specific config
 				int shardId = config.ShardId;
-				
+
 				//TODO: here HS check if shardId is not null and throw an exception
 
-				 Set<ShardId> virtualShardIds;
-				 if (virtualShardToShardMap.Count == 0)
-				 {
+				Set<ShardId> virtualShardIds;
+				if (virtualShardToShardMap.Count == 0)
+				{
 					// simple case, virtual and physical are the same
-					virtualShardIds = new HashedSet<ShardId>(new ShardId[] {new ShardId(shardId)});
-				 }
-				 else
-				 {
-					 // get the set of shard ids that are mapped to the physical shard
-					 // described by this config
-					 virtualShardIds = shardToVirtualShardIdMap[shardId];
-				 }
-				 sessionFactories.Add(BuildSessionFactory(), virtualShardIds);
+					virtualShardIds = new HashedSet<ShardId>(new [] {new ShardId(shardId)});
+				}
+				else
+				{
+					// get the set of shard ids that are mapped to the physical shard
+					// described by this config
+					virtualShardIds = shardToVirtualShardIdMap[shardId];
+				}
+				sessionFactories.Add(BuildSessionFactory(), virtualShardIds);
 			}
-            bool doFullCrossShardRelationshipChecking = PropertiesHelper.GetBoolean(ShardedEnvironment.CHECK_ALL_ASSOCIATED_OBJECTS_FOR_DIFFERENT_SHARDS, prototypeConfiguration.Properties, true);
+			bool doFullCrossShardRelationshipChecking =
+				PropertiesHelper.GetBoolean(ShardedEnvironment.CHECK_ALL_ASSOCIATED_OBJECTS_FOR_DIFFERENT_SHARDS,
+				                            prototypeConfiguration.Properties, true);
 
 			return new ShardedSessionFactoryImpl(
-				sessionFactories, 
-				shardStrategyFactory, 
-				classesWithoutTopLevelSaveSupport, 
+				sessionFactories,
+				shardStrategyFactory,
+				classesWithoutTopLevelSaveSupport,
 				doFullCrossShardRelationshipChecking);
 		}
 
 		private ISessionFactoryImplementor BuildSessionFactory()
 		{
-			throw new System.NotImplementedException();
+			throw new NotImplementedException();
 		}
 
 		private void PopulatePrototypeWithVariableProperties(IShardConfiguration config)
 		{
-			throw new System.NotImplementedException();
+			throw new NotImplementedException();
 		}
 
-		private static Set<System.Type> DetermineClassesWithoutTopLevelSaveSupport(Configuration configuration)
+		private Set<System.Type> DetermineClassesWithoutTopLevelSaveSupport(Configuration configuration)
 		{
-			throw new System.NotImplementedException();
+			Set<System.Type> classesWithoutTopLevelSaveSupport = new HashedSet<System.Type>();
+
+			foreach (PersistentClass classMapping in configuration.ClassMappings)
+			{
+				foreach (Property property in classMapping.PropertyClosureIterator)
+				{
+					if (DoesNotSupportTopLevelSave(property))
+					{
+						System.Type mappedClass = classMapping.MappedClass;
+						log.InfoFormat("Type {0} does not support top-level saves.", mappedClass.Name);
+						classesWithoutTopLevelSaveSupport.Add(mappedClass);
+						break;
+					}
+				}
+			}
+
+			return classesWithoutTopLevelSaveSupport;
+		}
+
+
+		private bool DoesNotSupportTopLevelSave(Property property)
+		{
+			return property.Value != null && property.Value.GetType().IsAssignableFrom(typeof (OneToOne));
 		}
 	}
 }
