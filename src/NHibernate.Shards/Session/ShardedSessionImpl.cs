@@ -9,6 +9,7 @@ using NHibernate.Proxy;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Strategy.Selection;
+using NHibernate.Shards.Util;
 using NHibernate.Stat;
 using NHibernate.Type;
 
@@ -1430,6 +1431,16 @@ namespace NHibernate.Shards.Session
 			bool checkAllAssociatedObjectsForDifferentShards,
 			IShardIdResolver shardIdResolver,
 			IInterceptor interceptor)
+		{
+			foreach (var entry in sessionFactoryShardIdMap)
+			{
+
+			}
+
+			throw new NotImplementedException();
+		}
+
+		public KeyValuePair<InterceptorList, SetSessionOnRequiresSessionEvent> BuildInterceptorList(IInterceptor providedInterceptor, IShardIdResolver shardIdResolver, bool checkAllAssociatedObjectsForDifferentShards)
 		{
 			throw new NotImplementedException();
 		}
