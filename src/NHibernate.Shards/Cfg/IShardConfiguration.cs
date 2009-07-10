@@ -1,3 +1,4 @@
+using NHibernate.Cfg;
 using NHibernate.Shards.Session;
 
 namespace NHibernate.Shards.Cfg
@@ -27,5 +28,7 @@ namespace NHibernate.Shards.Cfg
 		/// Connection string of the shard.
 		/// </summary>
 		string ConnectionString { get; }
+
+		Configuration Configuration { get; }
 	}
 }

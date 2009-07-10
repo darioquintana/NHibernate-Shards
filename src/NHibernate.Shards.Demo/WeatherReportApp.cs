@@ -13,6 +13,7 @@ using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Strategy.Access;
 using NHibernate.Shards.Strategy.Resolution;
 using NHibernate.Shards.Strategy.Selection;
+using NHibernate.Tool.hbm2ddl;
 
 namespace NHibernate.Shards.Demo
 {
@@ -28,35 +29,35 @@ namespace NHibernate.Shards.Demo
 
 		private void Run()
 		{
-			CreateSchema();
-			sessionFactory = CreateSessionFactory();
+			IList<IShardConfiguration> shardConfigs = PrepareConfiguration();
+			CreateSchema(shardConfigs);
+			//sessionFactory = CreateSessionFactory(shardConfigs);
 
-			AddData();
+			//AddData();
 
-			ISession session = sessionFactory.OpenSession();
-			try
-			{
-				ICriteria crit = session.CreateCriteria("weather", "WeatherReport");
-				var count = crit.List() as List;
-				if (count != null) Console.WriteLine(count.BatchSize); //.size()
-				crit.Add(Restrictions.Gt("temperature", 33));
-				var reports = crit.List() as List;
-				if (reports != null) Console.WriteLine(reports.BatchSize);
-			}
-			finally
-			{
-				session.Close();
-			}
+			//ISession session = sessionFactory.OpenSession();
+			//try
+			//{
+			//    ICriteria crit = session.CreateCriteria("weather", "WeatherReport");
+			//    var count = crit.List() as List;
+			//    if (count != null) Console.WriteLine(count.BatchSize); //.size()
+			//    crit.Add(Restrictions.Gt("temperature", 33));
+			//    var reports = crit.List() as List;
+			//    if (reports != null) Console.WriteLine(reports.BatchSize);
+			//}
+			//finally
+			//{
+			//    session.Close();
+			//}
 		}
 
-		private void CreateSchema()
+		private static void CreateSchema(IList<IShardConfiguration> configurations)
 		{
 			for (int i = 0; i < 3; i++)
 			{
-				//DestroyDatabase(i, IdGenType.SIMPLE);
-				//CreateDatabase(i, IdGenType.SIMPLE);
+				new SchemaExport(configurations[0].Configuration).Drop(false, true);
+				new SchemaExport(configurations[0].Configuration).Create(false, true);
 			}
-			throw new NotImplementedException();
 		}
 
 		private void AddData()
@@ -102,26 +103,30 @@ namespace NHibernate.Shards.Demo
 			}
 		}
 
-
-		public ISessionFactory CreateSessionFactory()
+		public IList<IShardConfiguration> PrepareConfiguration()
 		{
-			Configuration prototypeConfig = new Configuration().Configure("hibernate0.cfg.xml");
-			prototypeConfig.AddXmlFile("weather.hbm.xml");
 			IList<IShardConfiguration> shardConfigs = new List<IShardConfiguration>();
 			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(GetConfigurationTemplate("Shard1", 1)));
 			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(GetConfigurationTemplate("Shard2", 2)));
 			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(GetConfigurationTemplate("Shard3", 3)));
+			return shardConfigs;
+		}
+
+
+		public ISessionFactory CreateSessionFactory(IList<IShardConfiguration> shardConfigs)
+		{
+			Configuration prototypeConfig = GetConfigurationTemplate("Shard1", 1);
 			IShardStrategyFactory shardStrategyFactory = BuildShardStrategyFactory();
 			var shardedConfig = new ShardedConfiguration(prototypeConfig, shardConfigs, shardStrategyFactory);
 			return shardedConfig.buildShardedSessionFactory();
 		}
 
-		private IShardStrategyFactory BuildShardStrategyFactory()
+		private static IShardStrategyFactory BuildShardStrategyFactory()
 		{
 			return new MyStrategy();
 		}
 
-		private Configuration GetConfigurationTemplate(string connectionStringName, int shardId)
+		private static Configuration GetConfigurationTemplate(string connectionStringName, int shardId)
 		{
 			var cfg = new Configuration();
 			cfg.SessionFactoryName("NHibernateShards" + shardId);
