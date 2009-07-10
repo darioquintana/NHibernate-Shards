@@ -108,9 +108,9 @@ namespace NHibernate.Shards.Demo
 			Configuration prototypeConfig = new Configuration().Configure("hibernate0.cfg.xml");
 			prototypeConfig.AddXmlFile("weather.hbm.xml");
 			IList<IShardConfiguration> shardConfigs = new List<IShardConfiguration>();
-			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate0.cfg.xml")));
-			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate1.cfg.xml")));
-			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(new Configuration().Configure("hibernate2.cfg.xml")));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(GetConfigurationTemplate("Shard1", 1)));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(GetConfigurationTemplate("Shard2", 2)));
+			shardConfigs.Add(new ConfigurationToShardConfigurationAdapter(GetConfigurationTemplate("Shard3", 3)));
 			IShardStrategyFactory shardStrategyFactory = BuildShardStrategyFactory();
 			var shardedConfig = new ShardedConfiguration(prototypeConfig, shardConfigs, shardStrategyFactory);
 			return shardedConfig.buildShardedSessionFactory();
@@ -121,7 +121,7 @@ namespace NHibernate.Shards.Demo
 			return new MyStrategy();
 		}
 
-		private Configuration GetConfigurationTemplate(string connectionString, int shardId)
+		private Configuration GetConfigurationTemplate(string connectionStringName, int shardId)
 		{
 			var cfg = new Configuration();
 			cfg.SessionFactoryName("NHibernateShards" + shardId);
@@ -133,7 +133,7 @@ namespace NHibernate.Shards.Demo
 				.DataBaseIntegration(db =>
 				                     	{
 				                     		db.Dialect<MsSql2008Dialect>();
-				                     		db.ConnectionString = connectionString;
+				                     		db.ConnectionStringName = connectionStringName;
 				                     	})
 				.AddResource("NHibernate.Shards.Demo.weather.hbm.xml", Assembly.GetExecutingAssembly())
 				.SetProperty(ShardedEnvironment.ShardIdProperty, shardId.ToString());
