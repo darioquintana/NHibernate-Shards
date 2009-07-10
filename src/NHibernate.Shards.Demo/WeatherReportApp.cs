@@ -33,7 +33,7 @@ namespace NHibernate.Shards.Demo
 			CreateSchema(shardConfigs);
 			sessionFactory = CreateSessionFactory(shardConfigs);
 
-			//AddData();
+			AddData();
 
 			//ISession session = sessionFactory.OpenSession();
 			//try
@@ -75,7 +75,7 @@ namespace NHibernate.Shards.Demo
 				             		Continent = "North America",
 				             		Latitude = 25,
 				             		Longitude = 30,
-				             		ReportTime = new DateTime(),
+									ReportTime = DateTime.Now,
 				             		Temperature = 44
 				             	};
 				session.Save(report);
@@ -85,7 +85,7 @@ namespace NHibernate.Shards.Demo
 				         		Continent = "Africa",
 				         		Latitude = 44,
 				         		Longitude = 99,
-				         		ReportTime = new DateTime(),
+				         		ReportTime = DateTime.Now,
 				         		Temperature = 31
 				         	};
 				session.Save(report);
@@ -95,7 +95,7 @@ namespace NHibernate.Shards.Demo
 				         		Continent = "Asia",
 				         		Latitude = 13,
 				         		Longitude = 12,
-				         		ReportTime = new DateTime(),
+								ReportTime = DateTime.Now,
 				         		Temperature = 104
 				         	};
 				session.Save(report);
