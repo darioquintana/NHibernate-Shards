@@ -65,6 +65,8 @@ namespace NHibernate.Shards.Session
 		private readonly Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap;
 
 		private readonly IShardStrategy shardStrategy;
+
+		//TODO: to enable statistics see this
 		private readonly IStatistics statistics; // = new StatisticsImpl()
 
 		#region Ctor
@@ -469,7 +471,8 @@ namespace NHibernate.Shards.Session
 			if (fullSessionFactoryShardIdMap != null)
 				fullSessionFactoryShardIdMap.Clear();
 
-			statistics.Clear();
+			//TODO: to enable statistics see this
+			//statistics.Clear();
 		}
 
 		/// <summary>
