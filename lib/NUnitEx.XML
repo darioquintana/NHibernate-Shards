@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>NUnitEx</name>
+    </assembly>
+    <members>
+        <member name="T:NUnit.Framework.IBooleanConstraints">
+            <summary>
+            Constraint over boolean values.
+            </summary>
+        </member>
+        <member name="T:NUnit.Framework.IAssertionInfo`1">
+            <summary>
+            Assertion information.
+            </summary>
+            <typeparam name="T">The type of the value subject of the assertion.</typeparam>
+        </member>
+        <member name="P:NUnit.Framework.IAssertionInfo`1.Actual">
+            <summary>
+            Subject of the assertion.
+            </summary>
+        </member>
+        <member name="P:NUnit.Framework.IAssertionInfo`1.IsNegated">
+            <summary>
+            The assertion is negated ?
+            </summary>
+        </member>
+        <member name="P:NUnit.Framework.IAssertionInfo`1.FailureMessage">
+            <summary>
+            The title of the assertion ("message" in NUnit terminology)
+            </summary>
+        </member>
+    </members>
+</doc>
