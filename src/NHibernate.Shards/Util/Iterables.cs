@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace NHibernate.Shards.Util
@@ -13,6 +14,14 @@ namespace NHibernate.Shards.Util
 				{
 					yield return item;
 				}
+			}
+		}
+
+		public static void Each<T>(this IEnumerable<T> iterables, Action<T> action)
+		{
+			foreach (T item in iterables)
+			{
+				action(item);
 			}
 		}
 	}

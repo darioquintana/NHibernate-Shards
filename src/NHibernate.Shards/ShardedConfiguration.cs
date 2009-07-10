@@ -91,7 +91,7 @@ namespace NHibernate.Shards
 
 		#endregion
 
-		public IShardedSessionFactory buildShardedSessionFactory()
+		public IShardedSessionFactory BuildShardedSessionFactory()
 		{
 			var sessionFactories = new Dictionary<ISessionFactoryImplementor, Set<ShardId>>();
 			// since all configs get their mappings from the prototype config, and we

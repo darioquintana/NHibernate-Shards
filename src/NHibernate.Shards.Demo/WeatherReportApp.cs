@@ -122,7 +122,7 @@ namespace NHibernate.Shards.Demo
 			Configuration prototypeConfig = GetConfigurationTemplate("Shard1", 1);
 			IShardStrategyFactory shardStrategyFactory = BuildShardStrategyFactory();
 			var shardedConfig = new ShardedConfiguration(prototypeConfig, shardConfigs, shardStrategyFactory);
-			return shardedConfig.buildShardedSessionFactory();
+			return shardedConfig.BuildShardedSessionFactory();
 		}
 
 		private static IShardStrategyFactory BuildShardStrategyFactory()
