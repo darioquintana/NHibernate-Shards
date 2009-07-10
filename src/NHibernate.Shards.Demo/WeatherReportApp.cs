@@ -49,6 +49,8 @@ namespace NHibernate.Shards.Demo
 			//{
 			//    session.Close();
 			//}
+			Console.WriteLine("Done.");
+			Console.ReadKey(true);
 		}
 
 		private static void CreateSchema(IList<IShardConfiguration> configurations)

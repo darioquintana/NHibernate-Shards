@@ -74,7 +74,7 @@
     <Compile Include="WeatherReportApp.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="weather.hbm.xml" />
+    <EmbeddedResource Include="Mappings.hbm.xml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NHibernate.Shards\NHibernate.Shards.csproj">

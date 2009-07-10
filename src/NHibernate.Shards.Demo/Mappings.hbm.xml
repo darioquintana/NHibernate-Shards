@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<hibernate-mapping xmlns="urn:nhibernate-mapping-2.2"
+                   assembly="NHibernate.Shards.Test"
+                   namespace="NHibernate.Shards.Test.Example"
+                   default-access="backfield">
+
+	<class name="WeatherReport">
+		<id name="ReportId">
+			<generator class="native"/>
+		</id>
+		<property name="Continent"/>
+		<property name="Latitude" />
+		<property name="Longitude" />
+		<property name="Temperature" />
+		<property name="ReportTime" type="timestamp"/>
+	</class>
+</hibernate-mapping>
