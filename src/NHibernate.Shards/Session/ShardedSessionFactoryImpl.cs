@@ -5,6 +5,7 @@ using System.Data;
 using Iesi.Collections;
 using Iesi.Collections.Generic;
 using log4net;
+using System.Linq;
 using NHibernate.Cache;
 using NHibernate.Cfg;
 using NHibernate.Connection;
@@ -83,7 +84,7 @@ namespace NHibernate.Shards.Session
 		/// <param name="checkAllAssociatedObjectsForDifferentShards">Flag that controls
 		///  whether or not we do full cross-shard relationshp checking (very slow)</param>
 		public ShardedSessionFactoryImpl(
-			IList<ShardId> shardIds,
+			ICollection<ShardId> shardIds,
 			Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap,
 			IShardStrategyFactory shardStrategyFactory,
 			Set<System.Type> classesWithoutTopLevelSaveSupport,
@@ -157,19 +158,18 @@ namespace NHibernate.Shards.Session
 		/// as top-level objects</param>
 		/// <param name="checkAllAssociatedObjectsForDifferentShards">Flag that controls
 		///whether or not we do full cross-shard relationshp checking (very slow)</param>
-		//public ShardedSessionFactoryImpl(
-		//    Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap,
-		//    IShardStrategyFactory shardStrategyFactory,
-		//    Set<System.Type> classesWithoutTopLevelSaveSupport,
-		//    bool checkAllAssociatedObjectsForDifferentShards)
-		//    : this(sessionFactoryShardIdMap.Values,
-		//    sessionFactoryShardIdMap,
-		//    shardStrategyFactory,
-		//    classesWithoutTopLevelSaveSupport,
-		//    checkAllAssociatedObjectsForDifferentShards)
-		//{
-
-		//}
+		public ShardedSessionFactoryImpl(
+			Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap,
+			IShardStrategyFactory shardStrategyFactory,
+			Set<System.Type> classesWithoutTopLevelSaveSupport,
+			bool checkAllAssociatedObjectsForDifferentShards)
+			: this(new List<ShardId>(sessionFactoryShardIdMap.Values.Cast<ShardId>()), 
+			sessionFactoryShardIdMap, 
+			shardStrategyFactory, 
+			classesWithoutTopLevelSaveSupport,
+			checkAllAssociatedObjectsForDifferentShards)
+		{
+		}
 
 		private void SetupIdGenerators()
 		{

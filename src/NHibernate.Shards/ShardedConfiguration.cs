@@ -8,6 +8,7 @@ using NHibernate.Shards.Cfg;
 using NHibernate.Shards.Session;
 using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Util;
+using NHibernate.Util;
 
 namespace NHibernate.Shards
 {
@@ -89,7 +90,7 @@ namespace NHibernate.Shards
 
 		public IShardedSessionFactory buildShardedSessionFactory()
 		{
-			Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactories = new Dictionary<ISessionFactoryImplementor, Set<ShardId>>();
+			var sessionFactories = new Dictionary<ISessionFactoryImplementor, Set<ShardId>>();
 			// since all configs get their mappings from the prototype config, and we
 			// get the set of classes that don't support top-level saves from the mappings,
 			// we can get the set from the prototype and then just reuse it.
@@ -117,8 +118,13 @@ namespace NHibernate.Shards
 				 }
 				 sessionFactories.Add(BuildSessionFactory(), virtualShardIds);
 			}
+            bool doFullCrossShardRelationshipChecking = PropertiesHelper.GetBoolean(ShardedEnvironment.CHECK_ALL_ASSOCIATED_OBJECTS_FOR_DIFFERENT_SHARDS, prototypeConfiguration.Properties, true);
 
-			throw new NotImplementedException();
+			return new ShardedSessionFactoryImpl(
+				sessionFactories, 
+				shardStrategyFactory, 
+				classesWithoutTopLevelSaveSupport, 
+				doFullCrossShardRelationshipChecking);
 		}
 
 		private ISessionFactoryImplementor BuildSessionFactory()

@@ -7,7 +7,7 @@ namespace NHibernate.Shards.LoadBalance
 	/// </summary>
 	public abstract class BaseShardLoadBalancer : BaseHasShardIdList , IShardLoadBalancer
 	{
-		protected BaseShardLoadBalancer(IList<ShardId> shardIds) : base(shardIds)
+		protected BaseShardLoadBalancer(ICollection<ShardId> shardIds): base(shardIds)
 		{
 		}
 

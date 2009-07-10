@@ -31,7 +31,7 @@ namespace NHibernate.Shards.Demo
 		{
 			IList<IShardConfiguration> shardConfigs = PrepareConfiguration();
 			CreateSchema(shardConfigs);
-			//sessionFactory = CreateSessionFactory(shardConfigs);
+			sessionFactory = CreateSessionFactory(shardConfigs);
 
 			//AddData();
 
@@ -49,6 +49,8 @@ namespace NHibernate.Shards.Demo
 			//{
 			//    session.Close();
 			//}
+			
+			sessionFactory.Dispose();
 			Console.WriteLine("Done.");
 			Console.ReadKey(true);
 		}
@@ -152,7 +154,7 @@ namespace NHibernate.Shards.Demo
 	{
 		#region IShardStrategyFactory Members
 
-		public IShardStrategy NewShardStrategy(IList<ShardId> shardIds)
+		public IShardStrategy NewShardStrategy(ICollection<ShardId> shardIds)
 		{
 			var loadBalancer = new RoundRobinShardLoadBalancer(shardIds);
 			var pss = new RoundRobinShardSelectionStrategy(loadBalancer);

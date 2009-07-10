@@ -18,7 +18,7 @@ namespace NHibernate.Shards.LoadBalance
 		/// Construct a RoundRobinShardLoadBalancer
 		/// </summary>
 		/// <param name="shardIds">the ShardIds that we're balancing across</param>
-		public RoundRobinShardLoadBalancer(IList<ShardId> shardIds) : base(shardIds)
+		public RoundRobinShardLoadBalancer(ICollection<ShardId> shardIds) : base(shardIds)
 		{
 		}
 

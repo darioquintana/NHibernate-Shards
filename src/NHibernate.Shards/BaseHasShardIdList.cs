@@ -15,7 +15,7 @@ namespace NHibernate.Shards
 		/// </summary>
 		protected readonly IList<ShardId> shardIds;
 
-		protected BaseHasShardIdList(IList<ShardId> shardIds)
+		protected BaseHasShardIdList(ICollection<ShardId> shardIds)
 		{
 			Preconditions.CheckNotNull(shardIds);
 			Preconditions.CheckArgument(!(shardIds.Count == 0)); //not empty

@@ -5,7 +5,7 @@ namespace NHibernate.Shards.Strategy.Resolution
 {
 	public class AllShardsShardResolutionStrategy : BaseShardResolutionStrategy
 	{
-		public AllShardsShardResolutionStrategy(IList<ShardId> shardIds) : base(shardIds)
+		public AllShardsShardResolutionStrategy(ICollection<ShardId> shardIds) : base(shardIds)
 		{
 		}
 
