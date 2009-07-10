@@ -1,13 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<hibernate-mapping package="org.hibernate.shards.example.model">
-    <class name="WeatherReport" table="WEATHER_REPORT">
-        <id name="reportId" column="REPORT_ID">
-            <generator class="native"/>
-        </id>
-        <property name="continent" column="CONTINENT"/>
-        <property name="latitude" column="LATITUDE"/>
-        <property name="longitude" column="LONGITUDE"/>
-        <property name="temperature" column="TEMPERATURE"/>
-        <property name="reportTime" type="timestamp" column="REPORT_TIME"/>
-    </class>
+<hibernate-mapping xmlns="urn:nhibernate-mapping-2.2"
+                   assembly="NHibernate.Shards.Test"
+                   namespace="NHibernate.Shards.Test.Example">
+                   
+	<class name="WeatherReport" table="WEATHER_REPORT">
+		<id name="ReportId" column="REPORT_ID">
+			<generator class="native"/>
+		</id>
+		<property name="Continent" column="CONTINENT"/>
+		<property name="Latitude" column="LATITUDE"/>
+		<property name="Longitude" column="LONGITUDE"/>
+		<property name="Temperature" column="TEMPERATURE"/>
+		<property name="ReportTime" type="timestamp" column="REPORT_TIME"/>
+	</class>
 </hibernate-mapping>

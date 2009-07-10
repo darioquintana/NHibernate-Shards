@@ -7,8 +7,8 @@
         <property name="connection.connection_string">Server=localhost;initial catalog=nhibernate;User Id=;Password=</property>
         <property name="show_sql">false</property>
         <property name="dialect">NHibernate.Dialect.MsSql2005Dialect</property>
-        <property name="hibernate.connection.shard_id">0</property>
-        <property name="hibernate.shard.enable_cross_shard_relationship_checks">true</property>
+        <!--<property name="hibernate.connection.shard_id">0</property>
+        <property name="hibernate.shard.enable_cross_shard_relationship_checks">true</property>-->
         <!-- mapping files -->
         <mapping resource="NHibernate.Shards.Test.Example.WeatherReport" assembly="NHibernate.Shards.Test.Example" />
     </session-factory>
