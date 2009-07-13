@@ -9,6 +9,7 @@ using NHibernate.Proxy;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Strategy.Selection;
+using NHibernate.Shards.Transaction;
 using NHibernate.Shards.Util;
 using NHibernate.Stat;
 using NHibernate.Type;
@@ -260,7 +261,15 @@ namespace NHibernate.Shards.Session
 		/// <returns>The connection provided by the application or <see langword="null" /></returns>
 		public IDbConnection Disconnect()
 		{
-			throw new NotImplementedException();
+            foreach (IShard shard in shards)
+            {
+                if (shard.Session != null)
+                {
+                    ISession session = shard.Session;
+                    session.Disconnect();
+                }
+            }
+            return null;
 		}
 
 		/// <summary>
@@ -739,6 +748,7 @@ namespace NHibernate.Shards.Session
 		/// <param name="obj">The instance to be removed</param>
 		public void Delete(object obj)
 		{
+             //applyDeleteOperation(SIMPLE_DELETE_OPERATION, object);
 			throw new NotImplementedException();
 		}
 
@@ -1014,8 +1024,27 @@ namespace NHibernate.Shards.Session
 		/// <returns>A transaction instance</returns>
 		public ITransaction BeginTransaction()
 		{
-			throw new NotImplementedException();
+            ErrorIfClosed();
+            ITransaction result = GetTransaction();
+            result.Begin();
+            return result;
 		}
+        public ITransaction GetTransaction()
+        {
+            ErrorIfClosed();
+            if (transaction == null)
+            {
+                transaction = new ShardedTransactionImpl(this);
+            }
+            return transaction;
+        }
+        void ErrorIfClosed()
+        {
+            if (closed)
+            {
+                throw new SessionException("Session is closed!");
+            }
+        }
 
 		/// <summary>
 		/// Begin a transaction with the specified <c>isolationLevel</c>
@@ -1423,7 +1452,15 @@ namespace NHibernate.Shards.Session
 
 		private IDictionary<ShardId, IShard> BuildShardIdsToShardsMap()
 		{
-			throw new NotImplementedException();
+		    var map = new Dictionary<ShardId, IShard>();
+		    foreach (IShard shard in shards)
+		    {
+		        foreach (ShardId shardId in shard.ShardIds)
+		        {
+                    map.Add(shardId, shard);
+		        }
+		    }
+		    return map;
 		}
 
 		private static List<IShard> BuildShardListFromSessionFactoryShardIdMap(
@@ -1432,15 +1469,27 @@ namespace NHibernate.Shards.Session
 			IShardIdResolver shardIdResolver,
 			IInterceptor interceptor)
 		{
-			foreach (var entry in sessionFactoryShardIdMap)
+		    var shardList = new List<IShard>(); 
+		    foreach (var entry in sessionFactoryShardIdMap)
 			{
-
+                //Pair<InterceptorList, SetSessionOnRequiresSessionEvent> pair =
+                //buildInterceptorList(
+                //interceptor,
+                //shardIdResolver,
+                //checkAllAssociatedObjectsForDifferentShards);
+                //Shard shard = new ShardImpl(entry.getValue(), entry.getKey(), pair.first);
+                //shardList.add(shard);
+                //if (pair.second != null)
+                //{
+                //    shard.addOpenSessionEvent(pair.second);
+                //}   
 			}
-
-			throw new NotImplementedException();
+            /////
+			//throw new NotImplementedException();
+            return shardList;
 		}
 
-		public KeyValuePair<InterceptorList, SetSessionOnRequiresSessionEvent> BuildInterceptorList(IInterceptor providedInterceptor, IShardIdResolver shardIdResolver, bool checkAllAssociatedObjectsForDifferentShards)
+	    public KeyValuePair<InterceptorList, SetSessionOnRequiresSessionEvent> BuildInterceptorList(IInterceptor providedInterceptor, IShardIdResolver shardIdResolver, bool checkAllAssociatedObjectsForDifferentShards)
 		{
 			throw new NotImplementedException();
 		}
