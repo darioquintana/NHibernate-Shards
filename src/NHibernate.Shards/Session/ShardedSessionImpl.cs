@@ -644,16 +644,54 @@ namespace NHibernate.Shards.Session
 		    ShardId shardId = GetShardIdForObject(obj);
 		    if (shardId == null)
 		    {
-		        //shardId = SelectShardIdForNewObject(obj);
+		        shardId = SelectShardIdForNewObject(obj);
 		    }
 		    Preconditions.CheckNotNull(shardId);
-		    //SetCurrentSubgraphShardId(shardId);
+		    SetCurrentSubgraphShardId(shardId);
 		    log.Debug(String.Format("Saving object of type %s to shard %s", obj.GetType(), shardId));
 		    return shardIdsToShards[shardId].EstablishSession().Save(entityName, obj);
     
 		}
         
-		/// <summary>
+        public static void SetCurrentSubgraphShardId(ShardId shardId)
+        {
+            //currentSubgraphShardId.set(shardId);
+        }
+        
+        ShardId SelectShardIdForNewObject(object obj)
+        {
+            if (lockedShardId != null)
+            {
+                return lockedShardId;
+            }
+            ShardId shardId;
+            /*
+             * Someone is trying to save this object, and that's wonderful, but if
+             * this object references or is referenced by any other objects that have already been
+             * associated with a session it's important that this object end up
+             * associated with the same session.  In order to make sure that happens,
+             * we're going to look at the metadata for this object and see what
+             * references we have, and then use those to determine the proper shard.
+             * If we can't find any references we'll leave it up to the shard selection
+             * strategy.
+             */
+            //shardId = GetShardIdOfRelatedObject(obj);
+            //if (shardId == null)
+            //{
+            //    checkForUnsupportedTopLevelSave(obj.getClass());
+            //    shardId = shardStrategy.getShardSelectionStrategy().selectShardIdForNewObject(obj);
+            //}
+            //// lock has been requested but shard has not yet been selected - lock it in
+            //if (lockedShard)
+            //{
+            //    lockedShardId = shardId;
+            //}
+            //log.Debug(String.Format("Selected shard %d for object of type %s", shardId.getId(), obj.getClass().getName()));
+            //return shardId;
+            throw new NotImplementedException();
+        }
+
+ 		/// <summary>
 		/// Persist the given transient instance, using the given identifier.
 		/// </summary>
 		/// <param name="obj">A transient instance of a persistent class</param>
