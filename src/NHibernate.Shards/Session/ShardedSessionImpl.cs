@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using Iesi.Collections.Generic;
 using log4net;
 using NHibernate.Engine;
+using NHibernate.Id;
 using NHibernate.Proxy;
 using NHibernate.Shards.Engine;
+using NHibernate.Shards.Id;
 using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Strategy.Selection;
 using NHibernate.Shards.Transaction;
@@ -547,12 +550,12 @@ namespace NHibernate.Shards.Session
 		/// <param name="id">A valid identifier of an existing persistent instance of the class</param>
 		/// <param name="lockMode">The lock level</param>
 		/// <returns>the persistent instance</returns>
-		public T Load<T>(object id, LockMode lockMode)
+        public T Load<T>(object id, LockMode lockMode)
 		{
-			throw new NotImplementedException();
+            throw new NotImplementedException();
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Return the persistent instance of the given entity class with the given identifier,
 		/// assuming that the instance exists.
 		/// </summary>
@@ -566,12 +569,26 @@ namespace NHibernate.Shards.Session
 		/// <returns>The persistent instance or proxy</returns>
 		public T Load<T>(object id)
 		{
-			throw new NotImplementedException();
+            throw new NotImplementedException();
 		}
 
 		public object Load(string entityName, object id)
 		{
-			throw new NotImplementedException();
+            List<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(new 
+                                                                                    ShardResolutionStrategyDataImpl(entityName, id));
+            if (shardIds.Count == 1)
+            {
+                return shardIdsToShards[shardIds[0]].EstablishSession().Load(entityName, id);
+            }
+            else
+            {
+                Object result = Get(entityName, id);
+                if (result == null)
+                {
+                    shardedSessionFactory.EntityNotFoundDelegate.HandleEntityNotFound(entityName, id);
+                }
+                return result;
+            } 
 		}
 
 		/// <summary>
@@ -623,9 +640,19 @@ namespace NHibernate.Shards.Session
 
 		public object Save(string entityName, object obj)
 		{
-			throw new NotImplementedException();
+		    // TODO: what if we have detached instance?
+		    ShardId shardId = GetShardIdForObject(obj);
+		    if (shardId == null)
+		    {
+		        //shardId = SelectShardIdForNewObject(obj);
+		    }
+		    Preconditions.CheckNotNull(shardId);
+		    //SetCurrentSubgraphShardId(shardId);
+		    log.Debug(String.Format("Saving object of type %s to shard %s", obj.GetType(), shardId));
+		    return shardIdsToShards[shardId].EstablishSession().Save(entityName, obj);
+    
 		}
-
+        
 		/// <summary>
 		/// Persist the given transient instance, using the given identifier.
 		/// </summary>
@@ -1374,14 +1401,19 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public IList<IShard> Shards
 		{
-			get { throw new NotImplementedException(); }
+		    get { return shards.AsReadOnly(); } //Collections.unmodifiableList(shards);
 		}
-
-		#endregion
+        
+	    #endregion
 
 		private List<ShardId> SelectShardIdsFromShardResolutionStrategyData(ShardResolutionStrategyDataImpl srsd)
 		{
-			throw new NotImplementedException();
+            IIdentifierGenerator idGenerator = shardedSessionFactory.GetIdentifierGenerator(srsd.EntityName);
+            if ((idGenerator is IShardEncodingIdentifierGenerator) && (srsd.Id != null))
+            {
+                //return Collections.singletonList(((IShardEncodingIdentifierGenerator) idGenerator).ExtractShardId(srsd.Id));
+            }
+            return shardStrategy.ShardResolutionStrategy.SelectShardIdsFromShardResolutionStrategyData(srsd) as List<ShardId>;
 		}
 
 		private object ApplyGetOperation(IShardOperation<object> shardOp, ShardResolutionStrategyDataImpl srsd)
