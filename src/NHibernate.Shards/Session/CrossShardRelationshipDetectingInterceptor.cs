@@ -8,7 +8,7 @@ namespace NHibernate.Shards.Session
 {
 	public class CrossShardRelationshipDetectingInterceptor : EmptyInterceptor
 	{
-		private static readonly ILog log = LogManager.GetLogger(typeof (CrossShardRelationshipDetectingInterceptor));
+		private static readonly ILog Log = LogManager.GetLogger(typeof (CrossShardRelationshipDetectingInterceptor));
 		private readonly IShardIdResolver shardIdResolver;
 
 		public CrossShardRelationshipDetectingInterceptor(IShardIdResolver shardIdResolver)
@@ -32,23 +32,21 @@ namespace NHibernate.Shards.Session
 			throw new NotImplementedException();
 		}
 
-		static List<KeyValuePair<IType, object>> BuildListOfAssociations(IType[] types, object[] currentState)
+	    public static List<KeyValuePair<IType, object>> BuildListOfAssociations(IType[] types, object[] currentState)
 		{
-			// we assume types and current state are the same length
-			//Preconditions.CheckState(types.Length == currentState.Length);
-
-			//List<KeyValuePair<IType, object>> associationList = new List<KeyValuePair<IType, object>>();
-
-			//for (int i = 0; i < types.Length; i++)
-			//{
-			//    if (types[i] != null &&
-			//        currentState[i] != null &&
-			//        types[i].IsAssociationType)
-			//    {
-			//        associationList.Add(KeyValuePair.of(types[i], currentState[i]));
-			//    }
-			//}
-			return null;
+            // we assume types and current state are the same length
+            Preconditions.CheckState(types.Length == currentState.Length);
+            var associationList = new List<KeyValuePair<IType, object>>();
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (types[i] != null &&
+                    currentState[i] != null &&
+                    types[i].IsAssociationType)
+                {
+                    associationList.Add(new KeyValuePair<IType, object>());//Pair.of(types[i], currentState[i])
+                }
+            }
+            return associationList;
 		}
 
 		private ShardId GetAndRefreshExpectedShardId(object @object)
@@ -64,5 +62,6 @@ namespace NHibernate.Shards.Session
 			}
 			return expectedShardId;
 		}
+
 	}
 }

@@ -137,6 +137,12 @@
     <Compile Include="Query\NamedQueryFactoryImpl.cs" />
     <Compile Include="Query\QueryId.cs" />
     <Compile Include="Query\IShardedQuery.cs" />
+    <Compile Include="Query\SetBigIntegerEvent.cs" />
+    <Compile Include="Query\SetBinaryEvent.cs" />
+    <Compile Include="Query\SetBooleanEvent.cs" />
+    <Compile Include="Query\SetCacheableEvent.cs" />
+    <Compile Include="Query\SetCacheModeEvent.cs" />
+    <Compile Include="Query\SetCacheRegionEvent.cs" />
     <Compile Include="Query\ShardedQueryImpl.cs" />
     <Compile Include="Session\BaseStatefulInterceptorFactory.cs" />
     <Compile Include="Session\CrossShardRelationshipDetectingInterceptor.cs" />
