@@ -137,6 +137,7 @@
     <Compile Include="Query\NamedQueryFactoryImpl.cs" />
     <Compile Include="Query\QueryId.cs" />
     <Compile Include="Query\IShardedQuery.cs" />
+    <Compile Include="Query\QueryResult.cs" />
     <Compile Include="Query\SetBigIntegerEvent.cs" />
     <Compile Include="Query\SetBinaryEvent.cs" />
     <Compile Include="Query\SetBooleanEvent.cs" />

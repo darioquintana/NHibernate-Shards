@@ -696,7 +696,7 @@ namespace NHibernate.Shards.Session
         ShardId GetShardIdOfRelatedObject(object obj)
         {
             IClassMetadata cmd = GetClassMetadata(obj.GetType());
-            var types = cmd.GetPropertyValues(null, EntityMode.Poco); // this wasn't in java null, EntityMode.Poco
+            var types = cmd.GetPropertyValues(obj, EntityMode.Poco); // this wasn't in java null, EntityMode.Poco
             // TODO() fix hard-coded entity mode
             object[] values = cmd.GetPropertyValues(obj, EntityMode.Poco);
             ShardId shardId = null;
