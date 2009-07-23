@@ -141,6 +141,7 @@
     <Compile Include="Query\SetBigIntegerEvent.cs" />
     <Compile Include="Query\SetBinaryEvent.cs" />
     <Compile Include="Query\SetBooleanEvent.cs" />
+    <Compile Include="Query\SetByteEvent.cs" />
     <Compile Include="Query\SetCacheableEvent.cs" />
     <Compile Include="Query\SetCacheModeEvent.cs" />
     <Compile Include="Query\SetCacheRegionEvent.cs" />

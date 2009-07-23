@@ -123,7 +123,7 @@ namespace NHibernate.Shards
 				sessionFactories.Add(BuildSessionFactory(), virtualShardIds);
 			}
 			bool doFullCrossShardRelationshipChecking =
-				PropertiesHelper.GetBoolean(ShardedEnvironment.CHECK_ALL_ASSOCIATED_OBJECTS_FOR_DIFFERENT_SHARDS,
+				PropertiesHelper.GetBoolean(ShardedEnvironment.CheckAllAssociatedObjectsForDifferentShards,
 				                            prototypeConfiguration.Properties, true);
 
 			return new ShardedSessionFactoryImpl(

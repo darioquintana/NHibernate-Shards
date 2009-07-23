@@ -16,7 +16,7 @@ namespace NHibernate.Shards.Cfg
 		/// performance but will prevent the programmer from ending up with the
 		/// same entity on multiple shards, which is bad (at least in the current version). 
 		/// </summary>
-		public static readonly string CHECK_ALL_ASSOCIATED_OBJECTS_FOR_DIFFERENT_SHARDS = "hibernate.shard.enable_cross_shard_relationship_checks";
+		public static readonly string CheckAllAssociatedObjectsForDifferentShards = "hibernate.shard.enable_cross_shard_relationship_checks";
 
 		/// <summary>
 		/// Unique identifier for a shard.  Must be an Integer.
