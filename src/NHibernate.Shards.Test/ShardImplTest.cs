@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace NHibernate.Shards.Test
 {
-    [TestFixture]
+    [TestFixture,Ignore("Not implemented yet")]
     public class ShardImplTest : TestFixtureBaseWithMock
     {
           [Test]

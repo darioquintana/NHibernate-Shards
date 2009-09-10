@@ -7,7 +7,7 @@ namespace NHibernate.Shards.Test.Criteria
 	[TestFixture]
 	public class AddOrderEventTest : TestFixtureBaseWithMock
 	{
-		[Test]
+		[Test, Ignore]
 		public void TestOnOpenSession()
 		{
 			var @event = new AddOrderEvent(null);
