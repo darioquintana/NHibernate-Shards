@@ -6,7 +6,7 @@
 
 	<class name="WeatherReport">
 		<id name="ReportId">
-			<generator class="native"/>
+			<generator class="NHibernate.Shards.Id.ShardedUUIDGenerator, NHibernate.Shards"/>
 		</id>
 		<property name="Continent"/>
 		<property name="Latitude" />

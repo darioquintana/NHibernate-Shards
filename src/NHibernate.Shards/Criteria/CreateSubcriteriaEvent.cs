@@ -1,25 +1,36 @@
-﻿namespace NHibernate.Shards.Criteria
+﻿using System.Collections.Generic;
+
+namespace NHibernate.Shards.Criteria
 {
-	internal class CreateSubcriteriaEvent : ICriteriaEvent
+	/**
+	 * Event that allows a Subcriteria to be lazily added to a Criteria.
+	 *
+	 * @author maxr@google.com (Max Ross)
+	 */
+	public class CreateSubcriteriaEvent : ICriteriaEvent
 	{
-		private readonly ISubCriteriaFactory subcriteriaFactory;
-		private readonly ShardedSubcriteriaImpl.ISubcriteriaRegistrar subcriteriaRegistrar;
+		private readonly ISubcriteriaFactory subcriteriaFactory;
+		private readonly ISubcriteriaRegistrar subCriteriaRegistrar;
+		private readonly IDictionary<IShard, ICriteria> shardToCriteriaMap;
+		private readonly IDictionary<IShard, IList<ICriteriaEvent>> shardToCriteriaEventListMap;
 
-		public ISubCriteriaFactory SubcriteriaFactory
+		public CreateSubcriteriaEvent(ISubcriteriaFactory subCriteriaFactory, ISubcriteriaRegistrar subCriteriaRegistrar,
+		                              IDictionary<IShard, ICriteria> shardToCriteriaMap,
+		                              IDictionary<IShard, IList<ICriteriaEvent>> shardToCriteriaEventListMap)
 		{
-			get { return subcriteriaFactory; }
+            this.subcriteriaFactory = subCriteriaFactory;
+			this.subCriteriaRegistrar = subCriteriaRegistrar;
+			this.shardToCriteriaMap = shardToCriteriaMap;
+			this.shardToCriteriaEventListMap = shardToCriteriaEventListMap;
 		}
 
-		public CreateSubcriteriaEvent(ISubCriteriaFactory subcriteriaFactory,
-		                              ShardedSubcriteriaImpl.ISubcriteriaRegistrar subcriteriaRegistrar)
-		{
-			this.subcriteriaFactory = subcriteriaFactory;
-			this.subcriteriaRegistrar = subcriteriaRegistrar;
-		}
+		#region Implementation of ICriteriaEvent
 
 		public void OnEvent(ICriteria crit)
 		{
-			subcriteriaRegistrar.EstablishSubcriteria(crit, subcriteriaFactory);
+			subCriteriaRegistrar.EstablishSubCriteria(crit, subcriteriaFactory, shardToCriteriaMap, shardToCriteriaEventListMap);
 		}
+
+		#endregion
 	}
 }

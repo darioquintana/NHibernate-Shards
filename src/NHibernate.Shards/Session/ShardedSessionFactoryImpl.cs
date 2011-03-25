@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
 using Iesi.Collections;
@@ -21,6 +22,7 @@ using NHibernate.Metadata;
 using NHibernate.Persister.Collection;
 using NHibernate.Persister.Entity;
 using NHibernate.Proxy;
+using NHibernate.Shards.Criteria;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Id;
 using NHibernate.Shards.Strategy;
@@ -36,38 +38,34 @@ namespace NHibernate.Shards.Session
 		// the id of the control shard
 		private static readonly int CONTROL_SHARD_ID = 0;
 
-		private readonly bool checkAllAssociatedObjectsForDifferentShards;
-
 		// the SessionFactoryImplementor objects to which we delegate
+		private readonly IList<ISessionFactoryImplementor> sessionFactories;
 
 		// All classes that cannot be directly saved
 		private readonly Set<System.Type> classesWithoutTopLevelSaveSupport;
 
 		// map of SessionFactories used by this ShardedSessionFactory (might be a subset of all SessionFactories)
+		private readonly Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap;
+
+		// map of all existing SessionFactories, used when creating a new ShardedSessionFactory for some subset of shards
+		private readonly IDictionary<ISessionFactoryImplementor, Set<ShardId>> fullSessionFactoryShardIdMap;
+
+		// The strategy we use for all shard-related operations
+		private readonly IShardStrategy shardStrategy;
 
 		// Reference to the SessionFactory we use for functionality that expects
 		// data to live in a single, well-known location (like distributed sequences)
 		private readonly ISessionFactoryImplementor controlSessionFactory;
 
-		private readonly Dictionary<ISessionFactoryImplementor, Set<ShardId>> fullSessionFactoryShardIdMap;
-
 		// flag to indicate whether we should do full cross-shard relationship
 		// checking (very slow)
+		private readonly bool checkAllAssociatedObjectsForDifferentShards;
 
-		//TODO
 		// Statistics aggregated across all contained SessionFactories
+		private readonly IStatistics statistics = new StatisticsImpl();
 
 		// our lovely logger
-		private readonly ILog log = LogManager.GetLogger(typeof (ShardedSessionFactoryImpl));
-
-		private readonly IList<ISessionFactoryImplementor> sessionFactories;
-
-		private readonly Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap;
-
-		private readonly IShardStrategy shardStrategy;
-
-		//TODO: to enable statistics see this
-		private readonly IStatistics statistics; // = new StatisticsImpl()
+		private readonly ILog log = LogManager.GetLogger(typeof(ShardedSessionFactoryImpl));
 
 		#region Ctor
 
@@ -87,9 +85,9 @@ namespace NHibernate.Shards.Session
 		///  whether or not we do full cross-shard relationshp checking (very slow)</param>
 		public ShardedSessionFactoryImpl(
 			ICollection<ShardId> shardIds,
-			Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap,
+			IDictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap,
 			IShardStrategyFactory shardStrategyFactory,
-			Set<System.Type> classesWithoutTopLevelSaveSupport,
+			ISet<System.Type> classesWithoutTopLevelSaveSupport,
 			bool checkAllAssociatedObjectsForDifferentShards)
 		{
 			Preconditions.CheckNotNull(sessionFactoryShardIdMap);
@@ -161,30 +159,35 @@ namespace NHibernate.Shards.Session
 		/// <param name="checkAllAssociatedObjectsForDifferentShards">Flag that controls
 		///whether or not we do full cross-shard relationshp checking (very slow)</param>
 		public ShardedSessionFactoryImpl(
-			Dictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap,
+			IDictionary<ISessionFactoryImplementor, Set<ShardId>> sessionFactoryShardIdMap,
 			IShardStrategyFactory shardStrategyFactory,
-			Set<System.Type> classesWithoutTopLevelSaveSupport,
+			ISet<System.Type> classesWithoutTopLevelSaveSupport,
 			bool checkAllAssociatedObjectsForDifferentShards)
 			: this(new List<ShardId>(sessionFactoryShardIdMap.Values.Concatenation().Cast<ShardId>()),
-			       sessionFactoryShardIdMap,
-			       shardStrategyFactory,
-			       classesWithoutTopLevelSaveSupport,
-			       checkAllAssociatedObjectsForDifferentShards)
+				   sessionFactoryShardIdMap,
+				   shardStrategyFactory,
+				   classesWithoutTopLevelSaveSupport,
+				   checkAllAssociatedObjectsForDifferentShards)
 		{
 		}
 
+		/**
+		 * Sets the {@link ControlSessionProvider} on id generators that implement the
+		 * {@link GeneratorRequiringControlSessionProvider} interface
+		 */
 		private void SetupIdGenerators()
 		{
 			foreach (ISessionFactoryImplementor sfi in sessionFactories)
 			{
-				foreach (object obj in sfi.GetAllClassMetadata().Values)
+				foreach (IClassMetadata obj in sfi.GetAllClassMetadata().Values)
 				{
-					var cmd = (IClassMetadata) obj;
-					IEntityPersister ep = null; //= sfi.GetEntityPersister(cmd.EntityName);
-					//TODO: FIXME
+					var cmd = obj;
+					IEntityPersister ep = sfi.GetEntityPersister(cmd.EntityName);					
 
 					if (ep is IGeneratorRequiringControlSessionProvider)
-						((IGeneratorRequiringControlSessionProvider) ep.IdentifierGenerator).SetControlSessionProvider(this);
+					{
+						((IGeneratorRequiringControlSessionProvider)ep.IdentifierGenerator).SetControlSessionProvider(this);
+					}
 				}
 			}
 		}
@@ -297,7 +300,7 @@ namespace NHibernate.Shards.Session
 		{
 			Preconditions.CheckState(controlSessionFactory != null);
 			ISession session = controlSessionFactory.OpenSession();
-			return (ISessionImplementor) session;
+			return (ISessionImplementor)session;
 		}
 
 		#endregion
@@ -311,7 +314,7 @@ namespace NHibernate.Shards.Session
 
 		public bool ContainsFactory(ISessionFactoryImplementor factory)
 		{
-			throw new NotImplementedException();
+			return sessionFactories.Contains(factory);
 		}
 
 		/// <summary>
@@ -319,7 +322,7 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public IList<ISessionFactory> SessionFactories
 		{
-			get { throw new NotImplementedException(); }
+            get { return new ReadOnlyCollection<ISessionFactory>((IList<ISessionFactory>) this.sessionFactories); }
 		}
 
 		/// <summary>
@@ -337,7 +340,13 @@ namespace NHibernate.Shards.Session
 		/// <returns>specially configured ShardedSessionFactory</returns>
 		public IShardedSessionFactory GetSessionFactory(IList<ShardId> shardIds, IShardStrategyFactory shardStrategyFactory)
 		{
-			throw new NotImplementedException();
+			return new SubsetShardedSessionFactoryImpl(
+				shardIds,
+				fullSessionFactoryShardIdMap,
+				shardStrategyFactory,
+				classesWithoutTopLevelSaveSupport,
+				checkAllAssociatedObjectsForDifferentShards);
+
 		}
 
 		/// <summary>
@@ -349,7 +358,12 @@ namespace NHibernate.Shards.Session
 		/// Throws <see cref="HibernateException"/>
 		IShardedSession IShardedSessionFactory.OpenSession(IInterceptor interceptor)
 		{
-			throw new NotImplementedException();
+			return new ShardedSessionImpl(
+				interceptor,
+				this,
+				shardStrategy,
+				classesWithoutTopLevelSaveSupport,
+				checkAllAssociatedObjectsForDifferentShards);
 		}
 
 		/// <summary>
@@ -360,9 +374,9 @@ namespace NHibernate.Shards.Session
 		public IShardedSession OpenSession()
 		{
 			return new ShardedSessionImpl(this,
-			                              shardStrategy,
-			                              classesWithoutTopLevelSaveSupport,
-			                              checkAllAssociatedObjectsForDifferentShards);
+										  shardStrategy,
+										  classesWithoutTopLevelSaveSupport,
+										  checkAllAssociatedObjectsForDifferentShards);
 		}
 
 		/// <summary>
@@ -378,7 +392,7 @@ namespace NHibernate.Shards.Session
 		/// </remarks>
 		public ISession OpenSession(IDbConnection conn)
 		{
-			throw new NotSupportedException();
+			throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
 		}
 
 		/// <summary>
@@ -392,10 +406,10 @@ namespace NHibernate.Shards.Session
 		{
 			return
 				new ShardedSessionImpl(interceptor,
-				                       this,
-				                       shardStrategy,
-				                       classesWithoutTopLevelSaveSupport,
-				                       checkAllAssociatedObjectsForDifferentShards);
+									   this,
+									   shardStrategy,
+									   classesWithoutTopLevelSaveSupport,
+									   checkAllAssociatedObjectsForDifferentShards);
 		}
 
 		public ISession OpenSession(IDbConnection conn, IInterceptor interceptor)
@@ -410,9 +424,9 @@ namespace NHibernate.Shards.Session
 		ISession ISessionFactory.OpenSession()
 		{
 			return new ShardedSessionImpl(this,
-			                              shardStrategy,
-			                              classesWithoutTopLevelSaveSupport,
-			                              checkAllAssociatedObjectsForDifferentShards);
+										  shardStrategy,
+										  classesWithoutTopLevelSaveSupport,
+										  checkAllAssociatedObjectsForDifferentShards);
 		}
 
 		/// <summary>
@@ -422,12 +436,16 @@ namespace NHibernate.Shards.Session
 		/// <returns></returns>
 		public IClassMetadata GetClassMetadata(System.Type persistentType)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetClassMetadata(persistentType);
 		}
 
 		public IClassMetadata GetClassMetadata(string entityName)
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.GetClassMetadata(entityName);
 		}
 
 		/// <summary>
@@ -437,17 +455,23 @@ namespace NHibernate.Shards.Session
 		/// <returns></returns>
 		public ICollectionMetadata GetCollectionMetadata(string roleName)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetCollectionMetadata(roleName);
 		}
 
 		IDictionary<string, IClassMetadata> ISessionFactory.GetAllClassMetadata()
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+		    return AnyFactory.GetAllClassMetadata();
 		}
 
 		IDictionary<string, ICollectionMetadata> ISessionFactory.GetAllCollectionMetadata()
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+		    return AnyFactory.GetAllCollectionMetadata();
 		}
 
 		/// <summary>
@@ -456,7 +480,7 @@ namespace NHibernate.Shards.Session
 		/// to ensure that there are no open <c>Session</c>s before calling
 		/// <c>close()</c>. 
 		/// </summary>
-		public void Close()
+		public virtual void Close()
 		{
 			sessionFactories.Each(sf => sf.Close());
 
@@ -519,7 +543,10 @@ namespace NHibernate.Shards.Session
 
 		public void EvictEntity(string entityName, object id)
 		{
-			throw new NotImplementedException();
+			foreach (ISessionFactory sf in sessionFactories)
+			{
+				sf.EvictEntity(entityName, id);
+			}
 		}
 
 		/// <summary>
@@ -579,6 +606,8 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public IConnectionProvider ConnectionProvider
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.ConnectionProvider; }
 		}
 
@@ -592,12 +621,16 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public Dialect.Dialect Dialect
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.Dialect; }
 		}
 
 		public IInterceptor Interceptor
 		{
-			get { throw new NotImplementedException(); }
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			get { return AnyFactory.Interceptor; }
 		}
 
 		public bool IsClosed
@@ -620,6 +653,8 @@ namespace NHibernate.Shards.Session
 		/// <return>The set of filter names.</return>
 		public ICollection<string> DefinedFilterNames
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.DefinedFilterNames; }
 		}
 
@@ -630,11 +665,15 @@ namespace NHibernate.Shards.Session
 		/// <return>The filter definition.</return>
 		public FilterDefinition GetFilterDefinition(string filterName)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetFilterDefinition(filterName);
 		}
 
 		public Settings Settings
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.Settings; }
 		}
 
@@ -649,7 +688,7 @@ namespace NHibernate.Shards.Session
 		/// <summary> Get a new stateless session.</summary>
 		public IStatelessSession OpenStatelessSession()
 		{
-			throw new NotImplementedException();
+		    throw new NotSupportedException();
 		}
 
 		/// <summary> Get a new stateless session for the given ADO.NET connection.</summary>
@@ -670,31 +709,23 @@ namespace NHibernate.Shards.Session
 		///<filterpriority>2</filterpriority>
 		public void Dispose()
 		{
-			try
+			// try to be helpful to apps that don't clean up properly
+			if (!this.IsClosed)
 			{
-				// try to be helpful to apps that don't clean up properly
-				if (!IsClosed)
+				try
 				{
-					log.Warn("ShardedSessionFactoryImpl is being garbage collected but it was never properly closed.");
-					try
-					{
-						Close();
-					}
-					catch (Exception e)
-					{
-						log.Warn("Caught exception trying to close.", e);
-					}
+					this.Close();
 				}
-			}
-			finally
-			{
-				//base.Dispose();
+				catch (Exception e)
+				{
+					this.log.Warn("Caught exception trying to close.", e);
+				}
 			}
 		}
 
 		IDictionary<string, ICache> ISessionFactoryImplementor.GetAllSecondLevelCacheRegions()
 		{
-			throw new NotImplementedException();
+			return AnyFactory.GetAllSecondLevelCacheRegions();
 		}
 
 		/// <summary>
@@ -705,6 +736,8 @@ namespace NHibernate.Shards.Session
 		/// <exception cref="MappingException">If no <see cref="IEntityPersister"/> can be found.</exception>
 		public IEntityPersister GetEntityPersister(string className)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetEntityPersister(className);
 		}
 
@@ -715,6 +748,8 @@ namespace NHibernate.Shards.Session
 		/// <returns></returns>
 		public ICollectionPersister GetCollectionPersister(string role)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetCollectionPersister(role);
 		}
 
@@ -731,16 +766,20 @@ namespace NHibernate.Shards.Session
 		/// <summary> Get the return aliases of a query</summary>
 		public string[] GetReturnAliases(string queryString)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetReturnAliases(queryString);
 		}
 
 		/// <summary>
 		/// Get the names of all persistent classes that implement/extend the given interface/class
 		/// </summary>
-		/// <param name="clazz"></param>
+		/// <param name="className"></param>
 		/// <returns></returns>
 		public string[] GetImplementors(string className)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetImplementors(className);
 		}
 
@@ -751,14 +790,18 @@ namespace NHibernate.Shards.Session
 		/// <returns></returns>
 		public string GetImportedClassName(string name)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetImportedClassName(name);
-		}
+		}		
 
 		/// <summary>
 		/// Get the default query cache
 		/// </summary>
 		public IQueryCache QueryCache
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.QueryCache; }
 		}
 
@@ -771,6 +814,8 @@ namespace NHibernate.Shards.Session
 		/// region name</returns>
 		public IQueryCache GetQueryCache(string regionName)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetQueryCache(regionName);
 		}
 
@@ -781,26 +826,33 @@ namespace NHibernate.Shards.Session
 
 		public IIdentifierGenerator GetIdentifierGenerator(string rootEntityName)
 		{
-			throw new NotImplementedException();
+			// since all configs are same, we return any
+		    return AnyFactory.GetIdentifierGenerator(rootEntityName);
 		}
 
 		public ITransactionFactory TransactionFactory
 		{
-			get { throw new NotImplementedException(); }
+            get { return AnyFactory.TransactionFactory; }
 		}
 
 		public ISQLExceptionConverter SQLExceptionConverter
 		{
-			get { throw new NotImplementedException(); }
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+            get { return AnyFactory.SQLExceptionConverter; }
 		}
 
 		public SQLFunctionRegistry SQLFunctionRegistry
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.SQLFunctionRegistry; }
 		}
 
 		public IEntityNotFoundDelegate EntityNotFoundDelegate
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.EntityNotFoundDelegate; }
 		}
 
@@ -809,76 +861,108 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public ICurrentSessionContext CurrentSessionContext
 		{
-			get { throw new NotImplementedException(); }
+            get { return AnyFactory.CurrentSessionContext; }
 		}
 
+		/// <summary>
+		///  Unsupported.  This is a technical decision.  See <see cref="OpenSession(System.Data.IDbConnection)"/> for an explanation.
+		/// </summary>
+		/// <param name="connection"></param>
+		/// <param name="flushBeforeCompletionEnabled"></param>
+		/// <param name="autoCloseSessionEnabled"></param>
+		/// <param name="connectionReleaseMode"></param>
+		/// <returns></returns>
 		public ISession OpenSession(IDbConnection connection, bool flushBeforeCompletionEnabled, bool autoCloseSessionEnabled,
-		                            ConnectionReleaseMode connectionReleaseMode)
+									ConnectionReleaseMode connectionReleaseMode)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		ISet<string> ISessionFactoryImplementor.GetCollectionRolesByEntityParticipant(string entityName)
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.GetCollectionRolesByEntityParticipant(entityName);
 		}
 
 		public IEntityPersister TryGetEntityPersister(string entityName)
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.TryGetEntityPersister(entityName);
 		}
 
 		/// <summary> The cache of table update timestamps</summary>
 		public UpdateTimestampsCache UpdateTimestampsCache
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.UpdateTimestampsCache; }
 		}
 
 		/// <summary> Get a named second-level cache region</summary>
 		public ICache GetSecondLevelCacheRegion(string regionName)
 		{
-			return GetSecondLevelCacheRegion(regionName);
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.GetSecondLevelCacheRegion(regionName);
 		}
 
 		public NamedQueryDefinition GetNamedQuery(string queryName)
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.GetNamedQuery(queryName);
 		}
 
 		public NamedSQLQueryDefinition GetNamedSQLQuery(string queryName)
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.GetNamedSQLQuery(queryName);
 		}
 
 		/// <summary> Statistics SPI</summary>
 		public IStatisticsImplementor StatisticsImplementor
 		{
-			get { throw new NotImplementedException(); }
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+            get { return AnyFactory.StatisticsImplementor; }
 		}
 
 		public QueryPlanCache QueryPlanCache
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			get { return AnyFactory.QueryPlanCache; }
 		}
 
 		public IType GetIdentifierType(string className)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetIdentifierType(className);
 		}
 
 		public string GetIdentifierPropertyName(string className)
 		{
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
 			return AnyFactory.GetIdentifierPropertyName(className);
 		}
 
 		public IType GetReferencedPropertyType(string className, string propertyName)
 		{
-			return GetReferencedPropertyType(className, propertyName);
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.GetReferencedPropertyType(className, propertyName);
 		}
 
 		public bool HasNonIdentifierPropertyNamedId(string className)
 		{
-			throw new NotImplementedException();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return AnyFactory.HasNonIdentifierPropertyNamedId(className);
 		}
 
 		#endregion
@@ -899,8 +983,8 @@ namespace NHibernate.Shards.Session
 		/// <returns></returns>
 		public IDictionary GetAllClassMetadata()
 		{
-			throw new NotImplementedException();
-			//return AnyFactory.GetAllClassMetadata();
+			//throw new NotImplementedException();
+		    return (IDictionary) this.AnyFactory.GetAllClassMetadata();
 		}
 
 		/// <summary>
@@ -909,9 +993,8 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		/// <returns></returns>
 		public IDictionary GetAllCollectionMetadata()
-		{
-			throw new NotImplementedException();
-			//return AnyFactory.GetAllCollectionMetadata();
+		{		
+		    return (IDictionary) this.AnyFactory.GetAllCollectionMetadata();
 		}
 
 		/// <summary>
@@ -983,14 +1066,16 @@ namespace NHibernate.Shards.Session
 		/// </returns>
 		public ISet GetCollectionRolesByEntityParticipant(string entityName)
 		{
-			throw new NotImplementedException();
-			//return AnyFactory.GetCollectionRolesByEntityParticipant(entityName);
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return (ISet) this.AnyFactory.GetCollectionRolesByEntityParticipant(entityName);
 		}
 
 		public IDictionary GetAllSecondLevelCacheRegions()
 		{
-			throw new NotImplementedException();
-			//return AnyFactory.GetAllSecondLevelCacheRegions();
+			// assumption is that all session factories are configured the same way,
+			// so it doesn't matter which session factory answers this question
+			return (IDictionary) this.AnyFactory.GetAllSecondLevelCacheRegions();
 		}
 
 		public IQueryTranslator[] GetQuery(string queryString, bool shallow, IDictionary<string, IFilter> enabledFilters)

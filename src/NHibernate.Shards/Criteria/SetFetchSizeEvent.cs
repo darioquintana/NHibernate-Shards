@@ -1,9 +1,13 @@
-﻿
-
-namespace NHibernate.Shards.Criteria
+﻿namespace NHibernate.Shards.Criteria
 {
+	/**
+	 * Event that allows the fetch size of a {@link Criteria} to be set lazily.
+	 * @see Criteria#setFetchSize(int)
+	 *
+	 * @author maxr@google.com (Max Ross)
+	 */
 	public class SetFetchSizeEvent : ICriteriaEvent
-	{
+    {
 		// the fetchSize we'll set on the Criteria when the event fires.
 		private readonly int fetchSize;
 

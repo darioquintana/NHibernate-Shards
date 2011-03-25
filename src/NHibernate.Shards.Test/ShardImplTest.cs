@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace NHibernate.Shards.Test
 {
-    [TestFixture,Ignore("Not implemented yet")]
+    [TestFixture,Ignore]
     public class ShardImplTest : TestFixtureBaseWithMock
     {
           [Test]
@@ -27,14 +27,14 @@ namespace NHibernate.Shards.Test
               IOpenSessionEvent ose = Stub<IOpenSessionEvent>();//new OpenSessionEventDefaultMock()
               shard.AddOpenSessionEvent(ose);
               Assert.IsNotNull(shard.GetOpenSessionEvents());
-              Assert.Equals(1, shard.GetOpenSessionEvents().Count);//.size()
+              Assert.AreEqual(1, shard.GetOpenSessionEvents().Count);//.size()
               //Assert.AreSame(ose, shard.GetOpenSessionEvents().Find(0));//.get(0)
 
               // now add another and make sure it is added to the end
               IOpenSessionEvent anotherOse = Stub<IOpenSessionEvent>();
               shard.AddOpenSessionEvent(anotherOse);
               Assert.IsNotNull(shard.GetOpenSessionEvents());
-              Assert.Equals(2, shard.GetOpenSessionEvents().Count);//.size()
+              Assert.AreEqual(2, shard.GetOpenSessionEvents().Count);//.size()
               //Assert.AreSame(ose, shard.GetOpenSessionEvents().get(0));
               //Assert.AreSame(anotherOse, shard.GetOpenSessionEvents().get(1));
           }

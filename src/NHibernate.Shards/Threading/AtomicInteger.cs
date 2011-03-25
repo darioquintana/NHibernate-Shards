@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace NHibernate.Shards.Threading
 {
 	/// <summary>
@@ -5,7 +7,7 @@ namespace NHibernate.Shards.Threading
 	/// </summary>
 	public class AtomicInteger
 	{
-		private volatile int _value;
+		private int _value;
 
 		/// <summary>
 		/// Construct a atomic integer
@@ -28,14 +30,8 @@ namespace NHibernate.Shards.Threading
 		/// </summary>
 		public int Value
 		{
-			get { return _value; }
-			set
-			{
-				lock(this)
-				{
-					_value = value;
-				}
-			}
+			get { return Thread.VolatileRead(ref _value); }
+			set { Thread.VolatileWrite(ref _value, value); }
 		}
 
 		/// <summary>
@@ -44,10 +40,7 @@ namespace NHibernate.Shards.Threading
 		/// <returns>Return the incremented value.</returns>
 		public int IncrementAndGet()
 		{
-			lock(this)
-			{
-				return ++_value;
-			}
+			return Interlocked.Increment(ref _value);
 		}
 
 		/// <summary>
@@ -56,10 +49,7 @@ namespace NHibernate.Shards.Threading
 		/// <returns>Return the decremented value.</returns>
 		public int DecrementAndGet()
 		{
-			lock(this)
-			{
-				return --_value;
-			}
+			return Interlocked.Decrement(ref _value);
 		}
 
 		/// <summary>
@@ -68,12 +58,12 @@ namespace NHibernate.Shards.Threading
 		/// <returns>Return the past value.</returns>
 		public int GetAndIncrement()
 		{
-			lock(this)
+			int old;
+			do
 			{
-				int old = _value;
-				_value++;
-				return old;
-			}
+				old = Thread.VolatileRead(ref _value);
+			} while (old != Interlocked.CompareExchange(ref _value, old + 1, old));
+			return old;
 		}
 
 		/// <summary>
@@ -82,12 +72,12 @@ namespace NHibernate.Shards.Threading
 		/// <returns>Return the past value.</returns>
 		public int GetAndDecrement()
 		{
-			lock(this)
+			int old;
+			do
 			{
-				int old = _value;
-				_value--;
-				return old;
-			}
+				old = Thread.VolatileRead(ref _value);
+			} while (old != Interlocked.CompareExchange(ref _value, old - 1, old));
+			return old;
 		}
 
 		/// <summary>
@@ -97,12 +87,12 @@ namespace NHibernate.Shards.Threading
 		/// <returns>the past value</returns>
 		public int GetAndSet(int newValue)
 		{
-			lock(this)
+			int old;
+			do
 			{
-				int old = newValue;
-				_value = newValue;
-				return old;
-			}
+				old = Thread.VolatileRead(ref _value);
+			} while (old != Interlocked.CompareExchange(ref _value, newValue, old));
+			return old;
 		}
 
 		public override string ToString()

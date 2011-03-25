@@ -1,6 +1,6 @@
 ﻿namespace NHibernate.Shards.Query
 {
-    class SetCacheModeEvent : IQueryEvent
+	public class SetCacheModeEvent : IQueryEvent
     {
         private readonly CacheMode cacheMode;
 

@@ -29,6 +29,12 @@ namespace NHibernate.Shards.Cfg
 		/// </summary>
 		string ConnectionString { get; }
 
+
+		/// <summary>
+		/// Named connection string of the shard.
+		/// </summary>
+		string ConnectionStringName { get; }
+
 		Configuration Configuration { get; }
 	}
 }

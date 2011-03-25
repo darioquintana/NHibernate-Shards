@@ -2,7 +2,7 @@
 
 namespace NHibernate.Shards.Query
 {
-    class SetCacheRegionEvent : IQueryEvent
+	public class SetCacheRegionEvent : IQueryEvent
     {
         private readonly string cacheRegion;
 

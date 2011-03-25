@@ -1,8 +1,13 @@
-﻿using System;
-using NHibernate.Shards.Session;
+﻿using NHibernate.Shards.Session;
 
 namespace NHibernate.Shards.Criteria
 {
+	/**
+	 * Event that allows the {@link LockMode} of a {@link Criteria} to be set lazily.
+	 * @see Criteria#setLockMode(LockMode)
+	 *
+	 * @author maxr@google.com (Max Ross)
+	 */
 	public class SetLockModeEvent : ICriteriaEvent
 	{
 		private enum MethodSig
@@ -45,10 +50,8 @@ namespace NHibernate.Shards.Criteria
 		 *
 		 * @param lockMode the lock mode we'll set when the event fires
 		 */
-
-		public SetLockModeEvent(LockMode lockMode)
+        public SetLockModeEvent(LockMode lockMode):this(MethodSig.LockMode,lockMode,null)
 		{
-			//this(MethodSig.LockMode, lockMode, null);
 		}
 
 		/**
@@ -58,29 +61,24 @@ namespace NHibernate.Shards.Criteria
 		 * @param alias the alias for which we'll set the lock mode
 		 * when the event fires
 		 */
-
-		public SetLockModeEvent(LockMode lockMode, String alias)
+        public SetLockModeEvent(LockMode lockMode,string alias):this(MethodSig.LockModeAndAlias,lockMode,alias)
 		{
-			//this(MethodSig.LockModeAndAlias, lockMode, alias);
+            
 		}
 
 		public void OnEvent(ICriteria crit)
 		{
 			switch (methodSig)
 			{
-					//case LockMode:
-					//    crit.SetLockMode(lockMode);
-					//    break;
-					//case LockModeAndAlias:
-					//    crit.SetLockMode(alias, lockMode);
-					//    break;
-					//default:
-					//    throw new ShardedSessionException(
-					//        "Unknown constructor type for SetLockModeEvent: " + methodSig);
+                case MethodSig.LockMode:
+                    crit.SetLockMode(lockMode);
+                    break;
+                case MethodSig.LockModeAndAlias:
+                    crit.SetLockMode(alias, lockMode);
+                    break;
+                default:
+                    throw new ShardedSessionException("Unknown cTor type for SetLockModeEvent: " + methodSig);
 			}
 		}
 	}
 }
-
-
-

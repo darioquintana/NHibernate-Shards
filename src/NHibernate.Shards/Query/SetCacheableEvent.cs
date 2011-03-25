@@ -1,6 +1,6 @@
 ﻿namespace NHibernate.Shards.Query
 {
-    internal class SetCacheableEvent : IQueryEvent
+	public class SetCacheableEvent : IQueryEvent
     {
         private readonly bool cacheable;
 

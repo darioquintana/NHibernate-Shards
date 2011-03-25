@@ -32,6 +32,11 @@ namespace NHibernate.Shards.Cfg
 			get { return config.GetProperty(Environment.ConnectionString); }
 		}
 
+		public string ConnectionStringName
+		{
+			get { return config.GetProperty(Environment.ConnectionStringName); }
+		}
+
 		public Configuration Configuration
 		{
 			get { return config; }

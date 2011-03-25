@@ -2,6 +2,9 @@
 
 namespace NHibernate.Shards.Criteria
 {
+	/// <summary>
+	/// Event that allows an Order to be lazily added to a Criteria.
+	/// </summary>
 	public class AddOrderEvent : ICriteriaEvent
 	{
 		private readonly Order order;

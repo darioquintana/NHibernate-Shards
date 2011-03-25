@@ -1,12 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Iesi.Collections.Generic;
 using NHibernate.Engine;
+using NHibernate.Shards.Engine;
+using NHibernate.Shards.Session;
 using NHibernate.Stat;
 
 namespace NHibernate.Shards.Stat
 {
 	internal class ShardedSessionStatistics : ISessionStatistics
 	{
+	    private Set<ISessionStatistics> sessionStats;
+
+        public ShardedSessionStatistics(IShardedSessionImplementor session)
+        {
+            sessionStats = new HashedSet<ISessionStatistics>();
+            foreach(IShard shard in session.Shards)
+            {
+                if(shard.Session != null)
+                {
+                    sessionStats.Add(shard.Session.Statistics);
+                }
+                else
+                {
+                    IOpenSessionEvent ose = new StatOpenSessionEvent(sessionStats);
+                    shard.AddOpenSessionEvent(ose);
+                }
+            }
+        }
+
 		#region ISessionStatistics Members
 
 		///<summary>
@@ -15,7 +38,15 @@ namespace NHibernate.Shards.Stat
 		///
 		public int EntityCount
 		{
-			get { throw new NotImplementedException(); }
+			get
+			{
+			    int count = 0;
+                foreach(ISessionStatistics stats in sessionStats)
+			    {
+			        count += stats.EntityCount;
+			    }
+                return count;
+			}
 		}
 
 		///<summary>
@@ -24,7 +55,15 @@ namespace NHibernate.Shards.Stat
 		///
 		public int CollectionCount
 		{
-			get { throw new NotImplementedException(); }
+			get
+			{
+			    int count = 0;
+                foreach (ISessionStatistics stats in sessionStats)
+                {
+                    count += stats.CollectionCount;
+                }
+                return count;
+			}
 		}
 
 		///<summary>
@@ -33,7 +72,17 @@ namespace NHibernate.Shards.Stat
 		///
 		public IList<EntityKey> EntityKeys
 		{
-			get { throw new NotImplementedException(); }
+			get
+			{
+			    Set<EntityKey> entityKeys = new HashedSet<EntityKey>();
+                foreach(ISessionStatistics stat in sessionStats)
+                {
+                    var shardEntityKeys = stat.EntityKeys;
+                    entityKeys.AddAll(shardEntityKeys);
+                }
+
+			    return entityKeys.ToList();
+			}
 		}
 
 		///<summary>
@@ -42,8 +91,32 @@ namespace NHibernate.Shards.Stat
 		///
 		public IList<CollectionKey> CollectionKeys
 		{
-			get { throw new NotImplementedException(); }
+			get
+			{
+			    Set<CollectionKey> collectionKeys = new HashedSet<CollectionKey>();
+                foreach(ISessionStatistics stats in sessionStats)
+                {
+                    var shardCollectionKeys = stats.CollectionKeys;
+                    collectionKeys.AddAll(shardCollectionKeys);
+                }
+			    return collectionKeys.ToList();
+			}            
 		}
+
+        private class StatOpenSessionEvent:IOpenSessionEvent
+        {
+            private Set<ISessionStatistics> sessionStats;
+
+            public StatOpenSessionEvent(Set<ISessionStatistics> sessionStats)
+            {
+                this.sessionStats = sessionStats;
+            }
+
+            public void OnOpenSession(ISession session)
+            {
+                sessionStats.Add(session.Statistics);
+            }
+        }
 
 		#endregion
 	}

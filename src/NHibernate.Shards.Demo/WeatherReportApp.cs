@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Reflection;
 using NHibernate.ByteCode.LinFu;
-using NHibernate.Cfg;
 using NHibernate.Cfg.Loquacious;
 using NHibernate.Criterion;
 using NHibernate.Dialect;
-using NHibernate.Mapping;
 using NHibernate.Shards.Cfg;
 using NHibernate.Shards.LoadBalance;
 using NHibernate.Shards.Strategy;
@@ -14,6 +12,7 @@ using NHibernate.Shards.Strategy.Access;
 using NHibernate.Shards.Strategy.Resolution;
 using NHibernate.Shards.Strategy.Selection;
 using NHibernate.Tool.hbm2ddl;
+using Configuration = NHibernate.Cfg.Configuration;
 
 namespace NHibernate.Shards.Demo
 {
@@ -35,20 +34,20 @@ namespace NHibernate.Shards.Demo
 
 			AddData();
 
-			//ISession session = sessionFactory.OpenSession();
-			//try
-			//{
-			//    ICriteria crit = session.CreateCriteria("weather", "WeatherReport");
-			//    var count = crit.List() as List;
-			//    if (count != null) Console.WriteLine(count.BatchSize); //.size()
-			//    crit.Add(Restrictions.Gt("temperature", 33));
-			//    var reports = crit.List() as List;
-			//    if (reports != null) Console.WriteLine(reports.BatchSize);
-			//}
-			//finally
-			//{
-			//    session.Close();
-			//}
+			ISession session = sessionFactory.OpenSession();
+			try
+			{
+				ICriteria crit = session.CreateCriteria(typeof (WeatherReport),"weather");
+				var count = crit.List();
+				if (count != null) Console.WriteLine(count.Count);
+				crit.Add(Restrictions.Gt("Temperature", 33));
+				var reports = crit.List();
+				if (reports != null) Console.WriteLine(reports.Count);
+			}
+			finally
+			{
+				session.Close();
+			}
 			
 			sessionFactory.Dispose();
 			Console.WriteLine("Done.");
@@ -133,6 +132,7 @@ namespace NHibernate.Shards.Demo
 		private static Configuration GetConfigurationTemplate(string connectionStringName, int shardId)
 		{
 			var cfg = new Configuration();
+			
 			cfg.SessionFactoryName("NHibernateShards" + shardId);
 			cfg.Proxy(p =>
 			          	{

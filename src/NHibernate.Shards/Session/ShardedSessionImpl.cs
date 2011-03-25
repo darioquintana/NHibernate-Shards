@@ -3,15 +3,22 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Linq.Expressions;
+using System.Runtime.Serialization;
 using Iesi.Collections.Generic;
 using log4net;
+using System.Linq;
 using NHibernate.Engine;
 using NHibernate.Id;
 using NHibernate.Metadata;
 using NHibernate.Proxy;
+using NHibernate.Shards.Criteria;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Id;
+using NHibernate.Shards.Query;
+using NHibernate.Shards.Stat;
 using NHibernate.Shards.Strategy;
+using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Shards.Strategy.Selection;
 using NHibernate.Shards.Transaction;
 using NHibernate.Shards.Util;
@@ -54,7 +61,14 @@ namespace NHibernate.Shards.Session
         private int nextQueryId = 0;
         private IShardedTransaction transaction;
 
-
+		/**
+		 * Constructor used for openSession(...) processing.
+		 *
+		 * @param shardedSessionFactory The factory from which this session was obtained
+		 * @param shardStrategy The shard strategy for this session
+		 * @param classesWithoutTopLevelSaveSupport The set of classes on which top-level save can not be performed
+		 * @param checkAllAssociatedObjectsForDifferentShards Should we check for cross-shard relationships
+		 */
         internal ShardedSessionImpl(
             IShardedSessionFactoryImplementor shardedSessionFactory,
             IShardStrategy shardStrategy,
@@ -68,7 +82,15 @@ namespace NHibernate.Shards.Session
         {
         }
 
-
+		/**
+		 * Constructor used for openSession(...) processing.
+		 *
+		 * @param interceptor The interceptor to be applied to this session
+		 * @param shardedSessionFactory The factory from which this session was obtained
+		 * @param shardStrategy The shard strategy for this session
+		 * @param classesWithoutTopLevelSaveSupport The set of classes on which top-level save can not be performed
+		 * @param checkAllAssociatedObjectsForDifferentShards Should we check for cross-shard relationships
+		 */
         internal ShardedSessionImpl(
             /*@Nullable*/ IInterceptor interceptor,
                           IShardedSessionFactoryImplementor shardedSessionFactory,
@@ -270,10 +292,11 @@ namespace NHibernate.Shards.Session
             {
                 if (shard.Session != null)
                 {
-                    ISession session = shard.Session;
-                    session.Disconnect();
+                	shard.Session.Disconnect();
                 }
             }
+			// we do not allow application-supplied connections, so we can always return
+			// null
             return null;
         }
 
@@ -285,7 +308,7 @@ namespace NHibernate.Shards.Session
         /// </remarks>
         public void Reconnect()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -295,7 +318,7 @@ namespace NHibernate.Shards.Session
         /// <param name="connection">An ADO.NET connection</param>
         public void Reconnect(IDbConnection connection)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Cannot reconnect a sharded session");
         }
 
         /// <summary>
@@ -375,7 +398,18 @@ namespace NHibernate.Shards.Session
         /// </summary>
         public bool IsOpen
         {
-            get { return !closed; }
+            get
+            {
+				// one open session means the sharded session is open
+                foreach(IShard shard in shards)
+                {
+                    if(shard.Session != null && shard.Session.IsOpen)
+                    {
+                        return true;
+                    }
+                }
+                return !closed;
+            }
         }
 
         /// <summary>
@@ -491,7 +525,7 @@ namespace NHibernate.Shards.Session
         /// <returns>the persistent instance</returns>
         public object Load(System.Type clazz, object id, LockMode lockMode)
         {
-            List<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(
+            IList<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(
                 new ShardResolutionStrategyDataImpl(clazz, id));
             if (shardIds.Count == 1)
             {
@@ -510,7 +544,25 @@ namespace NHibernate.Shards.Session
 
         public object Load(string entityName, object id, LockMode lockMode)
         {
-            throw new NotImplementedException();
+            IList<ShardId> shardIds =
+                SelectShardIdsFromShardResolutionStrategyData(new ShardResolutionStrategyDataImpl(entityName, id));
+            if(shardIds.Count == 1)
+            {
+                return shardIdsToShards[shardIds[0]].EstablishSession().Load(entityName, id, lockMode);
+            }
+            object result = Get(entityName, id, lockMode);
+            if(result == null)
+            {
+                shardedSessionFactory.EntityNotFoundDelegate.HandleEntityNotFound(entityName, id);
+            }
+            return result;
+        }
+
+        private object Get(string entityName, object id, LockMode mode)
+        {
+            IShardOperation<object> shardOp = new GetShardOperationByEntityNameIdAndLockMode(entityName, (ISerializable) id, mode);
+			// we're not letting people customize shard selection by lockMode
+            return ApplyGetOperation(shardOp, new ShardResolutionStrategyDataImpl(entityName, id));
         }
 
         /// <summary>
@@ -527,21 +579,18 @@ namespace NHibernate.Shards.Session
         /// <returns>The persistent instance or proxy</returns>
         public object Load(System.Type clazz, object id)
         {
-            List<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(new
+            IList<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(new
                                                                                     ShardResolutionStrategyDataImpl(clazz, id));
             if (shardIds.Count == 1)
             {
                 return shardIdsToShards[shardIds[0]].EstablishSession().Load(clazz, id);
             }
-            else
+            Object result = this.Get(clazz, id);
+            if (result == null)
             {
-                Object result = Get(clazz, id);
-                if (result == null)
-                {
-                    shardedSessionFactory.EntityNotFoundDelegate.HandleEntityNotFound(clazz.Name, id);
-                }
-                return result;
+                this.shardedSessionFactory.EntityNotFoundDelegate.HandleEntityNotFound(clazz.Name, id);
             }
+            return result;
         }
 
         /// <summary>
@@ -554,7 +603,7 @@ namespace NHibernate.Shards.Session
         /// <returns>the persistent instance</returns>
         public T Load<T>(object id, LockMode lockMode)
         {
-            throw new NotImplementedException();
+            return (T) Load(typeof (T), id, lockMode);
         }
 
         /// <summary>
@@ -571,12 +620,12 @@ namespace NHibernate.Shards.Session
         /// <returns>The persistent instance or proxy</returns>
         public T Load<T>(object id)
         {
-            throw new NotImplementedException();
+            return (T) Load(typeof (T), id);
         }
 
         public object Load(string entityName, object id)
         {
-            List<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(new
+            IList<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(new
                                                                                     ShardResolutionStrategyDataImpl(entityName, id));
             if (shardIds.Count == 1)
             {
@@ -601,7 +650,27 @@ namespace NHibernate.Shards.Session
         /// <param name="id">A valid identifier of an existing persistent instance of the class</param>
         public void Load(object obj, object id)
         {
-            throw new NotImplementedException();
+            IList<ShardId> shardIds =
+                SelectShardIdsFromShardResolutionStrategyData(new ShardResolutionStrategyDataImpl(obj.GetType(), id));
+            if (shardIds.Count == 1)
+            {
+                shardIdsToShards[shardIds[0]].EstablishSession().Load(obj, id);
+            }
+            else
+            {
+                object result = Get(obj.GetType(), id);
+                if (result == null)
+                {
+                    shardedSessionFactory.EntityNotFoundDelegate.HandleEntityNotFound(obj.GetType().Name, id);
+                }
+                else
+                {
+                    IShard objectShard = GetShardForObject(result, ShardIdListToShardList(shardIds));
+                    Evict(result);
+                    objectShard.EstablishSession().Load(obj, id);
+                }
+
+            }
         }
 
         /// <summary>
@@ -623,7 +692,42 @@ namespace NHibernate.Shards.Session
         /// <param name="replicationMode"></param>
         public void Replicate(string entityName, object obj, ReplicationMode replicationMode)
         {
-            throw new NotImplementedException();
+            ISerializable id = ExtractId(obj);
+            IList<ShardId> shardIds =
+                SelectShardIdsFromShardResolutionStrategyData(new ShardResolutionStrategyDataImpl(obj.GetType(), id));
+            if(shardIds.Count == 1)
+            {
+                CurrentSubgraphShardId = shardIds[0];
+                shardIdsToShards[shardIds[0]].EstablishSession().Replicate(entityName, obj, replicationMode);
+            }
+            else
+            {
+                object result = null;
+                if(id != null)
+                {
+                    result = Get(obj.GetType(), id);                    
+                }
+                if(result == null)
+                {
+                    ShardId shardId = SelectShardIdForNewObject(obj);
+                    CurrentSubgraphShardId = shardId;
+                    shardIdsToShards[shardId].EstablishSession().Replicate(entityName, obj, replicationMode);
+                }
+                else
+                {
+                    IShard objectShard = GetShardForObject(result, ShardIdListToShardList(shardIds));
+                    Evict(result);
+                    objectShard.EstablishSession().Replicate(entityName, obj, replicationMode);
+                }
+            }
+
+        }
+
+        ISerializable ExtractId(object obj)
+        {
+            IClassMetadata cmd = shardedSessionFactory.GetClassMetadata(obj.GetType());
+			// I'm just guessing about the EntityMode
+            return (ISerializable) cmd.GetIdentifier(obj, EntityMode.Poco);
         }
 
         /// <summary>
@@ -650,14 +754,32 @@ namespace NHibernate.Shards.Session
             }
             Preconditions.CheckNotNull(shardId);
             SetCurrentSubgraphShardId(shardId);
-            log.Debug(String.Format("Saving object of type %s to shard %s", obj.GetType(), shardId));
+            log.Debug(String.Format("Saving object of type {0} to shard {1}", obj.GetType(), shardId));
             return shardIdsToShards[shardId].EstablishSession().Save(entityName, obj);
 
         }
 
         public static void SetCurrentSubgraphShardId(ShardId shardId)
         {
-            //currentSubgraphShardId.set(shardId);
+        	currentSubgraphShardId = shardId;           
+        }
+
+		/*
+		 * We already know that we don't have a shardId locked in for this session,
+		 * and we already know that this object can't grab its session from some
+		 * other object (we looked).  If this class is in the set of classes
+		 * that don't support top-level saves, it's an error.
+		 * This is to prevent clients from accidentally splitting their object graphs
+		 * across multiple shards.
+		 */
+        private void CheckForUnsupportedToplevelSave(System.Type clazz)
+        {
+            if(classesWithoutTopLevelSaveSupport.Contains(clazz))
+            {
+                string msg = string.Format("Attempt to save object of type {0} as top-level object", clazz.Name);
+                log.Error(msg);
+                throw new HibernateException(msg);
+            }
         }
 
         ShardId SelectShardIdForNewObject(object obj)
@@ -678,21 +800,27 @@ namespace NHibernate.Shards.Session
              * strategy.
              */
             shardId = GetShardIdOfRelatedObject(obj);
-            //if (shardId == null)
-            //{
-            //    checkForUnsupportedTopLevelSave(obj.getClass());
-            //    shardId = shardStrategy.getShardSelectionStrategy().selectShardIdForNewObject(obj);
-            //}
-            //// lock has been requested but shard has not yet been selected - lock it in
-            //if (lockedShard)
-            //{
-            //    lockedShardId = shardId;
-            //}
-            //log.Debug(String.Format("Selected shard %d for object of type %s", shardId.getId(), obj.getClass().getName()));
+            if(shardId == null)
+            {
+                CheckForUnsupportedToplevelSave(obj.GetType());
+                shardId = shardStrategy.ShardSelectionStrategy.SelectShardIdForNewObject(obj);             
+            }
+			// lock has been requested but shard has not yet been selected - lock it in
+            if(lockedShard)
+            {
+                lockedShardId = shardId;
+            }
+            
+            log.Debug(string.Format("Selected shard {0} for object of type {1}", shardId.Id, obj.GetType().Name));
+            
             return shardId;
-            //throw new NotImplementedException();
+            
         }
 
+		/**
+		 * TODO(maxr) I can see this method benefitting from a cache that lets us quickly
+		 * see which properties we might need to look at.
+		 */
         ShardId GetShardIdOfRelatedObject(object obj)
         {
             IClassMetadata cmd = GetClassMetadata(obj.GetType());
@@ -713,10 +841,10 @@ namespace NHibernate.Shards.Session
                      */
                     if (collections == null)
                     {
-                        collections = new List<Collection<object>>(); //Lists.newArrayList();
+                        collections = new List<Collection<object>>();
                     }
-                    //@SuppressWarnings("unchecked")
-                    var coll = (Collection<Object>)pair.Value; //(Collection<Object>)pair.getSecond();
+                    
+                    var coll = (Collection<Object>)pair.Value; 
                     collections.Add(coll);
                 }
                 else
@@ -762,8 +890,8 @@ namespace NHibernate.Shards.Session
                 else if (!localShardId.Equals(existingShardId))
                 {
                     /*readonly*/
-                    string msg = String.Format(
-                        "Object of type %s is on shard %d but an associated object of type %s is on shard %d.",
+                    string msg = string.Format(
+                        "Object of type {0} is on shard {1} but an associated object of type {2} is on shard {3}.",
                         newObjectClass.Name,
                         existingShardId.Id,
                         associatedObject.GetType().Name,
@@ -793,7 +921,7 @@ namespace NHibernate.Shards.Session
         /// <param name="id">An unused valid identifier</param>
         public void Save(object obj, object id)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -807,12 +935,65 @@ namespace NHibernate.Shards.Session
         /// <param name="obj">A transient instance containing new or updated state</param>
         public void SaveOrUpdate(object obj)
         {
-            throw new NotImplementedException();
+            ApplySaveOrUpdateOperation(new SaveOrUpdateSimple(), obj);
+        }
+
+        void ApplySaveOrUpdateOperation(ISaveOrUpdateOperation op, object obj)
+        {
+            ShardId shardId = GetShardIdForObject(obj);
+            if(shardId != null)
+            {
+				// attached object
+                op.SaveOrUpdate(shardIdsToShards[shardId], obj);
+                return;
+            }
+            IList<IShard> potentialShards = DetermineShardsObjectViaResolutionStrategy(obj);
+            if(potentialShards.Count == 1)
+            {
+                op.SaveOrUpdate(potentialShards[0], obj);
+                return;
+            }
+
+			/**
+			 * Too bad, we've got a detached object that could be on more than 1 shard.
+			 * The only safe way to handle this is to try and lookup the object, and if
+			 * it exists, do a merge, and if it doesn't, do a save.
+			 */
+            ISerializable id = ExtractId(obj);
+            if(id != null)
+            {
+                object persistent = Get(obj.GetType(), id);
+                if(persistent != null)
+                {
+                    shardId = GetShardIdForObject(persistent);
+                }
+            }
+            if(shardId != null)
+            {
+                op.Merge(shardIdsToShards[shardId], obj);
+            }
+            else
+            {
+                Save(obj);
+            }
+        }
+
+        IList<IShard> DetermineShardsObjectViaResolutionStrategy(object obj)
+        {
+            ISerializable id = ExtractId(obj);
+            if(id == null)
+            {
+                return new List<IShard>();
+            }
+            var srsd = new ShardResolutionStrategyDataImpl(obj.GetType(), id);
+            IList<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(srsd);
+            return ShardIdListToShardList(shardIds);
         }
 
         public void SaveOrUpdate(string entityName, object obj)
         {
-            throw new NotImplementedException();
+            ISaveOrUpdateOperation so = new SaveOrUpdateWithEntityName(entityName);
+            ApplySaveOrUpdateOperation(so, obj);
         }
 
         /// <summary>
@@ -825,7 +1006,57 @@ namespace NHibernate.Shards.Session
         /// <param name="obj">A transient instance containing updated state</param>
         public void Update(object obj)
         {
-            throw new NotImplementedException();
+
+            IUpdateOperation updateOperation = new UpdateOperationSimple();
+            ApplyUpdateOperation(updateOperation, obj);
+        }
+
+
+        private void ApplyUpdateOperation(IUpdateOperation updateOperation, object obj)
+        {
+            ShardId shardId = GetShardIdForObject(obj);
+            if(shardId != null)
+            {
+				// attached object
+                updateOperation.Update(shardIdsToShards[shardId], obj);
+                return;
+            }
+            IList<IShard> potentialShards = DetermineShardsObjectViaResolutionStrategy(obj);
+            if(potentialShards.Count  == 1)
+            {
+                updateOperation.Update(potentialShards[0], obj);
+                return;
+            }
+			/**
+			  * Too bad, we've got a detached object that could be on more than 1 shard.
+			  * The only safe way to perform the update is to load the object and then
+			  * do a merge.
+			  */
+            ISerializable id = ExtractId(obj);
+            if(id != null)
+            {
+                object persistent = Get(obj.GetType(), id);
+                if(persistent != null)
+                {
+                    shardId = GetShardIdForObject(persistent);
+                }
+                
+            }
+            if(shardId == null)
+            {
+                /**
+                 * This is an error condition.  In order to provide the same behavior
+                 * as a non-sharded session we're just going to dispatch the update
+                 * to a random shard (we know it will fail because either we don't have
+                 * an id or the lookup returned).
+                 */
+                updateOperation.Update(Shards[0], obj);
+                // this call may succeed but the commit will fail
+            }
+            else
+            {
+                updateOperation.Merge(shardIdsToShards[shardId], obj);
+            }
         }
 
         /// <summary>
@@ -839,32 +1070,62 @@ namespace NHibernate.Shards.Session
         /// <param name="id">Identifier of persistent instance</param>
         public void Update(object obj, object id)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public void Update(string entityName, object obj)
         {
-            throw new NotImplementedException();
+            IUpdateOperation updateOperation = new UpdateOperationWithEntityName(entityName);
+            ApplyUpdateOperation(updateOperation, obj);
         }
 
         public object Merge(object obj)
         {
-            throw new NotImplementedException();
+            return Merge(null, obj);
         }
 
         public object Merge(string entityName, object obj)
         {
-            throw new NotImplementedException();
+            ISerializable id = ExtractId(obj);
+            IList<ShardId> shardIds =
+                SelectShardIdsFromShardResolutionStrategyData(new ShardResolutionStrategyDataImpl(obj.GetType(), id));
+            if(shardIds.Count  == 1)
+            {
+                SetCurrentSubgraphShardId(shardIds[0]);
+                return shardIdsToShards[shardIds[0]].EstablishSession().Merge(entityName, obj);
+            }
+            object result = null;
+            if(id != null)
+            {
+                result = Get(obj.GetType(), id);
+            }
+            if(result == null)
+            {
+                ShardId shardId = SelectShardIdForNewObject(obj);
+                SetCurrentSubgraphShardId(shardId);
+                return shardIdsToShards[shardId].EstablishSession().Merge(entityName, obj);
+            }
+            IShard objectShard = GetShardForObject(result, ShardIdListToShardList(shardIds));
+            return objectShard.EstablishSession().Merge(entityName, obj);
         }
 
         public void Persist(object obj)
         {
-            throw new NotImplementedException();
+            Persist(null, obj);
         }
 
         public void Persist(string entityName, object obj)
         {
-            throw new NotImplementedException();
+            //TODO: what if we have detached object?
+            ShardId shardId = GetShardIdForObject(obj);
+            if(shardId == null)
+            {
+                shardId = SelectShardIdForNewObject(obj);
+            }
+            Preconditions.CheckNotNull(shardId);
+            SetCurrentSubgraphShardId(shardId);
+            log.Debug(string.Format("Persisting object of type {0} to shard {1}", obj.GetType(), shardId));
+            shardIdsToShards[shardId].EstablishSession().Persist(entityName, obj);
         }
 
         /// <summary>
@@ -879,7 +1140,7 @@ namespace NHibernate.Shards.Session
         /// <returns>an updated persistent instance</returns>
         public object SaveOrUpdateCopy(object obj)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -895,7 +1156,7 @@ namespace NHibernate.Shards.Session
         /// <returns>an updated persistent instance</returns>
         public object SaveOrUpdateCopy(object obj, object id)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -908,13 +1169,51 @@ namespace NHibernate.Shards.Session
         /// <param name="obj">The instance to be removed</param>
         public void Delete(object obj)
         {
-            //applyDeleteOperation(SIMPLE_DELETE_OPERATION, object);
-            throw new NotImplementedException();
+            IDeleteOperation deleteOperation = new DeleteOperationSimple();
+            ApplyDeleteOperation(deleteOperation, obj);
         }
 
         public void Delete(string entityName, object obj)
         {
-            throw new NotImplementedException();
+            IDeleteOperation deleteOperation = new DeleteOperationWithEntityName(entityName);
+            ApplyDeleteOperation(deleteOperation, obj);
+        }
+
+        private void ApplyDeleteOperation(IDeleteOperation deleteOperation, object obj)
+        {
+            ShardId shardId = GetShardIdForObject(obj);
+            if (shardId != null)
+            {
+				// attached object
+                deleteOperation.Delete(shardIdsToShards[shardId], obj);
+				return;
+            }
+			/**
+			 * Detached object.
+			 * We can't just try to delete on each shard because if you have an
+			 * object associated with Session x and you try to delete that object in
+			 * Session y, and if that object has persistent collections, Hibernate will
+			 * blow up because it will try to associate the persistent collection with
+			 * a different Session as part of the cascade.  In order to avoid this we
+			 * need to be precise about the shard on which we perform the delete.
+			 *
+			 * First let's see if we can derive the shard just from the object's id.
+			 */
+        	IList<IShard> potentialShards = DetermineShardsObjectViaResolutionStrategy(obj);
+			if(potentialShards.Count == 1)
+			{
+				deleteOperation.Delete(potentialShards[0], obj);
+				return;
+			}
+			/**
+			 * Too bad, we've got a detached object that could be on more than 1 shard.
+			 * The only safe way to perform the delete is to load the object before
+			 * deleting.
+			 */
+        	object persistent = Get(obj.GetType(), ExtractId(obj));
+        	shardId = GetShardIdForObject(persistent);
+        	deleteOperation.Delete(shardIdsToShards[shardId], persistent);
+
         }
 
         /// <summary>
@@ -925,7 +1224,7 @@ namespace NHibernate.Shards.Session
         /// <remarks>See <see cref="IQuery.List()"/> for implications of <c>cache</c> usage.</remarks>
         public IList Find(string query)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -938,7 +1237,7 @@ namespace NHibernate.Shards.Session
         /// <remarks>See <see cref="IQuery.List()"/> for implications of <c>cache</c> usage.</remarks>
         public IList Find(string query, object value, IType type)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -951,7 +1250,7 @@ namespace NHibernate.Shards.Session
         /// <remarks>See <see cref="IQuery.List()"/> for implications of <c>cache</c> usage.</remarks>
         public IList Find(string query, object[] values, IType[] types)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -972,7 +1271,7 @@ namespace NHibernate.Shards.Session
         /// <returns>An enumerator</returns>
         public IEnumerable Enumerable(string query)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -996,7 +1295,7 @@ namespace NHibernate.Shards.Session
         /// <returns>An enumerator</returns>
         public IEnumerable Enumerable(string query, object value, IType type)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1020,7 +1319,7 @@ namespace NHibernate.Shards.Session
         /// <returns>An enumerator</returns>
         public IEnumerable Enumerable(string query, object[] values, IType[] types)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1036,7 +1335,7 @@ namespace NHibernate.Shards.Session
         /// <returns>The resulting collection</returns>
         public ICollection Filter(object collection, string filter)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1054,7 +1353,7 @@ namespace NHibernate.Shards.Session
         /// <returns>A collection</returns>
         public ICollection Filter(object collection, string filter, object value, IType type)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1072,7 +1371,7 @@ namespace NHibernate.Shards.Session
         /// <returns>A collection</returns>
         public ICollection Filter(object collection, string filter, object[] values, IType[] types)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1082,7 +1381,7 @@ namespace NHibernate.Shards.Session
         /// <returns>Returns the number of objects deleted.</returns>
         public int Delete(string query)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1094,7 +1393,7 @@ namespace NHibernate.Shards.Session
         /// <returns>The number of instances deleted</returns>
         public int Delete(string query, object value, IType type)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1106,7 +1405,7 @@ namespace NHibernate.Shards.Session
         /// <returns>The number of instances deleted</returns>
         public int Delete(string query, object[] values, IType[] types)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1116,12 +1415,14 @@ namespace NHibernate.Shards.Session
         /// <param name="lockMode">The lock level</param>
         public void Lock(object obj, LockMode lockMode)
         {
-            throw new NotImplementedException();
+            IShardOperation<object> shardOp = new LockShardOperationByObjectAndLockMode(obj, lockMode);
+            InvokeOnShardWithObject(shardOp, obj);
         }
 
         public void Lock(string entityName, object obj, LockMode lockMode)
         {
-            throw new NotImplementedException();
+            IShardOperation<object> shardOp = new LockShardOperationByEntityNameObjectLockMode(entityName, obj, lockMode);
+            InvokeOnShardWithObject(shardOp, obj);
         }
 
         /// <summary>
@@ -1144,7 +1445,40 @@ namespace NHibernate.Shards.Session
         /// <param name="obj">A persistent instance</param>
         public void Refresh(object obj)
         {
-            throw new NotImplementedException();
+            IRefreshOperation refreshOperation = new RefreshOperationSimple();
+            ApplyRefreshOperation(refreshOperation, obj);
+        }
+
+        private void ApplyRefreshOperation(IRefreshOperation refreshOperation, object obj)
+        {
+            ShardId shardId = GetShardIdForObject(obj);
+            if(shardId != null)
+            {
+                refreshOperation.Refresh(shardIdsToShards[shardId], obj);
+            }
+            else
+            {
+                IList<IShard> candidateShards = DetermineShardsObjectViaResolutionStrategy(obj);
+                if (candidateShards.Count == 1)
+                {
+                    refreshOperation.Refresh(candidateShards[0], obj);
+                }
+                else
+                {
+                    foreach(IShard shard in candidateShards)
+                    {
+                        try
+                        {
+                            refreshOperation.Refresh(shard, obj);
+                        }
+                        catch(UnresolvableObjectException)
+                        {
+                            //ignore
+                        }
+                    }
+                    refreshOperation.Refresh(shards[0], obj);
+                }
+            }
         }
 
         /// <summary>
@@ -1159,7 +1493,8 @@ namespace NHibernate.Shards.Session
         /// <param name="lockMode">the lock mode to use</param>
         public void Refresh(object obj, LockMode lockMode)
         {
-            throw new NotImplementedException();
+            IRefreshOperation refreshOperation = new RefreshOperationWithLockMode(lockMode);
+            ApplyRefreshOperation(refreshOperation, obj);
         }
 
         /// <summary>
@@ -1169,7 +1504,8 @@ namespace NHibernate.Shards.Session
         /// <returns>The current lock mode</returns>
         public LockMode GetCurrentLockMode(object obj)
         {
-            throw new NotImplementedException();
+            IShardOperation<LockMode> shardOp = new CurrentLockModeShardOperation(obj);
+            return InvokeOnShardWithObject(shardOp, obj);
         }
 
         /// <summary>
@@ -1185,16 +1521,16 @@ namespace NHibernate.Shards.Session
         public ITransaction BeginTransaction()
         {
             ErrorIfClosed();
-            ITransaction result = GetTransaction();
+            ITransaction result = GetTransaction(IsolationLevel.Unspecified);
             result.Begin();
             return result;
         }
-        public ITransaction GetTransaction()
+        public ITransaction GetTransaction(IsolationLevel isoLevel)
         {
             ErrorIfClosed();
             if (transaction == null)
             {
-                transaction = new ShardedTransactionImpl(this);
+                transaction = new ShardedTransactionImpl(this,isoLevel);
             }
             return transaction;
         }
@@ -1213,17 +1549,21 @@ namespace NHibernate.Shards.Session
         /// <returns>A transaction instance having the specified isolation level</returns>
         public ITransaction BeginTransaction(IsolationLevel isolationLevel)
         {
-            throw new NotImplementedException();
+            ErrorIfClosed();
+            ITransaction result = GetTransaction(isolationLevel);
+            result.Begin();
+            return result;
+
         }
 
         public ICriteria CreateCriteria<T>() where T : class
         {
-            throw new NotImplementedException();
+            return CreateCriteria(typeof (T));
         }
 
         public ICriteria CreateCriteria<T>(string alias) where T : class
         {
-            throw new NotImplementedException();
+            return CreateCriteria(typeof (T), alias);
         }
 
         /// <summary>
@@ -1231,7 +1571,15 @@ namespace NHibernate.Shards.Session
         /// </summary>
         public ITransaction Transaction
         {
-            get { throw new NotImplementedException(); }
+            get 
+            {
+                ErrorIfClosed();
+                if(transaction == null)
+                {
+                    transaction = new ShardedTransactionImpl(this);
+                }
+                return transaction;
+            }
         }
 
         /// <summary>
@@ -1241,7 +1589,8 @@ namespace NHibernate.Shards.Session
         /// <returns>An ICriteria object</returns>
         public ICriteria CreateCriteria(System.Type persistentClass)
         {
-            throw new NotImplementedException();
+            return new ShardedCriteriaImpl(new CriteriaId(nextCriteriaId++), shards,
+                                           new CriteriaFactoryImpl(persistentClass), shardStrategy.ShardAccessStrategy);
         }
 
         /// <summary>
@@ -1252,22 +1601,32 @@ namespace NHibernate.Shards.Session
         /// <returns>An ICriteria object</returns>
         public ICriteria CreateCriteria(System.Type persistentClass, string alias)
         {
-            throw new NotImplementedException();
+            return new ShardedCriteriaImpl(new CriteriaId(nextCriteriaId++), shards,
+                                            new CriteriaFactoryImpl(persistentClass, alias), shardStrategy.ShardAccessStrategy);
         }
 
         public ICriteria CreateCriteria(string entityName)
         {
-            throw new NotImplementedException();
+            return new ShardedCriteriaImpl(new CriteriaId(nextCriteriaId++), shards,
+                                           new CriteriaFactoryImpl(entityName), shardStrategy.ShardAccessStrategy);
         }
 
         public ICriteria CreateCriteria(string entityName, string alias)
         {
-            throw new NotImplementedException();
+            return new ShardedCriteriaImpl(new CriteriaId(nextCriteriaId++), shards,
+                                           new CriteriaFactoryImpl(entityName,alias), shardStrategy.ShardAccessStrategy);
         }
+
 
         public IQueryOver<T> QueryOver<T>() where T : class
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
+        }
+
+
+        public IQueryOver<T> QueryOver<T>(Expression<Func<T>> alias) where T : class
+        {
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1277,8 +1636,14 @@ namespace NHibernate.Shards.Session
         /// <returns>The query</returns>
         public IQuery CreateQuery(string queryString)
         {
-            throw new NotImplementedException();
+            return new ShardedQueryImpl(new QueryId(nextQueryId++), shards, new AdHocQueryFactoryImpl(queryString),
+                                        shardStrategy.ShardAccessStrategy);
         }
+
+		//public IQuery CreateQuery(IQueryExpression queryExpression)
+		//{
+		//    throw new NotSupportedException();
+		//}
 
         /// <summary>
         /// Create a new instance of <c>Query</c> for the given collection and filter string
@@ -1288,7 +1653,41 @@ namespace NHibernate.Shards.Session
         /// <returns>A query</returns>
         public IQuery CreateFilter(object collection, string queryString)
         {
-            throw new NotImplementedException();
+            IShard shard = GetShardForCollection(collection,shards);
+            ISession session;
+            if(shard == null)
+            {
+				// collection not associated with any of our shards, so just delegate to
+				// a random shard.  We'll end up failing, but we'll fail with the
+				// error that users typically get.
+                session = SomeSession;
+                if(session!=null )
+                {
+                    session = shards[0].EstablishSession();
+                }
+            }
+            else
+            {
+                session = shard.EstablishSession();
+            }
+            return session.CreateFilter(collection, queryString);
+        }
+
+        private IShard GetShardForCollection(object collection, IList<IShard> shardsToConsider)
+        {
+            foreach(IShard shard in shardsToConsider)
+            {
+                if(shard.Session != null)
+                {
+                    var si = (ISessionImplementor) shard.Session;
+                    if(si.PersistenceContext.GetCollectionEntryOrNull(collection) != null)
+                    {
+                        return shard;
+                    }
+
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -1302,7 +1701,8 @@ namespace NHibernate.Shards.Session
         /// </remarks>
         public IQuery GetNamedQuery(string queryName)
         {
-            throw new NotImplementedException();
+            return new ShardedQueryImpl(new QueryId(nextQueryId++), shards, new NamedQueryFactoryImpl(queryName),
+                                        shardStrategy.ShardAccessStrategy);
         }
 
         /// <summary>
@@ -1314,7 +1714,7 @@ namespace NHibernate.Shards.Session
         /// <returns>An <see cref="IQuery"/> from the SQL string</returns>
         public IQuery CreateSQLQuery(string sql, string returnAlias, System.Type returnClass)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1326,7 +1726,7 @@ namespace NHibernate.Shards.Session
         /// <returns>An <see cref="IQuery"/> from the SQL string</returns>
         public IQuery CreateSQLQuery(string sql, string[] returnAliases, System.Type[] returnClasses)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1336,7 +1736,7 @@ namespace NHibernate.Shards.Session
         /// <returns>An <see cref="ISQLQuery"/> from the SQL string</returns>
         public ISQLQuery CreateSQLQuery(string queryString)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1346,7 +1746,13 @@ namespace NHibernate.Shards.Session
         /// </summary>
         public void Clear()
         {
-            throw new NotImplementedException();
+            foreach (IShard shard in shards)
+            {
+                if(shard.Session != null)
+                {
+                    shard.Session.Clear();
+                }
+            }
         }
 
         /// <summary>
@@ -1359,8 +1765,7 @@ namespace NHibernate.Shards.Session
         /// <returns>a persistent instance or null</returns>
         public object Get(System.Type clazz, object id)
         {
-            IShardOperation<Object> shardOp = new GetShardOperation();
-
+            IShardOperation<Object> shardOp = new GetShardOperationByTypeAndId(clazz, id);
             return ApplyGetOperation(shardOp, new ShardResolutionStrategyDataImpl(clazz, id));
         }
 
@@ -1375,12 +1780,16 @@ namespace NHibernate.Shards.Session
         /// <returns>a persistent instance or null</returns>
         public object Get(System.Type clazz, object id, LockMode lockMode)
         {
-            throw new NotImplementedException();
+            IShardOperation<object> shardOp = new GetShardOperationByTypeIdAndLockMode(clazz, (ISerializable) id, lockMode);
+			// we're not letting people customize shard selection by lockMode
+            return ApplyGetOperation(shardOp, new ShardResolutionStrategyDataImpl(clazz, id));
         }
 
         public object Get(string entityName, object id)
         {
-            throw new NotImplementedException();
+            IShardOperation<object> shardOp = new GetShardOperationByEntityNameAndId(entityName, (ISerializable) id);
+			// we're not letting people customize shard selection by lockMode
+            return ApplyGetOperation(shardOp, new ShardResolutionStrategyDataImpl(entityName, id));
         }
 
         /// <summary>
@@ -1388,7 +1797,7 @@ namespace NHibernate.Shards.Session
         /// </summary>
         public T Get<T>(object id)
         {
-            throw new NotImplementedException();
+            return (T) this.Get(typeof (T), id);
         }
 
         /// <summary>
@@ -1396,7 +1805,7 @@ namespace NHibernate.Shards.Session
         /// </summary>
         public T Get<T>(object id, LockMode lockMode)
         {
-            throw new NotImplementedException();
+            return (T) this.Get(typeof (T), id, lockMode);
         }
 
         /// <summary> 
@@ -1406,7 +1815,22 @@ namespace NHibernate.Shards.Session
         /// <returns> the entity name </returns>
         public string GetEntityName(object obj)
         {
-            throw new NotImplementedException();
+            IShardOperation<string> invoker = new GetShardOperationByEntityName(obj);
+            return InvokeOnShardWithObject(invoker, obj);
+        }
+
+		/**
+		  * Helper method we can use when we need to find the Shard with which a
+		  * specified object is associated and invoke the method on that Shard.
+		  * If the object isn't associated with a Session we just invoke it on a
+		  * random Session with the expectation that this will cause an error.
+		  */
+        T InvokeOnShardWithObject<T>(IShardOperation<T> so, object obj )
+        {
+            ShardId shardId = GetShardIdForObject(obj);
+			// just ask this question of a random shard so we get the proper error
+            IShard shardToUse = shardId == null ? this.shards[0] : this.shardIdsToShards[shardId];
+            return so.Execute(shardToUse);
         }
 
         /// <summary>
@@ -1416,7 +1840,20 @@ namespace NHibernate.Shards.Session
         /// <returns>The Filter instance representing the enabled fiter.</returns>
         public IFilter EnableFilter(string filterName)
         {
-            throw new NotImplementedException();
+            var filterEvent = new EnableFilterOpenSessionEvent(filterName);
+            foreach(IShard shard in shards)
+            {
+                if(shard.Session != null)
+                {
+                    shard.Session.EnableFilter(filterName);
+                }
+                else
+                {
+                    shard.AddOpenSessionEvent(filterEvent);
+                }
+            }
+            //TODO: what do we do here?  A sharded filter?
+            return null;
         }
 
         /// <summary>
@@ -1426,7 +1863,20 @@ namespace NHibernate.Shards.Session
         /// <returns>The Filter instance representing the enabled fiter.</returns>
         public IFilter GetEnabledFilter(string filterName)
         {
-            throw new NotImplementedException();
+			// TODO(maxr) what do we return here?  A sharded filter?
+            foreach(IShard shard in shards)
+            {
+                if(shard.Session != null)
+                {
+                    IFilter filter = shard.Session.GetEnabledFilter(filterName);
+                    if(filter != null)
+                    {
+                        return filter;
+                    }
+                }
+            }
+            //TODO what do we do here?
+            return null;
         }
 
         /// <summary>
@@ -1435,7 +1885,18 @@ namespace NHibernate.Shards.Session
         /// <param name="filterName">The name of the filter to be disabled.</param>
         public void DisableFilter(string filterName)
         {
-            throw new NotImplementedException();
+            var filterEvent = new DisableFilterOpenSessionEvent(filterName);
+            foreach(IShard shard in shards)
+            {
+                if (shard.Session != null)
+                {
+                    shard.Session.DisableFilter(filterName);
+                }
+                else
+                {
+                    shard.AddOpenSessionEvent(filterEvent);
+                }
+            }
         }
 
         /// <summary>
@@ -1450,7 +1911,7 @@ namespace NHibernate.Shards.Session
         /// </returns>
         public IMultiQuery CreateMultiQuery()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1460,7 +1921,7 @@ namespace NHibernate.Shards.Session
         /// <returns></returns>
         public ISession SetBatchSize(int batchSize)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1475,7 +1936,7 @@ namespace NHibernate.Shards.Session
         /// </returns>
         public ISessionImplementor GetSessionImplementation()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -1485,23 +1946,23 @@ namespace NHibernate.Shards.Session
         /// <returns></returns>
         public IMultiCriteria CreateMultiCriteria()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public ISession GetSession(EntityMode entityMode)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public EntityMode ActiveEntityMode
         {
-            get { throw new NotImplementedException(); }
+            get { throw new NotSupportedException(); }
         }
 
         /// <summary> Get the statistics for this session.</summary>
         public ISessionStatistics Statistics
         {
-            get { throw new NotImplementedException(); }
+            get { return new ShardedSessionStatistics(this); }
         }
 
         ///<summary>
@@ -1539,19 +2000,32 @@ namespace NHibernate.Shards.Session
 
         #endregion
 
-        private List<ShardId> SelectShardIdsFromShardResolutionStrategyData(ShardResolutionStrategyDataImpl srsd)
+        private IList<ShardId> SelectShardIdsFromShardResolutionStrategyData(ShardResolutionStrategyDataImpl srsd)
         {
             IIdentifierGenerator idGenerator = shardedSessionFactory.GetIdentifierGenerator(srsd.EntityName);
             if ((idGenerator is IShardEncodingIdentifierGenerator) && (srsd.Id != null))
             {
-                //return Collections.singletonList(((IShardEncodingIdentifierGenerator) idGenerator).ExtractShardId(srsd.Id));
+				return new[] { ((IShardEncodingIdentifierGenerator)idGenerator).ExtractShardId(srsd.Id) };
             }
-            return shardStrategy.ShardResolutionStrategy.SelectShardIdsFromShardResolutionStrategyData(srsd) as List<ShardId>;
+            return shardStrategy.ShardResolutionStrategy.SelectShardIdsFromShardResolutionStrategyData(srsd);
         }
 
         private object ApplyGetOperation(IShardOperation<object> shardOp, ShardResolutionStrategyDataImpl srsd)
         {
-            throw new NotImplementedException();
+            IList<ShardId> shardIds = SelectShardIdsFromShardResolutionStrategyData(srsd);
+            return shardStrategy.ShardAccessStrategy.Apply(ShardIdListToShardList(shardIds), shardOp,
+                                                           new FirstNonNullResultExitStrategy<object>(),
+                                                           new ExitOperationsQueryCollector());
+        }
+
+        private IList<IShard> ShardIdListToShardList(IEnumerable<ShardId> shardIds)
+        {
+            Set<IShard> shards = new HashedSet<IShard>();
+            foreach(ShardId shardId in shardIds)
+            {
+                shards.Add(shardIdsToShards[shardId]);
+            }
+            return shards.ToList();
         }
 
         private ISession GetSessionForObject(object obj, List<IShard> shardsToConsider)
@@ -1564,10 +2038,8 @@ namespace NHibernate.Shards.Session
             return shard.Session;
         }
 
-        private IShard GetShardForObject(object obj, List<IShard> shardsToConsider)
-        {
-            //TODO: optimize this by keeping an identity map of objects to shardId
-
+        private IShard GetShardForObject(object obj, IList<IShard> shardsToConsider)
+        {            
             foreach (IShard shard in shardsToConsider)
             {
                 if (shard.Session != null && shard.Session.Contains(obj))
@@ -1578,41 +2050,35 @@ namespace NHibernate.Shards.Session
 
         internal ShardId GetShardIdForObject(object obj, List<IShard> shardsToConsider)
         {
-            //TODO Also, wouldn't it be faster to first see if there's just a single shard id mapped to the shard?
-
+            //TODO: Also, wouldn't it be faster to first see if there's just a single shard id mapped to the shard?
+			//TODO: optimize this by keeping an identity map of objects to shardId
             IShard shard = GetShardForObject(obj, shardsToConsider);
 
             if (shard == null)
             {
                 return null;
             }
-            else if (shard.ShardIds.Count == 1)
+            if (shard.ShardIds.Count == 1)
             {
                 IEnumerator<ShardId> iterator = shard.ShardIds.GetEnumerator();
                 iterator.MoveNext();
                 return iterator.Current;
             }
+            string className;
+            if (obj is INHibernateProxy)
+                className = ((INHibernateProxy) obj).HibernateLazyInitializer.PersistentClass.Name;
             else
+                className = obj.GetType().Name;
+
+
+            IIdentifierGenerator idGenerator = shard.SessionFactoryImplementor.GetIdentifierGenerator(className);
+
+            if (idGenerator is IShardEncodingIdentifierGenerator)
             {
-                System.Type clazz;
-                if (obj is INHibernateProxy)
-                    clazz = ((INHibernateProxy)obj).HibernateLazyInitializer.PersistentClass;
-                else
-                    clazz = obj.GetType();
-
-                throw new NotImplementedException();
-                //IIdentifierGenerator idGenerator = shard.SessionFactoryImplementor.GetIdentifierGenerator(clazz);
-
-                //if (idGenerator is IShardEncodingIdentifierGenerator)
-                //{
-                //    return ((IShardEncodingIdentifierGenerator) idGenerator).ExtractShardId(GetIdentifier(obj));
-                //}
-                //else
-                //{
-                //    // TODO: also use shard resolution strategy if it returns only 1 shard; throw this error in config instead of here
-                //    throw new HibernateException("Can not use virtual sharding with non-shard resolving id gen");
-                //}
+                return ((IShardEncodingIdentifierGenerator)idGenerator).ExtractShardId(GetIdentifier(obj));
             }
+            // TODO: also use shard resolution strategy if it returns only 1 shard; throw this error in config instead of here
+            throw new HibernateException("Can not use virtual sharding with non-shard resolving id gen");
         }
 
         private IDictionary<ShardId, IShard> BuildShardIdsToShardsMap()
@@ -1637,45 +2103,405 @@ namespace NHibernate.Shards.Session
             var shardList = new List<IShard>();
             foreach (var entry in sessionFactoryShardIdMap)
             {
-                //Pair<InterceptorList, SetSessionOnRequiresSessionEvent> pair =
-                //buildInterceptorList(
-                //interceptor,
-                //shardIdResolver,
-                //checkAllAssociatedObjectsForDifferentShards);
-                //Shard shard = new ShardImpl(entry.getValue(), entry.getKey(), pair.first);
-                //shardList.add(shard);
-                //if (pair.second != null)
-                //{
-                //    shard.addOpenSessionEvent(pair.second);
-                //}   
+                IOpenSessionEvent eventToRegister = null;
+                IInterceptor interceptorToSet = interceptor;
+                if(checkAllAssociatedObjectsForDifferentShards)
+                {
+					// cross shard association checks for updates are handled using interceptors
+                    var csrdi =
+                        new CrossShardRelationshipDetectingInterceptor(shardIdResolver);
+                    if(interceptorToSet == null)
+                    {
+						// no interceptor to wrap so just use the cross-shard detecting interceptor raw
+						// this is safe because it's a stateless interceptor
+                        interceptorToSet = csrdi;
+                    }
+                    else
+                    {
+						// user specified their own interceptor, so wrap it with a decorator
+						// that will still do the cross shard association checks
+                        Pair<IInterceptor, IOpenSessionEvent> result = DecorateInterceptor(csrdi, interceptor);
+                        interceptorToSet = result.first;
+                        eventToRegister = result.second;
+                    }
+                }
+                else if(interceptorToSet != null)
+                {
+					// user specified their own interceptor so need to account for the fact
+					// that it might be stateful
+                    Pair<IInterceptor, IOpenSessionEvent> result = HandleStatefulInterceptor(interceptorToSet);
+                    interceptorToSet = result.first;
+                    eventToRegister = result.second;
+                }
+                IShard shard = new ShardImpl(entry.Value,entry.Key,interceptorToSet);
+                shardList.Add(shard);
+                if(eventToRegister != null)
+                {
+                    shard.AddOpenSessionEvent(eventToRegister);
+                }
             }
-            /////
-            //throw new NotImplementedException();
             return shardList;
         }
 
-        public KeyValuePair<InterceptorList, SetSessionOnRequiresSessionEvent> BuildInterceptorList(IInterceptor providedInterceptor, IShardIdResolver shardIdResolver, bool checkAllAssociatedObjectsForDifferentShards)
+        internal static Pair<IInterceptor, IOpenSessionEvent> HandleStatefulInterceptor(IInterceptor mightBeStateful)
         {
-            throw new NotImplementedException();
+            IOpenSessionEvent openSessionEvent = null;
+            if (mightBeStateful.GetType().GetInterfaces().Contains(typeof(IStatefulInterceptorFactory)))
+            {
+                mightBeStateful = ((IStatefulInterceptorFactory)mightBeStateful).NewInstance();
+                if (mightBeStateful.GetType().GetInterfaces().Contains(typeof(IRequiresSession)))
+                {
+                    openSessionEvent = new SetSessionOnRequiresSessionEvent((IRequiresSession)mightBeStateful);
+                }                
+            }
+            return Pair<IInterceptor, IOpenSessionEvent>.Of(mightBeStateful, openSessionEvent);
         }
 
-        #region Nested type: GetShardOperation
-
-        private class GetShardOperation : IShardOperation<object>
+        static Pair<IInterceptor,IOpenSessionEvent> DecorateInterceptor(CrossShardRelationshipDetectingInterceptor csrdi,IInterceptor decorateMe)
         {
+            Pair<IInterceptor, IOpenSessionEvent> pair = HandleStatefulInterceptor(decorateMe);
+            IInterceptor decorator = new CrossShardRelationshipDetectingInterceptorDecorator(csrdi, pair.first);
+            return Pair<IInterceptor, IOpenSessionEvent>.Of(decorator, pair.second);
+        }
+
+        public object Get(System.Type clazz, ISerializable id)
+        {
+            var shardOp = new GetShardOperationByTypeAndId(clazz, id);
+            return ApplyGetOperation(shardOp, new ShardResolutionStrategyDataImpl(clazz, id));
+        }
+
+        public object Get(string entityName, ISerializable id)
+        {
+            var shardOp = new GetShardOperationByEntityNameAndId(entityName, id);
+            return ApplyGetOperation(shardOp, new ShardResolutionStrategyDataImpl(entityName, id));
+        }
+
+        private class SaveOrUpdateWithEntityName:ISaveOrUpdateOperation
+        {
+            private string entityName;
+
+            public SaveOrUpdateWithEntityName(string entityName)
+            {
+                this.entityName = entityName;
+            }
+
+            public void SaveOrUpdate(IShard shard, object obj)
+            {
+                shard.EstablishSession().SaveOrUpdate(entityName, obj);
+            }
+
+            public void Merge(IShard shard, object obj)
+            {
+                shard.EstablishSession().Merge(entityName, obj);
+            }
+        }
+
+        private class SaveOrUpdateSimple:ISaveOrUpdateOperation
+        {
+            public void SaveOrUpdate(IShard shard, object obj)
+            {
+                shard.EstablishSession().SaveOrUpdate(obj);
+            }
+
+            public void Merge(IShard shard, object obj)
+            {
+                shard.EstablishSession().Merge(obj);
+            }
+        }
+
+        private class UpdateOperationWithEntityName:IUpdateOperation
+        {
+            private string entityName;
+
+            public UpdateOperationWithEntityName(string entityName)
+            {
+                this.entityName = entityName;
+            }
+
+            public void Update(IShard shard, object obj)
+            {
+                shard.EstablishSession().Update(entityName, obj);
+            }
+
+            public void Merge(IShard shard, object obj)
+            {
+                shard.EstablishSession().Merge(entityName, obj);
+            }
+        }
+
+        private class UpdateOperationSimple:IUpdateOperation
+        {
+            public void Update(IShard shard, object obj)
+            {
+                shard.EstablishSession().Update(obj);
+            }
+
+            public void Merge(IShard shard, object obj)
+            {
+                shard.EstablishSession().Merge(obj);
+            }
+        }
+
+        private class DeleteOperationSimple:IDeleteOperation
+        {
+            public void Delete(IShard shard, object obj)
+            {
+                shard.EstablishSession().Delete(obj);                
+            }
+        }
+
+        private class DeleteOperationWithEntityName:IDeleteOperation
+        {
+            private string entityName;
+
+            public DeleteOperationWithEntityName(string entityName)
+            {
+                this.entityName = entityName;
+            }
+            public void Delete(IShard shard, object obj)
+            {
+                shard.EstablishSession().Delete(entityName, obj);
+            }
+        }
+
+        private class RefreshOperationSimple:IRefreshOperation
+        {
+            public void Refresh(IShard shard, object obj)
+            {
+                shard.EstablishSession().Refresh(obj);
+            }
+        }
+
+        private class RefreshOperationWithLockMode:IRefreshOperation
+        {
+            private LockMode lockMode;
+
+            public RefreshOperationWithLockMode(LockMode lockMode)
+            {
+                this.lockMode = lockMode;
+            }
+
+
+            public void Refresh(IShard shard, object obj)
+            {
+                shard.EstablishSession().Refresh(obj, lockMode);
+            }
+        }
+
+        interface IRefreshOperation
+        {
+            void Refresh(IShard shard, object obj);
+        }
+
+        interface IDeleteOperation
+        {
+            void Delete(IShard shard, object obj);
+        }
+
+        interface IUpdateOperation
+        {
+            void Update(IShard shard, object obj);
+            void Merge(IShard shard, object obj);
+        }
+
+        interface ISaveOrUpdateOperation
+        {
+            void SaveOrUpdate(IShard shard, object obj);
+            void Merge(IShard shard, object obj);
+        }
+
+        #region Nested IShardOperation<object> types
+
+        private class GetShardOperationByTypeAndId : IShardOperation<object>
+        {
+
+            private readonly System.Type clazz;
+            private readonly object id;
+
+            public GetShardOperationByTypeAndId(System.Type clazz, object id)
+            {
+                this.clazz = clazz;
+                this.id = id;
+            }
+
             #region IShardOperation<object> Members
 
             public object Execute(IShard shard)
             {
-                throw new NotImplementedException();
+                return shard.EstablishSession().Get(clazz, id);
             }
 
             public string OperationName
             {
-                get { throw new NotImplementedException(); }
+                get { return "get(System.Type clazz, ISerializable id)"; }
             }
 
             #endregion
+        }
+
+
+        private class GetShardOperationByTypeIdAndLockMode : IShardOperation<object>
+        {
+
+            private readonly System.Type clazz;
+            private readonly ISerializable id;
+            private readonly LockMode lockMode;
+
+            public GetShardOperationByTypeIdAndLockMode(System.Type clazz, ISerializable id, LockMode lockMode)
+            {
+                this.clazz = clazz;
+                this.id = id;
+                this.lockMode = lockMode;
+            }
+
+            #region IShardOperation<object> Members
+
+            public object Execute(IShard shard)
+            {
+                return shard.EstablishSession().Get(clazz, id,lockMode);
+            }
+
+            public string OperationName
+            {
+                get { return "get(System.Type clazz, ISerializable id, LockMode lockMode)"; }
+            }
+
+            #endregion
+        }
+
+        private class GetShardOperationByEntityName:IShardOperation<string>
+        {
+            private object obj;
+
+            public GetShardOperationByEntityName(object obj)
+            {
+                this.obj = obj;
+            }
+
+            public string Execute(IShard shard)
+            {
+                return shard.EstablishSession().GetEntityName(obj);
+            }
+
+            public string OperationName
+            {
+                get{ return "getEntityName(object obj)"; }
+            }
+        }
+
+        private class GetShardOperationByEntityNameIdAndLockMode:IShardOperation<object>
+        {
+            private string entityName;
+            private ISerializable id;
+            private LockMode lockMode;
+
+            public GetShardOperationByEntityNameIdAndLockMode(string entityName, ISerializable id, LockMode lockMode)
+            {
+                this.entityName = entityName;
+                this.id = id;
+                this.lockMode = lockMode;                
+            }
+
+            public object Execute(IShard shard)
+            {
+                return shard.EstablishSession().Load(entityName, id);
+            }
+
+            public string OperationName
+            {
+                get { return "get(string entityName, ISerializableid, LockMode lockMode)"; }
+            }
+        }
+
+        private class GetShardOperationByEntityNameAndId : IShardOperation<object>
+        {
+            private readonly string entityName;
+            private readonly ISerializable id;            
+
+            public GetShardOperationByEntityNameAndId(string entityName, ISerializable id)
+            {
+                this.entityName = entityName;
+                this.id = id;
+            }
+
+            public object Execute(IShard shard)
+            {
+                return shard.EstablishSession().Get(entityName, id);
+            }
+
+            public string OperationName
+            {
+                get { return "get(string entityname, ISerializable id)"; }
+            }
+        }
+
+        private class LockShardOperationByEntityNameObjectLockMode:IShardOperation<object>
+        {
+            private string entityName;
+            private object obj;
+            private LockMode lockMode;
+
+            public LockShardOperationByEntityNameObjectLockMode(string entityName,object obj, LockMode lockMode)
+            {
+                this.entityName = entityName;
+                this.obj = obj;
+                this.lockMode = lockMode;
+            }
+
+
+            public object Execute(IShard shard)
+            {
+                shard.EstablishSession().Lock(entityName, obj, lockMode);
+                return null;
+            }
+
+            public string OperationName
+            {
+                get { return "Lock(string entityName, object obj, LockMode lockMode)"; }
+            }
+        }
+
+        private class LockShardOperationByObjectAndLockMode:IShardOperation<object>
+        {
+            
+            private LockMode lockMode;
+            private object obj;
+
+            public LockShardOperationByObjectAndLockMode(object obj, LockMode lockMode)
+            {
+                this.lockMode = lockMode;
+                this.obj = obj;
+            }
+            public object Execute(IShard shard)
+            {
+                shard.EstablishSession().Lock(obj, lockMode);
+                return null;
+            }
+
+            public string OperationName
+            {
+                get { return "LockShardOperationByLockMode(object obj, LockMode lockMode)"; }
+            }
+        }
+
+        private class CurrentLockModeShardOperation:IShardOperation<LockMode>
+        {
+            private object obj;
+
+            public CurrentLockModeShardOperation(object obj)
+            {
+                this.obj = obj;
+            }
+
+            public LockMode Execute(IShard shard)
+            {
+                return shard.EstablishSession().GetCurrentLockMode(obj);
+            }
+
+            public string OperationName
+            {
+                get { return "GetCurrentLockMode(object obj)"; }
+            }
         }
 
         #endregion

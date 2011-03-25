@@ -1,5 +1,11 @@
 ﻿namespace NHibernate.Shards.Criteria
 {
+	/**
+	 * Event that allows the maxResults of a {@link Criteria} to be set lazily.
+	 * @see Criteria#setMaxResults(int)
+	 *
+	 * @author maxr@google.com (Max Ross)
+	 */
 	public class SetMaxResultsEvent : ICriteriaEvent
 	{
 		// the maxResults we'll set when the event fires

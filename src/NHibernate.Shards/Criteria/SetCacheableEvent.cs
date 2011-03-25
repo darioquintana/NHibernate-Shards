@@ -1,9 +1,15 @@
-﻿
-
-namespace NHibernate.Shards.Criteria
+﻿namespace NHibernate.Shards.Criteria
 {
+	/**
+	 * Event that allows the cacheability of a {@link Criteria} to be set lazily.
+	 * @see Criteria#setCacheable(boolean)
+	 *
+	 * @author maxr@google.com (Max Ross)
+	 */
 	public class SetCacheableEvent : ICriteriaEvent
 	{
+		// the value to which we're going to set the cacheability of the Criteria
+		// when the event fires
 		private readonly bool cacheable;
 
 		///<summary>Construct a SetCacheableEvent</summary>

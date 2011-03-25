@@ -20,6 +20,7 @@ namespace NHibernate.Shards.Transaction
 		//private IList<Synchronization> synchronizations;
 		private int timeout;
 		private bool timeoutSet;
+	    private IsolationLevel isoLevel = IsolationLevel.Unspecified;
 
 		public ShardedTransactionImpl(IShardedSessionImplementor ssi)
 		{
@@ -38,6 +39,11 @@ namespace NHibernate.Shards.Transaction
 			}
 		}
 
+        public ShardedTransactionImpl(IShardedSessionImplementor ssi, IsolationLevel isoLevel):this(ssi)
+        {
+            this.isoLevel = isoLevel;
+        }
+
 		#region IShardedTransaction Members
 
 		public void SetupTransaction(ISession session)
@@ -46,7 +52,15 @@ namespace NHibernate.Shards.Transaction
 			transactions.Add(session.Transaction);
 			if (begun)
 			{
-				session.BeginTransaction();
+                if(isoLevel == IsolationLevel.Unspecified)
+                {
+                    session.BeginTransaction();    
+                }
+                else
+                {
+                    session.BeginTransaction(isoLevel);
+                }
+				
 			}
 			//TODO: Set Timeout
 			//if (timeoutSet)

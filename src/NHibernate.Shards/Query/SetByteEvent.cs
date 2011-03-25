@@ -16,7 +16,7 @@ namespace NHibernate.Shards.Query
         private readonly byte val;
         private readonly String name;
 
-        private SetByteEvent(CtorType ctorType, int position, byte val, String name)
+        private SetByteEvent(CtorType ctorType, int position, Byte val, String name)
         {
             this.ctorType = ctorType;
             this.position = position;

@@ -17,7 +17,7 @@ namespace NHibernate.Shards.Strategy.Exit
 		public IList Apply(IList results)
 		{
 			IList nonNullResults = ExitOperationUtils.GetNonNullList(results);
-			return ExitOperationUtils.GetSubList(nonNullResults, 0, Math.Min(nonNullResults.Count, maxResult));
+			return ExitOperationUtils.GetSubList(nonNullResults, 0, Math.Min(nonNullResults.Count - 1, maxResult - 1));
 		}
 
 		#endregion

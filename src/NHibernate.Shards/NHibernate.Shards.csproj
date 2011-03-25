@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9DEF9516-EB32-479D-99BF-FE8175956112}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -74,6 +74,7 @@
       <HintPath>..\..\lib\NHibernate.ByteCode.LinFu.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -81,6 +82,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="BaseHasShardIdList.cs" />
     <Compile Include="Cfg\ConfigurationToShardConfigurationAdapter.cs" />
     <Compile Include="Cfg\IShardConfiguration.cs" />
@@ -98,6 +100,7 @@
     <Compile Include="Criteria\IShardedCriteria.cs" />
     <Compile Include="Criteria\IShardedSubcriteria.cs" />
     <Compile Include="Criteria\ISubCriteriaFactory.cs" />
+    <Compile Include="Criteria\ISubcriteriaRegistrar.cs" />
     <Compile Include="Criteria\SetCacheableEvent.cs" />
     <Compile Include="Criteria\SetCacheModeEvent.cs" />
     <Compile Include="Criteria\SetCacheRegionEvent.cs" />
@@ -114,6 +117,7 @@
     <Compile Include="Criteria\ShardedCriteriaImpl.cs" />
     <Compile Include="Criteria\ShardedSubcriteriaImpl.cs" />
     <Compile Include="Criteria\SubcriteriaFactoryImpl.cs" />
+    <Compile Include="Criteria\SubcriteriaRegistrar.cs" />
     <Compile Include="Criteria\SubsetShardedSessionFactoryImpl.cs" />
     <Compile Include="CrossShardAssociationException.cs" />
     <Compile Include="Engine\IShardedSessionFactoryImplementor.cs" />
@@ -126,11 +130,13 @@
     <Compile Include="IShard.cs" />
     <Compile Include="IShardedTransaction.cs" />
     <Compile Include="IShardOperation.cs" />
+    <Compile Include="ListShardOperation.cs" />
     <Compile Include="LoadBalance\BaseShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\IShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RandomShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RoundRobinShardLoadBalancer.cs" />
     <Compile Include="Query\AdHocQueryFactoryImpl.cs" />
+    <Compile Include="Query\ExitOperationsQueryCollector.cs" />
     <Compile Include="Query\IExitOperationsQueryCollector.cs" />
     <Compile Include="Query\IQueryEvent.cs" />
     <Compile Include="Query\IQueryFactory.cs" />
@@ -138,6 +144,7 @@
     <Compile Include="Query\QueryId.cs" />
     <Compile Include="Query\IShardedQuery.cs" />
     <Compile Include="Query\QueryResult.cs" />
+    <Compile Include="Query\SetAnsiStringEvent.cs" />
     <Compile Include="Query\SetBigIntegerEvent.cs" />
     <Compile Include="Query\SetBinaryEvent.cs" />
     <Compile Include="Query\SetBooleanEvent.cs" />
@@ -145,9 +152,36 @@
     <Compile Include="Query\SetCacheableEvent.cs" />
     <Compile Include="Query\SetCacheModeEvent.cs" />
     <Compile Include="Query\SetCacheRegionEvent.cs" />
+    <Compile Include="Query\SetCharacterEvent.cs" />
+    <Compile Include="Query\SetCommentEvent.cs" />
+    <Compile Include="Query\SetDateTimeEvent.cs" />
+    <Compile Include="Query\SetDecimalEvent.cs" />
+    <Compile Include="Query\SetDoubleEvent.cs" />
+    <Compile Include="Query\SetEntityEvent.cs" />
+    <Compile Include="Query\SetEnumEvent.cs" />
+    <Compile Include="Query\SetFetchSizeEvent.cs" />
+    <Compile Include="Query\SetFirstResultEvent.cs" />
+    <Compile Include="Query\SetFlushModeEvent.cs" />
+    <Compile Include="Query\SetGuidEvent.cs" />
+    <Compile Include="Query\SetIntegerEvent.cs" />
+    <Compile Include="Query\SetLockModeEvent.cs" />
+    <Compile Include="Query\SetLongEvent.cs" />
+    <Compile Include="Query\SetMaxResultsEvent.cs" />
+    <Compile Include="Query\SetParameterEvent.cs" />
+    <Compile Include="Query\SetParameterListEvent.cs" />
+    <Compile Include="Query\SetPropertiesEvent.cs" />
+    <Compile Include="Query\SetReadOnlyEvent.cs" />
+    <Compile Include="Query\SetResultTransformerEvent.cs" />
+    <Compile Include="Query\SetShortEvent.cs" />
+    <Compile Include="Query\SetSingleEvent.cs" />
+    <Compile Include="Query\SetStringEvent.cs" />
+    <Compile Include="Query\SetTimeEvent.cs" />
+    <Compile Include="Query\SetTimeoutEvent.cs" />
+    <Compile Include="Query\SetTimestampEvent.cs" />
     <Compile Include="Query\ShardedQueryImpl.cs" />
     <Compile Include="Session\BaseStatefulInterceptorFactory.cs" />
     <Compile Include="Session\CrossShardRelationshipDetectingInterceptor.cs" />
+    <Compile Include="Session\CrossShardRelationshipDetectingInterceptorDecorator.cs" />
     <Compile Include="Session\DisableFilterOpenSessionEvent.cs" />
     <Compile Include="Session\EnableFilterOpenSessionEvent.cs" />
     <Compile Include="Session\IControlSessionProvider.cs" />
@@ -218,8 +252,11 @@
     <Compile Include="Threading\AtomicInteger.cs" />
     <Compile Include="Threading\SynchronizedCollection.cs" />
     <Compile Include="Transaction\ShardedTransactionImpl.cs" />
+    <Compile Include="UniqueResultShardOperation.cs" />
+    <Compile Include="Util\InterceptorDecorator.cs" />
     <Compile Include="Util\InterceptorList.cs" />
     <Compile Include="Util\Iterables.cs" />
+    <Compile Include="Util\Pair.cs" />
     <Compile Include="Util\Preconditions.cs" />
     <Compile Include="Util\StringUtil.cs" />
   </ItemGroup>

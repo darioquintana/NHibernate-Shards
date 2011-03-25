@@ -4,16 +4,16 @@ namespace NHibernate.Shards.Demo
 {
 	public class WeatherReport
 	{
-		public long ReportId { get; set; }
+		public virtual string ReportId { get; set; }
 
-		public string Continent { get; set; }
+		public virtual string Continent { get; set; }
 
-		public long Latitude { get; set; }
+		public virtual long Latitude { get; set; }
 
-		public long Longitude { get; set; }
+		public virtual long Longitude { get; set; }
 
-		public int Temperature { get; set; }
+		public virtual int Temperature { get; set; }
 
-		public DateTime ReportTime { get; set; }
+		public virtual DateTime ReportTime { get; set; }
 	}
 }

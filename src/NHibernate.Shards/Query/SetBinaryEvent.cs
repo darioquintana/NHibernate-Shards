@@ -3,7 +3,7 @@ using NHibernate.Shards.Session;
 
 namespace NHibernate.Shards.Query
 {
-    class SetBinaryEvent : IQueryEvent
+	public class SetBinaryEvent : IQueryEvent
     {
         private enum CtorType
         {

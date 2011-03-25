@@ -13,13 +13,13 @@ namespace NHibernate.Shards.Id
 	/// </summary>
 	public class ShardedUUIDGenerator : UUIDHexGenerator, IShardEncodingIdentifierGenerator
 	{
-		private static readonly ILog Log = LogManager.GetLogger(typeof(ShardedUUIDGenerator));
+		private static readonly ILog Log = LogManager.GetLogger(typeof (ShardedUUIDGenerator));
 
 		public ShardId ExtractShardId(object identifier)
 		{
 			Preconditions.CheckNotNull(identifier);
 
-			string id = (string) identifier;
+			var id = (string) identifier;
 
 			int shardId = int.Parse(id.Substring(0, 4), NumberStyles.AllowHexSpecifier);
 

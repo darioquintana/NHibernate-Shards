@@ -23,8 +23,6 @@ namespace NHibernate.Shards
 	/// </summary>
 	public class ShardedConfiguration
 	{
-		private readonly ILog log = LogManager.GetLogger(typeof (ShardedConfiguration));
-
 		// the prototype config that we'll use when constructing the shard-specific
 		// configs
 		private readonly Configuration prototypeConfiguration;
@@ -36,10 +34,17 @@ namespace NHibernate.Shards
 		private readonly IShardStrategyFactory shardStrategyFactory;
 
 		// maps virtual shard ids to physical shard ids
+		private readonly Dictionary<int, int> virtualShardToShardMap;
 
 		// maps physical shard ids to sets of virtual shard ids
 		private readonly Dictionary<int, Set<ShardId>> shardToVirtualShardIdMap;
-		private readonly Dictionary<int, int> virtualShardToShardMap;
+
+
+		/// <summary>
+		/// our lovely logger
+		/// </summary>
+		private readonly ILog log = LogManager.GetLogger(typeof(ShardedConfiguration));
+
 
 		#region Ctors
 
@@ -140,13 +145,14 @@ namespace NHibernate.Shards
 
 		private void PopulatePrototypeWithVariableProperties(IShardConfiguration config)
 		{
-			safeSet(prototypeConfiguration, Environment.ConnectionString, config.ConnectionString);
-			safeSet(prototypeConfiguration, Environment.CacheRegionPrefix, config.ShardCacheRegionPrefix);
-			safeSet(prototypeConfiguration, Environment.SessionFactoryName, config.ShardSessionFactoryName);
-			safeSet(prototypeConfiguration, ShardedEnvironment.ShardIdProperty, config.ShardId.ToString());
+			SafeSet(prototypeConfiguration, Environment.ConnectionString, config.ConnectionString);
+			SafeSet(prototypeConfiguration, Environment.ConnectionStringName, config.ConnectionStringName);
+			SafeSet(prototypeConfiguration, Environment.CacheRegionPrefix, config.ShardCacheRegionPrefix);
+			SafeSet(prototypeConfiguration, Environment.SessionFactoryName, config.ShardSessionFactoryName);
+			SafeSet(prototypeConfiguration, ShardedEnvironment.ShardIdProperty, config.ShardId.ToString());
 		}
 
-		private static void safeSet(Configuration config, String key, String value)
+		private static void SafeSet(Configuration config, String key, String value)
 		{
 			if (value != null)
 				config.SetProperty(key, value);
@@ -174,9 +180,9 @@ namespace NHibernate.Shards
 		}
 
 
-		private bool DoesNotSupportTopLevelSave(Property property)
+		private static bool DoesNotSupportTopLevelSave(Property property)
 		{
-			return property.Value != null && property.Value.GetType().IsAssignableFrom(typeof (OneToOne));
+			return property.Value != null && (property.Value.GetType() == (typeof (OneToOne)));            
 		}
 	}
 }
