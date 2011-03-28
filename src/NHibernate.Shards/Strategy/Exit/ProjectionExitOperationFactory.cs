@@ -18,7 +18,7 @@ namespace NHibernate.Shards.Strategy.Exit
             return projectionExitOperationFactory;
         }
 
-        public IProjectionExitOperation GetProjectionExitOperation(IProjection projection, ISessionFactoryImplementor sessionFactoryImplementor)
+        public IProjectionExitOperation GetProjectionExitOperation(IProjection projection, ISessionFactory sessionFactory)
         {
             if (projection.GetType().IsAssignableFrom(typeof(RowCountExitOperation)))
             {

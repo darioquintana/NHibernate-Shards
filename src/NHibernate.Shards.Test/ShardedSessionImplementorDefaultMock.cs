@@ -17,7 +17,7 @@ namespace NHibernate.Shards.Test
             get { throw new NotSupportedException(); }
         }
 
-        public virtual IList<IShard> Shards
+        public virtual IEnumerable<IShard> Shards
         {
             get { throw new NotSupportedException(); }
         }

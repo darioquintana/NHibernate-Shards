@@ -1,11 +1,10 @@
 using System.Collections.Generic;
-using NHibernate.Shards.Strategy.Selection;
+using NHibernate.Shards.Engine;
 
 namespace NHibernate.Shards.Strategy.Resolution
 {
-	public interface IShardResolutionStrategy
-	{
-		IList<ShardId> SelectShardIdsFromShardResolutionStrategyData(
-			IShardResolutionStrategyData shardResolutionStrategyData);
-	}
+    public interface IShardResolutionStrategy
+    {
+        IEnumerable<ShardId> ResolveShardIds(ShardedEntityKey key);
+    }
 }

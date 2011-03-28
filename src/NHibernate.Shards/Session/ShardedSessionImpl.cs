@@ -131,7 +131,7 @@ namespace NHibernate.Shards.Session
         public static ShardId CurrentSubgraphShardId
         {
             get { return currentSubgraphShardId; }
-            private set { currentSubgraphShardId = value; }
+            set { currentSubgraphShardId = value; }
         }
 
         public IShard AnyShard

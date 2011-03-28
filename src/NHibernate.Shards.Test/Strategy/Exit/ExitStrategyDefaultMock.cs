@@ -13,12 +13,12 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 		/// <returns>Whether or not the caller can halt processing</returns>
 		public bool AddResult(T result, IShard shard)
 		{
-			throw new System.NotImplementedException();
+			throw new System.NotSupportedException();
 		}
 
-		public T CompileResults(IExitOperationsCollector exitOperationsCollector)
+		public T CompileResults()
 		{
-			throw new System.NotImplementedException();
+			throw new System.NotSupportedException();
 		}
 	}
 }

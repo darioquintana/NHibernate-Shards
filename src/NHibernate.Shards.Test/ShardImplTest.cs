@@ -9,99 +9,99 @@ using NUnit.Framework;
 
 namespace NHibernate.Shards.Test
 {
-    [TestFixture,Ignore]
+    [TestFixture, Ignore]
     public class ShardImplTest : TestFixtureBaseWithMock
     {
-          [Test]
-          public void TestAddOpenSessionEvent() {
-              ShardImpl shard = new ShardImpl(new ShardId(1), Stub<ISessionFactoryImplementor>());//new SessionFactoryDefaultMock()
-              try
-              {
-                  shard.AddOpenSessionEvent(null);
-                  Assert.Fail("expected nre");
-              }
-              catch (NullReferenceException nre)
-              {
-                  // good
-              }
-              IOpenSessionEvent ose = Stub<IOpenSessionEvent>();//new OpenSessionEventDefaultMock()
-              shard.AddOpenSessionEvent(ose);
-              Assert.IsNotNull(shard.GetOpenSessionEvents());
-              Assert.AreEqual(1, shard.GetOpenSessionEvents().Count);//.size()
-              //Assert.AreSame(ose, shard.GetOpenSessionEvents().Find(0));//.get(0)
+        //  [Test]
+        //  public void TestAddOpenSessionEvent() {
+        //      ShardImpl shard = new ShardImpl(new ShardId(1), Stub<ISessionFactoryImplementor>());//new SessionFactoryDefaultMock()
+        //      try
+        //      {
+        //          shard.AddOpenSessionEvent(null);
+        //          Assert.Fail("expected nre");
+        //      }
+        //      catch (NullReferenceException nre)
+        //      {
+        //          // good
+        //      }
+        //      IOpenSessionEvent ose = Stub<IOpenSessionEvent>();//new OpenSessionEventDefaultMock()
+        //      shard.AddOpenSessionEvent(ose);
+        //      Assert.IsNotNull(shard.GetOpenSessionEvents());
+        //      Assert.AreEqual(1, shard.GetOpenSessionEvents().Count);//.size()
+        //      //Assert.AreSame(ose, shard.GetOpenSessionEvents().Find(0));//.get(0)
 
-              // now add another and make sure it is added to the end
-              IOpenSessionEvent anotherOse = Stub<IOpenSessionEvent>();
-              shard.AddOpenSessionEvent(anotherOse);
-              Assert.IsNotNull(shard.GetOpenSessionEvents());
-              Assert.AreEqual(2, shard.GetOpenSessionEvents().Count);//.size()
-              //Assert.AreSame(ose, shard.GetOpenSessionEvents().get(0));
-              //Assert.AreSame(anotherOse, shard.GetOpenSessionEvents().get(1));
-          }
+        //      // now add another and make sure it is added to the end
+        //      IOpenSessionEvent anotherOse = Stub<IOpenSessionEvent>();
+        //      shard.AddOpenSessionEvent(anotherOse);
+        //      Assert.IsNotNull(shard.GetOpenSessionEvents());
+        //      Assert.AreEqual(2, shard.GetOpenSessionEvents().Count);//.size()
+        //      //Assert.AreSame(ose, shard.GetOpenSessionEvents().get(0));
+        //      //Assert.AreSame(anotherOse, shard.GetOpenSessionEvents().get(1));
+        //  }
 
-        [Test]
-        public void TestAddCriteriaEvent()
-        {
-            ShardImpl shard = new ShardImpl(new ShardId(1), Stub<ISessionFactoryImplementor>());//new SessionFactoryDefaultMock()
-            try
-            {
-                shard.AddCriteriaEvent(null, null);
-                Assert.Fail("expected nre");
-            }
-            catch (NullReferenceException nre)
-            {
-                // good
-            }
+        //[Test]
+        //public void TestAddCriteriaEvent()
+        //{
+        //    ShardImpl shard = new ShardImpl(new ShardId(1), Stub<ISessionFactoryImplementor>());//new SessionFactoryDefaultMock()
+        //    try
+        //    {
+        //        shard.AddCriteriaEvent(null, null);
+        //        Assert.Fail("expected nre");
+        //    }
+        //    catch (NullReferenceException nre)
+        //    {
+        //        // good
+        //    }
 
-            CriteriaId criteriaId = new CriteriaId(2);
-            try
-            {
-                shard.AddCriteriaEvent(criteriaId, null);
-                Assert.Fail("expected nre");
-            }
-            catch (NullReferenceException nre)
-            {
-                // good
-            }
+        //    CriteriaId criteriaId = new CriteriaId(2);
+        //    try
+        //    {
+        //        shard.AddCriteriaEvent(criteriaId, null);
+        //        Assert.Fail("expected nre");
+        //    }
+        //    catch (NullReferenceException nre)
+        //    {
+        //        // good
+        //    }
 
-            ICriteriaEvent ce = Stub<ICriteriaEvent>();//new CriteriaEventDefaultMock()
-            try
-            {
-                shard.AddCriteriaEvent(null, ce);
-                Assert.Fail("expected nre");
-            }
-            catch (NullReferenceException nre)
-            {
-                // good
-            }
+        //    ICriteriaEvent ce = Stub<ICriteriaEvent>();//new CriteriaEventDefaultMock()
+        //    try
+        //    {
+        //        shard.AddCriteriaEvent(null, ce);
+        //        Assert.Fail("expected nre");
+        //    }
+        //    catch (NullReferenceException nre)
+        //    {
+        //        // good
+        //    }
 
-            shard.AddCriteriaEvent(criteriaId, ce);
-            //Assert.IsNotNull(shard.GetCriteriaEventMap());
-            //Assert.Equals(1, shard.getCriteriaEventMap().size());
-            //Assert.Equals(1, shard.getCriteriaEventMap().get(criteriaId).size());
-            //Assert.AreSame(ce, shard.getCriteriaEventMap().get(criteriaId).get(0));
+        //    shard.AddCriteriaEvent(criteriaId, ce);
+        //    //Assert.IsNotNull(shard.GetCriteriaEventMap());
+        //    //Assert.Equals(1, shard.getCriteriaEventMap().size());
+        //    //Assert.Equals(1, shard.getCriteriaEventMap().get(criteriaId).size());
+        //    //Assert.AreSame(ce, shard.getCriteriaEventMap().get(criteriaId).get(0));
 
-            // now add another event to the same criteria
-            ICriteriaEvent anotherCe = Stub<ICriteriaEvent>();
-            //shard.AddCriteriaEvent(criteriaId, anotherCe);
-            //Assert.IsNotNull(shard.getCriteriaEventMap());
-            //Assert.Equals(1, shard.getCriteriaEventMap().size());
-            //Assert.Equals(2, shard.getCriteriaEventMap().get(criteriaId).size());
-            //Assert.AreSame(ce, shard.getCriteriaEventMap().get(criteriaId).get(0));
-            //Assert.AreSame(anotherCe, shard.getCriteriaEventMap().get(criteriaId).get(1));
+        //    // now add another event to the same criteria
+        //    ICriteriaEvent anotherCe = Stub<ICriteriaEvent>();
+        //    //shard.AddCriteriaEvent(criteriaId, anotherCe);
+        //    //Assert.IsNotNull(shard.getCriteriaEventMap());
+        //    //Assert.Equals(1, shard.getCriteriaEventMap().size());
+        //    //Assert.Equals(2, shard.getCriteriaEventMap().get(criteriaId).size());
+        //    //Assert.AreSame(ce, shard.getCriteriaEventMap().get(criteriaId).get(0));
+        //    //Assert.AreSame(anotherCe, shard.getCriteriaEventMap().get(criteriaId).get(1));
 
-            // now add an event to a different criteria
-            CriteriaId anotherCriteriaId = new CriteriaId(3);
-            ICriteriaEvent yetAnotherCe = Stub<ICriteriaEvent>();
-            shard.AddCriteriaEvent(anotherCriteriaId, yetAnotherCe);
-            //Assert.IsNotNull(shard.getCriteriaEventMap());
-            //Assert.Equals(2, shard.getCriteriaEventMap().size());
-            //Assert.Equals(2, shard.getCriteriaEventMap().get(criteriaId).size());
-            //Assert.AreSame(ce, shard.getCriteriaEventMap().get(criteriaId).get(0));
-            //Assert.AreSame(anotherCe, shard.getCriteriaEventMap().get(criteriaId).get(1));
-            //Assert.Equals(1, shard.getCriteriaEventMap().get(anotherCriteriaId).size());
-            //Assert.AreSame(yetAnotherCe, shard.getCriteriaEventMap().get(anotherCriteriaId).get(0));
-        }
+        //    // now add an event to a different criteria
+        //    CriteriaId anotherCriteriaId = new CriteriaId(3);
+        //    ICriteriaEvent yetAnotherCe = Stub<ICriteriaEvent>();
+        //    shard.AddCriteriaEvent(anotherCriteriaId, yetAnotherCe);
+        //    //Assert.IsNotNull(shard.getCriteriaEventMap());
+        //    //Assert.Equals(2, shard.getCriteriaEventMap().size());
+        //    //Assert.Equals(2, shard.getCriteriaEventMap().get(criteriaId).size());
+        //    //Assert.AreSame(ce, shard.getCriteriaEventMap().get(criteriaId).get(0));
+        //    //Assert.AreSame(anotherCe, shard.getCriteriaEventMap().get(criteriaId).get(1));
+        //    //Assert.Equals(1, shard.getCriteriaEventMap().get(anotherCriteriaId).size());
+        //    //Assert.AreSame(yetAnotherCe, shard.getCriteriaEventMap().get(anotherCriteriaId).get(0));
+        //}
 
         //[Test]
         //public void TestEstablishSessionNoEvents()
@@ -253,125 +253,133 @@ namespace NHibernate.Shards.Test
         //    AssertTrue(shardImpl.getCriteriaEventMap().get(critId1).isEmpty());
         //}
 
-        [Test]
-public void TestAddQueryEvent() {
-    ShardImpl shard = new ShardImpl(new ShardId(1), Stub<ISessionFactoryImplementor>());
-    try {
-      shard.AddQueryEvent(null, null);
-      Assert.Fail("expected npe");
-    } catch (NullReferenceException npe) {
-      // good
-    }
+        //[Test]
+        //public void TestAddQueryEvent()
+        //{
+        //    ShardImpl shard = new ShardImpl(new ShardId(1), Stub<ISessionFactoryImplementor>());
+        //    try
+        //    {
+        //        shard.AddQueryEvent(null, null);
+        //        Assert.Fail("expected npe");
+        //    }
+        //    catch (NullReferenceException npe)
+        //    {
+        //        // good
+        //    }
 
-    QueryId queryId = new QueryId(1);
-    try {
-      shard.AddQueryEvent(queryId, null);
-      Assert.Fail("expected npe");
-    } catch (NullReferenceException npe) {
-      // good
-    }
+        //    QueryId queryId = new QueryId(1);
+        //    try
+        //    {
+        //        shard.AddQueryEvent(queryId, null);
+        //        Assert.Fail("expected npe");
+        //    }
+        //    catch (NullReferenceException npe)
+        //    {
+        //        // good
+        //    }
 
-    IQueryEvent qe = Stub<IQueryEvent>();
-    try {
-      shard.AddQueryEvent(null, qe);
-      Assert.Fail("expected npe");
-    } catch (NullReferenceException npe) {
-      // good
-    }
+        //    IQueryEvent qe = Stub<IQueryEvent>();
+        //    try
+        //    {
+        //        shard.AddQueryEvent(null, qe);
+        //        Assert.Fail("expected npe");
+        //    }
+        //    catch (NullReferenceException npe)
+        //    {
+        //        // good
+        //    }
 
-    shard.AddQueryEvent(queryId, qe);
-    //assertNotNull(shard.getQueryEventMap());
-    //assertEquals(1, shard.getQueryEventMap().size());
-    //assertEquals(1, shard.getQueryEventMap().get(queryId).size());
-    //assertSame(qe, shard.getQueryEventMap().get(queryId).get(0));
+        //    shard.AddQueryEvent(queryId, qe);
+        //    //assertNotNull(shard.getQueryEventMap());
+        //    //assertEquals(1, shard.getQueryEventMap().size());
+        //    //assertEquals(1, shard.getQueryEventMap().get(queryId).size());
+        //    //assertSame(qe, shard.getQueryEventMap().get(queryId).get(0));
 
-    // now add another event to the same query
-    IQueryEvent anotherQe = Stub<IQueryEvent>();
-    shard.AddQueryEvent(queryId, anotherQe);
-    //assertNotNull(shard.getQueryEventMap());
-    //assertEquals(1, shard.getQueryEventMap().size());
-    //assertEquals(2, shard.getQueryEventMap().get(queryId).size());
-    //assertSame(qe, shard.getQueryEventMap().get(queryId).get(0));
-    //assertSame(anotherQe, shard.getQueryEventMap().get(queryId).get(1));
+        //    // now add another event to the same query
+        //    IQueryEvent anotherQe = Stub<IQueryEvent>();
+        //    shard.AddQueryEvent(queryId, anotherQe);
+        //    //assertNotNull(shard.getQueryEventMap());
+        //    //assertEquals(1, shard.getQueryEventMap().size());
+        //    //assertEquals(2, shard.getQueryEventMap().get(queryId).size());
+        //    //assertSame(qe, shard.getQueryEventMap().get(queryId).get(0));
+        //    //assertSame(anotherQe, shard.getQueryEventMap().get(queryId).get(1));
 
-    // now add an event to a different query
-    QueryId anotherQueryId = new QueryId(3);
-    IQueryEvent yetAnotherQe = Stub<IQueryEvent>();
-    shard.AddQueryEvent(anotherQueryId, yetAnotherQe);
-    //assertNotNull(shard.getQueryEventMap());
-    //assertEquals(2, shard.getQueryEventMap().size());
-    //assertEquals(2, shard.getQueryEventMap().get(queryId).size());
-    //assertSame(qe, shard.getQueryEventMap().get(queryId).get(0));
-    //assertSame(anotherQe, shard.getQueryEventMap().get(queryId).get(1));
-    //assertEquals(1, shard.getQueryEventMap().get(anotherQueryId).size());
-    //assertSame(yetAnotherQe, shard.getQueryEventMap().get(anotherQueryId).get(0));
-  }
-
-
+        //    // now add an event to a different query
+        //    QueryId anotherQueryId = new QueryId(3);
+        //    IQueryEvent yetAnotherQe = Stub<IQueryEvent>();
+        //    shard.AddQueryEvent(anotherQueryId, yetAnotherQe);
+        //    //assertNotNull(shard.getQueryEventMap());
+        //    //assertEquals(2, shard.getQueryEventMap().size());
+        //    //assertEquals(2, shard.getQueryEventMap().get(queryId).size());
+        //    //assertSame(qe, shard.getQueryEventMap().get(queryId).get(0));
+        //    //assertSame(anotherQe, shard.getQueryEventMap().get(queryId).get(1));
+        //    //assertEquals(1, shard.getQueryEventMap().get(anotherQueryId).size());
+        //    //assertSame(yetAnotherQe, shard.getQueryEventMap().get(anotherQueryId).get(0));
+        //}
 
 
-  ////@Override
-  //  public CriteriaId getCriteriaId() {
-  //    return critId;
-  //  }
+        ////@Override
+        //  public CriteriaId getCriteriaId() {
+        //    return critId;
+        //  }
 
-  //  //@Override
-  //  public ICriteriaFactory getCriteriaFactory() {
-  //    return critFactory;
-  //  }
-  //}
+        //  //@Override
+        //  public ICriteriaFactory getCriteriaFactory() {
+        //    return critFactory;
+        //  }
+        //}
 
-  //  //@Override
-  //  public ICriteria createCriteria(org.hibernate.Session session) {
-  //    createCriteriaCalledWith = session;
-  //    return critToReturn;
-  //  }
-  //}
+        //  //@Override
+        //  public ICriteria createCriteria(org.hibernate.Session session) {
+        //    createCriteriaCalledWith = session;
+        //    return critToReturn;
+        //  }
+        //}
 
-  //private static readonly class MyCriteriaEvent implements CriteriaEvent {
-  //  private int numOnEventCalls;
-  //  public void onEvent(Criteria crit) {
-  //    numOnEventCalls++;
-  //  }
-  //}
+        //private static readonly class MyCriteriaEvent implements CriteriaEvent {
+        //  private int numOnEventCalls;
+        //  public void onEvent(Criteria crit) {
+        //    numOnEventCalls++;
+        //  }
+        //}
 
-  // private static readonly class MyShardedQuery extends ShardedQueryDefaultMock {
-  //  private readonly QueryId queryId;
-  //  private readonly QueryFactory queryFactory;
+        // private static readonly class MyShardedQuery extends ShardedQueryDefaultMock {
+        //  private readonly QueryId queryId;
+        //  private readonly QueryFactory queryFactory;
 
-  //  public MyShardedQuery(QueryId queryId, IQueryFactory queryFactory) {
-  //    this.queryId = queryId;
-  //    this.queryFactory = queryFactory;
-  //  }
+        //  public MyShardedQuery(QueryId queryId, IQueryFactory queryFactory) {
+        //    this.queryId = queryId;
+        //    this.queryFactory = queryFactory;
+        //  }
 
-  //  //@Override
-  //  public QueryId getQueryId() {
-  //    return queryId;
-  //  }
+        //  //@Override
+        //  public QueryId getQueryId() {
+        //    return queryId;
+        //  }
 
-  //  //@Override
-  //  public QueryFactory getQueryFactory() {
-  //    return queryFactory;
-  //  }
-  //}
+        //  //@Override
+        //  public QueryFactory getQueryFactory() {
+        //    return queryFactory;
+        //  }
+        //}
 
-  //public static readonly class MyQueryFactory extends QueryFactoryDefaultMock {
-  //  private org.hibernate.Session createQueryCalledWith;
-  //  private Query queryToReturn;
+        //public static readonly class MyQueryFactory extends QueryFactoryDefaultMock {
+        //  private org.hibernate.Session createQueryCalledWith;
+        //  private Query queryToReturn;
 
-  //  public MyQueryFactory(Query queryToReturn) {
-  //    this.queryToReturn = queryToReturn;
-  //  }
+        //  public MyQueryFactory(Query queryToReturn) {
+        //    this.queryToReturn = queryToReturn;
+        //  }
 
-  //  public IQuery createQuery(Session session) {
-  //    createQueryCalledWith = session;
-  //    return queryToReturn;
-  //  }
-  //}
+        //  public IQuery createQuery(Session session) {
+        //    createQueryCalledWith = session;
+        //    return queryToReturn;
+        //  }
+        //}
 
-  //private static readonly class MyQueryEvent implements QueryEvent {
-  //  private int numOnEventCalls;
-  //  public void onEvent(Query query) {
-  //    numOnEventCalls++;
+        //private static readonly class MyQueryEvent implements QueryEvent {
+        //  private int numOnEventCalls;
+        //  public void onEvent(Query query) {
+        //    numOnEventCalls++;
     }
 }

@@ -93,45 +93,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Criteria\AddCriterionEventTest.cs" />
-    <Compile Include="Criteria\AddOrderEventTest.cs" />
-    <Compile Include="Criteria\CreateAliasEventTest.cs" />
     <Compile Include="LoadBalance\RoundRobinShardLoadBalancerTest.cs" />
     <Compile Include="Mock\SessionDefaultMock.cs" />
-    <Compile Include="Query\AddTimeEventTest.cs" />
-    <Compile Include="Query\SetAnsiStringEventTest.cs" />
-    <Compile Include="Query\SetBigIntegerEventTest.cs" />
-    <Compile Include="Query\SetBinaryEventTest.cs" />
-    <Compile Include="Query\SetBooleanEventTest.cs" />
-    <Compile Include="Query\SetByteEventTest.cs" />
-    <Compile Include="Query\SetCacheableEventTest.cs" />
-    <Compile Include="Query\SetCacheModeEventTest.cs" />
-    <Compile Include="Query\SetCacheRegionEventTest.cs" />
-    <Compile Include="Query\SetCharacterEventTest.cs" />
-    <Compile Include="Query\SetCommentEventTest.cs" />
-    <Compile Include="Query\SetDateTimeEventTest.cs" />
-    <Compile Include="Query\SetDecimalEventTest.cs" />
-    <Compile Include="Query\SetDoubleEventTest.cs" />
-    <Compile Include="Query\SetEntityEventTest.cs" />
-    <Compile Include="Query\SetEnumEventTest.cs" />
-    <Compile Include="Query\SetFetchSizeEventTest.cs" />
-    <Compile Include="Query\SetFirstResultEventTest.cs" />
-    <Compile Include="Query\SetFlushModeEventTest.cs" />
-    <Compile Include="Query\SetGuidEventTest.cs" />
-    <Compile Include="Query\SetIntegerEventTest.cs" />
-    <Compile Include="Query\SetLockModeEventTest.cs" />
-    <Compile Include="Query\SetLongEventTest.cs" />
-    <Compile Include="Query\SetMaxResultsEventTest.cs" />
-    <Compile Include="Query\SetParameterEventTest.cs" />
-    <Compile Include="Query\SetParameterListEventTest.cs" />
-    <Compile Include="Query\SetPropertiesEventTest.cs" />
-    <Compile Include="Query\SetReadOnlyEventTest.cs" />
-    <Compile Include="Query\SetResultTransformerEventTest.cs" />
-    <Compile Include="Query\SetShortEventTest.cs" />
-    <Compile Include="Query\SetSingleEventTest.cs" />
-    <Compile Include="Query\SetStringEventTest.cs" />
-    <Compile Include="Query\SetTimeoutEventTest.cs" />
-    <Compile Include="Query\SetTimestampEventTest.cs" />
     <Compile Include="Session\CrossShardRelationshipDetectingInterceptorDecoratorTest.cs" />
     <Compile Include="ShardDefaultMock.cs" />
     <Compile Include="ShardedSessionImplementorDefaultMock.cs" />
@@ -144,24 +107,16 @@
     <Compile Include="Strategy\Exit\ProjectionExitOperationFactoryTest.cs" />
     <Compile Include="Strategy\Selection\LoadBalancedShardSelectionStrategyTest.cs" />
     <Compile Include="Transaction\ShardedTransactionTest.cs" />
-    <Compile Include="Util\IterablesFixture.cs" />
     <Compile Include="Id\ShardedUUIDGeneratorFixture.cs" />
     <Compile Include="Mock\TestFixtureBaseWithMock.cs" />
     <Compile Include="ShardedConfigurationTest.cs" />
     <Compile Include="ShardImplTest.cs" />
     <Compile Include="Strategy\Access\ParallelShardAccessStrategyFixture.cs" />
-    <Compile Include="Strategy\Access\ParallelShardOperationCallableFixture.cs" />
     <Compile Include="Strategy\Exit\ExitOperationUtilsFixture.cs" />
     <Compile Include="Strategy\Exit\ExitStrategyDefaultMock.cs" />
     <Compile Include="Strategy\Exit\OrderExitOperationFixture.cs" />
     <Compile Include="Strategy\Exit\Collections.cs" />
     <Compile Include="Threading\AtomicIntegerFixture.cs" />
-    <Compile Include="Threading\CountDownLatchFixture.cs" />
-    <Compile Include="Threading\FooCallable1.cs" />
-    <Compile Include="Threading\FooCallable2.cs" />
-    <Compile Include="Threading\FutureFixture.cs" />
-    <Compile Include="Threading\InmediatlyCallable.cs" />
-    <Compile Include="Threading\OperationCallable.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -197,7 +152,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Criteria\" />
     <Folder Include="Properties\" />
+    <Folder Include="Query\" />
     <Folder Include="Strategy\Resolution\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

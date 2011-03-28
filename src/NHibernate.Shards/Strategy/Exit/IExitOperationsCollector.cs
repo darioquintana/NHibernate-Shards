@@ -1,6 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
-using NHibernate.Engine;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
@@ -16,6 +14,6 @@ namespace NHibernate.Shards.Strategy.Exit
 	{
 		IList Apply(IList result);
 
-		void SetSessionFactory(ISessionFactoryImplementor sessionFactoryImplementor);
+		void SetSessionFactory(ISessionFactory sessionFactory);
 	}
 }

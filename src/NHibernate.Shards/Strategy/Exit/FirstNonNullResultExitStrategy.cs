@@ -30,7 +30,7 @@ namespace NHibernate.Shards.Strategy.Exit
 			return false;
 		}
 
-		public T CompileResults(IExitOperationsCollector exitOperationsCollector)
+		public T CompileResults()
 		{
 			return nonNullResult;
 		}

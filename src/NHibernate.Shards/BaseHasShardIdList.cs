@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards
 {
-	/// <summary>
+
+    /// <summary>
 	/// Base implementation for HasShadIdList.
 	/// Takes care of null/empty checks.
 	/// </summary>
@@ -15,13 +17,12 @@ namespace NHibernate.Shards
 		/// </summary>
 		protected readonly IList<ShardId> shardIds;
 
-		protected BaseHasShardIdList(ICollection<ShardId> shardIds)
+		protected BaseHasShardIdList(IEnumerable<ShardId> shardIds)
 		{
 			Preconditions.CheckNotNull(shardIds);
-			Preconditions.CheckArgument(!(shardIds.Count == 0)); //not empty
-
-			this.shardIds = new List<ShardId>(shardIds);
-		}
+			this.shardIds = shardIds.ToList();
+            Preconditions.CheckArgument(this.shardIds.Count > 0); //not empty
+        }
 
 		public BaseHasShardIdList()
 		{}

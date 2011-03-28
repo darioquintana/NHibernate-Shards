@@ -46,7 +46,7 @@ namespace NHibernate.Shards.Strategy.Exit
             get { return firstShard; }
         }
 
-		public T CompileResults(IExitOperationsCollector collector)
+		public T CompileResults()
 		{
 			return firstResult;
 		}

@@ -1,84 +1,121 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Threading;
 using NHibernate.Shards.Strategy.Exit;
-using NHibernate.Shards.Threading;
 
 namespace NHibernate.Shards.Strategy.Access
 {
-	/// <summary>
-	/// Invokes the given operation on the given shards in parallel.
-	/// </summary>
-	public class ParallelShardAccessStrategy : IShardAccessStrategy
-	{
-		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ParallelShardAccessStrategy));
+    /// <summary>
+    /// Invokes the given operation on the given shards in parallel.
+    /// </summary>
+    public class ParallelShardAccessStrategy : IShardAccessStrategy
+    {
+        private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(30);
+        private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ParallelShardAccessStrategy));
 
-		#region IShardAccessStrategy Members
+        #region IShardAccessStrategy Members
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="shards"></param>
-		/// <param name="operation"></param>
-		/// <param name="exitStrategy"></param>
-		/// <param name="exitOperationsCollector"></param>
-		/// <returns></returns>
-		public T Apply<T>(IList<IShard> shards,
-		                  IShardOperation<T> operation,
-		                  IExitStrategy<T> exitStrategy,
-		                  IExitOperationsCollector exitOperationsCollector)
-		{
-			IList<StartAwareFutureTask<T>> tasks = new List<StartAwareFutureTask<T>>(shards.Count);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="shards"></param>
+        /// <param name="operation"></param>
+        /// <param name="exitStrategy"></param>
+        /// <returns></returns>
+        public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
+        {
+            object syncLock = new object();
+            int activeCount = 0;                // Number of active operations
+            bool cancelled = false;             // Has cancellation been requested of uncompleted operations?
+            Exception exception = null;
 
-			int taskId = 0;
+            lock (syncLock)
+            {
+                foreach (var shard in shards)
+                {
+                    ThreadPool.QueueUserWorkItem(state =>
+                    {
+                        // ReSharper disable AccessToModifiedClosure
+                        var s = (IShard)state;
+                        try
+                        {
+                            lock (syncLock)
+                            {
+                                // Prevent execution if parallel operation has already been cancelled.
+                                if (cancelled)
+                                {
+                                    if (--activeCount <= 0) Monitor.Pulse(syncLock);
+                                    return;
+                                }
+                            }
 
-			CountDownLatch startSignal = new CountDownLatch(1);
+                            var result = operation.Execute(s);
 
-			CountDownLatch doneSignal = new CountDownLatch(shards.Count);
+                            lock (syncLock)
+                            {
+                                // Only add result if operation still has not been cancelled and result is not null.
+                                if (!cancelled && !Equals(result, null))
+                                {
+                                    cancelled = exitStrategy.AddResult(result, s);
+                                }
 
-			foreach(IShard shard in shards)
-			{
-				ParallelShardOperationCallable<T> callable = new ParallelShardOperationCallable<T>(
-					startSignal,
-					doneSignal,
-					exitStrategy,
-					operation,
-					shard,
-					tasks);
+                                if (--activeCount <= 0) Monitor.Pulse(syncLock);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            lock (syncLock)
+                            {
+                                if (!cancelled)
+                                {
+                                    exception = e;
+                                    cancelled = true;
+                                }
 
-				StartAwareFutureTask<T> ft = new StartAwareFutureTask<T>(callable, taskId++);
+                                if (--activeCount <= 0) Monitor.Pulse(syncLock);
+                            }
+                            Log.DebugFormat("Failed parallel operation '{0}' on shard '{1:X}'.",
+                                operation.OperationName, s.ShardIds.First(), activeCount);
+                        }
+                        // ReSharper restore AccessToModifiedClosure
+                    }, shard);
+                    activeCount++;
+                }
 
-				tasks.Add(ft);
+                DateTime now = DateTime.Now;
+                DateTime deadline = now.Add(OperationTimeout);
+                while (activeCount > 0)
+                {
+                    var timeout = deadline - now;
+                    if (timeout <= TimeSpan.Zero || !Monitor.Wait(syncLock, timeout))
+                    {
+                        cancelled = true;
 
-				ThreadPool.QueueUserWorkItem(delegate { ft.Run(); });
-			}
-			// the tasks List is populated, release the threads!
-			startSignal.CountDown();
+                        string message = string.Format(
+                            CultureInfo.InvariantCulture,
+                            "Parallel '{0}' operation did not complete in '{1}' seconds.",
+                            operation.OperationName, OperationTimeout);
+                        Log.Error(message);
+                        throw new TimeoutException(message);
+                    }
 
-			try
-			{
-				Log.Debug("Waiting for threads to complete processing before proceeding.");
-				//TODO(maxr) let users customize timeout behavior
-				/*
-				if(!doneSignal.await(10, TimeUnit.SECONDS)) {
-				  final String msg = "Parallel operations timed out.";
-				  log.error(msg);
-				  throw new HibernateException(msg);
-				}
-				*/
-				// now we wait until all threads finish
-				doneSignal.Await();
-			}
-			catch(Exception e)
-			{
-				// not sure why this would happen or what we should do if it does
-				Log.Error("Received unexpected exception while waiting for done signal.", e);
-			}
-			Log.Debug("Compiling results.");
-			return exitStrategy.CompileResults(exitOperationsCollector);
-		}
+                    now = DateTime.Now;
+                }
+            }
 
-		#endregion
-	}
+            if (exception != null)
+            {
+                Log.Error(string.Format("Failed parallel '{0}' operation.", operation.OperationName), exception);
+                throw exception;
+            }
+
+            Log.Debug(string.Format("Completed parallel '{0}' operation.", operation.OperationName), exception);
+            return exitStrategy.CompileResults();
+        }
+
+        #endregion
+    }
 }
