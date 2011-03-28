@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Iesi.Collections.Generic;
-using log4net;
 using NHibernate.Cfg;
 using NHibernate.Engine;
 using NHibernate.Mapping;
@@ -23,7 +22,9 @@ namespace NHibernate.Shards
 	/// </summary>
 	public class ShardedConfiguration
 	{
-		// the prototype config that we'll use when constructing the shard-specific
+        private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedConfiguration));
+        
+        // the prototype config that we'll use when constructing the shard-specific
 		// configs
 		private readonly Configuration prototypeConfiguration;
 
@@ -38,13 +39,6 @@ namespace NHibernate.Shards
 
 		// maps physical shard ids to sets of virtual shard ids
 		private readonly Dictionary<int, Set<ShardId>> shardToVirtualShardIdMap;
-
-
-		/// <summary>
-		/// our lovely logger
-		/// </summary>
-		private readonly ILog log = LogManager.GetLogger(typeof(ShardedConfiguration));
-
 
 		#region Ctors
 
@@ -169,7 +163,7 @@ namespace NHibernate.Shards
 					if (DoesNotSupportTopLevelSave(property))
 					{
 						System.Type mappedClass = classMapping.MappedClass;
-						log.InfoFormat("Type {0} does not support top-level saves.", mappedClass.Name);
+						Log.InfoFormat("Type {0} does not support top-level saves.", mappedClass.Name);
 						classesWithoutTopLevelSaveSupport.Add(mappedClass);
 						break;
 					}

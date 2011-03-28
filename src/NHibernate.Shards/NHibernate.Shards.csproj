@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9DEF9516-EB32-479D-99BF-FE8175956112}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -60,10 +60,6 @@
     <Reference Include="LinFu.DynamicProxy, Version=1.0.3.14911, Culture=neutral, PublicKeyToken=62a6874124340d6e, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\LinFu.DynamicProxy.dll</HintPath>
-    </Reference>
-    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\lib\log4net.dll</HintPath>
     </Reference>
     <Reference Include="NHibernate, Version=2.1.0.1002, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

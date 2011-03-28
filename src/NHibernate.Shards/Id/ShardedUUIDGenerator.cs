@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using log4net;
 using NHibernate.Id;
 using NHibernate.Shards.Session;
 using NHibernate.Shards.Util;
@@ -13,8 +12,6 @@ namespace NHibernate.Shards.Id
 	/// </summary>
 	public class ShardedUUIDGenerator : UUIDHexGenerator, IShardEncodingIdentifierGenerator
 	{
-		private static readonly ILog Log = LogManager.GetLogger(typeof (ShardedUUIDGenerator));
-
 		public ShardId ExtractShardId(object identifier)
 		{
 			Preconditions.CheckNotNull(identifier);

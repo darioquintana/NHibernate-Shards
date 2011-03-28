@@ -7,8 +7,7 @@ using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Criteria
 {
-	using log4net;
-
+	
 	/**
 	 * Implements the ExitOperationsCollector interface for Critierias
 	 *
@@ -16,6 +15,9 @@ namespace NHibernate.Shards.Criteria
 	 */
 	public class ExitOperationsCriteriaCollector : IExitOperationsCollector
 	{
+		// Our friendly neighborhood logger
+    	private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ExitOperationsCriteriaCollector));
+
 		// maximum number of results requested by the client
 		private int? maxResults;
 
@@ -39,9 +41,6 @@ namespace NHibernate.Shards.Criteria
 
 		// Order operations applied to the Criteria
 		private readonly IList<Order> orders = new List<Order>();
-
-		// Our friendly neighborhood logger
-    	private readonly ILog log = LogManager.GetLogger(typeof (ExitOperationsCriteriaCollector));
 
 		/**
 		 * Sets the maximum number of results requested by the client
@@ -79,7 +78,7 @@ namespace NHibernate.Shards.Criteria
 			{
             	this.distinct = (Distinct) projection;
 				//TODO: Distinct doesn't work yet
-            	log.Error("Distinct is not ready yet");
+            	Log.Error("Distinct is not ready yet");
 				throw new NotSupportedException();
 			}
 			if (projection.GetType().IsAssignableFrom(rowCountProjection.GetType()))
@@ -99,7 +98,7 @@ namespace NHibernate.Shards.Criteria
 			}
 			else
 			{
-            	log.Error("Adding an unsupported Projection: " + projection.GetType().Name);
+            	Log.Error("Adding an unsupported Projection: " + projection.GetType().Name);
 				throw new NotSupportedException();
 			}
 

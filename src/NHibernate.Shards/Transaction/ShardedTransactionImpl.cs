@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using log4net;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Session;
 using NHibernate.Transaction;
@@ -11,7 +10,8 @@ namespace NHibernate.Shards.Transaction
 	//TODO: some methods without implementation
 	public class ShardedTransactionImpl : IShardedTransaction
 	{
-		private readonly ILog log = LogManager.GetLogger(typeof (ShardedTransactionImpl));
+		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof (ShardedTransactionImpl));
+
 		private readonly IList<ITransaction> transactions;
 		private bool begun;
 		private bool commitFailed;
@@ -48,7 +48,7 @@ namespace NHibernate.Shards.Transaction
 
 		public void SetupTransaction(ISession session)
 		{
-			log.Debug("Setting up transaction");
+			Log.Debug("Setting up transaction");
 			transactions.Add(session.Transaction);
 			if (begun)
 			{
@@ -88,7 +88,7 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (HibernateException he)
 				{
-					log.Warn("exception starting underlying transaction", he);
+					Log.Warn("exception starting underlying transaction", he);
 					beginException = true;
 				}
 			}
@@ -126,7 +126,7 @@ namespace NHibernate.Shards.Transaction
 			{
 				throw new TransactionException("Transaction not succesfully started");
 			}
-			log.Debug("Starting transaction commit");
+			Log.Debug("Starting transaction commit");
 			BeforeTransactionCompletion();
 			bool commitException = false;
 			HibernateException firstCommitException = null;
@@ -138,7 +138,7 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (HibernateException he)
 				{
-					log.Warn("exception commiting underlying transaction", he);
+					Log.Warn("exception commiting underlying transaction", he);
 					commitException = true;
 					// we're only going to rethrow the first commit exception we receive
 					if (firstCommitException == null)
@@ -177,7 +177,7 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (HibernateException he)
 				{
-					log.Warn("exception rolling back underlying transaction", he);
+					Log.Warn("exception rolling back underlying transaction", he);
 					rollbackException = true;
 					if (firstRollbackException == null)
 					{
@@ -205,7 +205,7 @@ namespace NHibernate.Shards.Transaction
 				catch(Exception ex)
 				{
 					string ExceptionMessage = "Can't enlist a commmand succesfully";
-					log.Warn(ExceptionMessage);
+					Log.Warn(ExceptionMessage);
 					throw new TransactionException(ExceptionMessage, ex);
 				}
 			}
@@ -244,7 +244,7 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (Exception ex)
 				{
-					log.Warn(ExceptionMessage);
+					Log.Warn(ExceptionMessage);
 					firstException = ex;
 				}
 			}

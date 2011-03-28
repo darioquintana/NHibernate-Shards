@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using log4net;
 using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Shards.Threading;
 
@@ -12,7 +11,7 @@ namespace NHibernate.Shards.Strategy.Access
 	/// </summary>
 	public class ParallelShardAccessStrategy : IShardAccessStrategy
 	{
-		private readonly ILog log = LogManager.GetLogger(typeof(ParallelShardAccessStrategy));
+		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ParallelShardAccessStrategy));
 
 		#region IShardAccessStrategy Members
 
@@ -59,7 +58,7 @@ namespace NHibernate.Shards.Strategy.Access
 
 			try
 			{
-				log.Debug("Waiting for threads to complete processing before proceeding.");
+				Log.Debug("Waiting for threads to complete processing before proceeding.");
 				//TODO(maxr) let users customize timeout behavior
 				/*
 				if(!doneSignal.await(10, TimeUnit.SECONDS)) {
@@ -74,9 +73,9 @@ namespace NHibernate.Shards.Strategy.Access
 			catch(Exception e)
 			{
 				// not sure why this would happen or what we should do if it does
-				log.Error("Received unexpected exception while waiting for done signal.", e);
+				Log.Error("Received unexpected exception while waiting for done signal.", e);
 			}
-			log.Debug("Compiling results.");
+			Log.Debug("Compiling results.");
 			return exitStrategy.CompileResults(exitOperationsCollector);
 		}
 

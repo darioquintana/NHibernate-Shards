@@ -1,12 +1,11 @@
 using System.Collections.Generic;
-using log4net;
 using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Strategy.Access
 {
 	public class SequentialShardAccessStrategy : IShardAccessStrategy
 	{
-		private readonly ILog log = LogManager.GetLogger(typeof(SequentialShardAccessStrategy));
+        private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(SequentialShardAccessStrategy));
 
 		#region IShardAccessStrategy Members
 
@@ -17,7 +16,7 @@ namespace NHibernate.Shards.Strategy.Access
 			{
 				if (exitStrategy.AddResult(operation.Execute(shard), shard))
 				{
-					log.DebugFormat("Short-circuiting operation {0} after execution against shard {1}",
+					Log.DebugFormat("Short-circuiting operation {0} after execution against shard {1}",
 					              operation.OperationName, shard);
 					break;
 				}

@@ -6,7 +6,6 @@ using System.Data;
 using System.Linq;
 using Iesi.Collections;
 using Iesi.Collections.Generic;
-using log4net;
 using NHibernate.Cache;
 using NHibernate.Cfg;
 using NHibernate.Connection;
@@ -35,6 +34,9 @@ namespace NHibernate.Shards.Session
 {
 	public class ShardedSessionFactoryImpl : IShardedSessionFactoryImplementor, IControlSessionProvider
 	{
+		// our lovely logger
+		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedSessionFactoryImpl));
+
 		// the id of the control shard
 		private static readonly int CONTROL_SHARD_ID = 0;
 
@@ -63,9 +65,6 @@ namespace NHibernate.Shards.Session
 
 		// Statistics aggregated across all contained SessionFactories
 		private readonly IStatistics statistics = new StatisticsImpl();
-
-		// our lovely logger
-		private readonly ILog log = LogManager.GetLogger(typeof(ShardedSessionFactoryImpl));
 
 		#region Ctor
 
@@ -121,7 +120,7 @@ namespace NHibernate.Shards.Session
 					if (!uniqueShardIds.Add(shardId))
 					{
 						string msg = string.Format("Cannot have more than one shard with shard id {0}.", shardId.Id);
-						log.Error(msg);
+						Log.Error(msg);
 						throw new HibernateException(msg);
 					}
 					if (shardIds.Contains(shardId))
@@ -718,7 +717,7 @@ namespace NHibernate.Shards.Session
 				}
 				catch (Exception e)
 				{
-					this.log.Warn("Caught exception trying to close.", e);
+					Log.Warn("Caught exception trying to close.", e);
 				}
 			}
 		}

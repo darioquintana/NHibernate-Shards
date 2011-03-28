@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using log4net;
 using NHibernate.Shards.Util;
 using NHibernate.Type;
 
@@ -8,8 +7,9 @@ namespace NHibernate.Shards.Session
 {
 	public class CrossShardRelationshipDetectingInterceptor : EmptyInterceptor
 	{
-		private static readonly ILog Log = LogManager.GetLogger(typeof (CrossShardRelationshipDetectingInterceptor));
-		private readonly IShardIdResolver shardIdResolver;
+		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof (CrossShardRelationshipDetectingInterceptor));
+		
+        private readonly IShardIdResolver shardIdResolver;
 
 		public CrossShardRelationshipDetectingInterceptor(IShardIdResolver shardIdResolver)
 		{

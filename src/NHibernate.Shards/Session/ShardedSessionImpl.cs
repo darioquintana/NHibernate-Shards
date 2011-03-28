@@ -6,7 +6,6 @@ using System.Data;
 using System.Linq.Expressions;
 using System.Runtime.Serialization;
 using Iesi.Collections.Generic;
-using log4net;
 using System.Linq;
 using NHibernate.Engine;
 using NHibernate.Id;
@@ -35,12 +34,13 @@ namespace NHibernate.Shards.Session
     /// </summary>
     public class ShardedSessionImpl : IShardedSession, IShardedSessionImplementor, IShardIdResolver
     {
+        private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedSessionImpl));
+
         [ThreadStatic]
         private static ShardId currentSubgraphShardId;
 
         private readonly bool checkAllAssociatedObjectsForDifferentShards;
         private readonly Set<System.Type> classesWithoutTopLevelSaveSupport;
-        private readonly ILog log = LogManager.GetLogger(typeof(ShardedSessionImpl));
 
         private readonly IShardedSessionFactoryImplementor shardedSessionFactory;
 
@@ -754,7 +754,7 @@ namespace NHibernate.Shards.Session
             }
             Preconditions.CheckNotNull(shardId);
             SetCurrentSubgraphShardId(shardId);
-            log.Debug(String.Format("Saving object of type {0} to shard {1}", obj.GetType(), shardId));
+            Log.Debug(String.Format("Saving object of type {0} to shard {1}", obj.GetType(), shardId));
             return shardIdsToShards[shardId].EstablishSession().Save(entityName, obj);
 
         }
@@ -777,7 +777,7 @@ namespace NHibernate.Shards.Session
             if(classesWithoutTopLevelSaveSupport.Contains(clazz))
             {
                 string msg = string.Format("Attempt to save object of type {0} as top-level object", clazz.Name);
-                log.Error(msg);
+                Log.Error(msg);
                 throw new HibernateException(msg);
             }
         }
@@ -811,7 +811,7 @@ namespace NHibernate.Shards.Session
                 lockedShardId = shardId;
             }
             
-            log.Debug(string.Format("Selected shard {0} for object of type {1}", shardId.Id, obj.GetType().Name));
+            Log.Debug(string.Format("Selected shard {0} for object of type {1}", shardId.Id, obj.GetType().Name));
             
             return shardId;
             
@@ -896,7 +896,7 @@ namespace NHibernate.Shards.Session
                         existingShardId.Id,
                         associatedObject.GetType().Name,
                         localShardId.Id);
-                    log.Error(msg);
+                    Log.Error(msg);
                     throw new CrossShardAssociationException(msg);
                 }
             }
@@ -1124,7 +1124,7 @@ namespace NHibernate.Shards.Session
             }
             Preconditions.CheckNotNull(shardId);
             SetCurrentSubgraphShardId(shardId);
-            log.Debug(string.Format("Persisting object of type {0} to shard {1}", obj.GetType(), shardId));
+            Log.Debug(string.Format("Persisting object of type {0} to shard {1}", obj.GetType(), shardId));
             shardIdsToShards[shardId].EstablishSession().Persist(entityName, obj);
         }
 
@@ -1976,14 +1976,14 @@ namespace NHibernate.Shards.Session
         {
             if (!closed)
             {
-                log.Warn("ShardedSessionImpl is being garbage collected but it was never properly closed.");
+                Log.Warn("ShardedSessionImpl is being garbage collected but it was never properly closed.");
                 try
                 {
                     Close();
                 }
                 catch (Exception e)
                 {
-                    log.Warn("Caught exception trying to close.", e);
+                    Log.Warn("Caught exception trying to close.", e);
                 }
             }
         }

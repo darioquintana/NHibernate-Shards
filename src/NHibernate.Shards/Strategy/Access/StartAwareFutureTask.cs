@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using log4net;
 using NHibernate.Shards.Threading;
 
 namespace NHibernate.Shards.Strategy.Access
@@ -27,12 +26,10 @@ namespace NHibernate.Shards.Strategy.Access
 	/// </summary>
 	public class StartAwareFutureTask<T> : FutureTask<T>
 	{
+		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(StartAwareFutureTask<T>));
+
 		private readonly int id;
-
-		private readonly ILog log = LogManager.GetLogger(typeof(StartAwareFutureTask<T>));
-
 		private bool cancelled;
-
 		private bool runCalled;
 
 		public StartAwareFutureTask(ICallable<T> callable, int id)
@@ -48,17 +45,17 @@ namespace NHibernate.Shards.Strategy.Access
 
 		public override void Run()
 		{
-			log.DebugFormat("Task {0}: Run invoked", Id);
+			Log.DebugFormat("Task {0}: Run invoked", Id);
 			lock(this)
 			{
 				if (cancelled)
 				{
-					log.DebugFormat("Task {0}: Task will not run.", Id);
+					Log.DebugFormat("Task {0}: Task will not run.", Id);
 					return;
 				}
 				runCalled = true;
 			}
-			log.DebugFormat("Task {0}: Task will run.", Id);
+			Log.DebugFormat("Task {0}: Task will run.", Id);
 			base.Run();
 		}
 
@@ -79,7 +76,7 @@ namespace NHibernate.Shards.Strategy.Access
 			}
 			bool result = superCancel(mayInterruptIfRunning);
 			cancelled = true;
-			log.DebugFormat("Task {0}: Task cancelled.", Id);
+			Log.DebugFormat("Task {0}: Task cancelled.", Id);
 			return result;
 		}
 

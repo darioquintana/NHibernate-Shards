@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using log4net;
 using NHibernate.Shards.Threading.Exception;
 using NHibernate.Shards.Util;
 
@@ -21,7 +20,7 @@ namespace NHibernate.Shards.Strategy.Exit
 	/// </summary>
 	public class AvgResultsExitOperation : IExitOperation
 	{
-		private readonly ILog log = LogManager.GetLogger(typeof(AvgResultsExitOperation));
+		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(AvgResultsExitOperation));
 
 		#region IExitOperation Members
 
@@ -75,7 +74,7 @@ namespace NHibernate.Shards.Strategy.Exit
 			{
 				String msg = "Wrong type in result list. Expected " + typeof(Object[]) +
 						" but found " + result.GetType();
-				log.Error(msg);
+				Log.Error(msg);
 				throw new IllegalStateException(msg);
 			}
 			Object[] resultArr = (Object[])result;
@@ -84,7 +83,7 @@ namespace NHibernate.Shards.Strategy.Exit
 				String msg =
 					"Result array is wrong size. Expected 2 " +
 						" but found " + resultArr.Length;
-				log.Error(msg);
+				Log.Error(msg);
 				throw new IllegalStateException(msg);
 			}
 			return Pair<Double?, Int32?>.Of((Double?)resultArr[0], (Int32?)resultArr[1]);
