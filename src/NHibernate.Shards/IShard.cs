@@ -31,13 +31,7 @@ namespace NHibernate.Shards
 		/// Ids of the virtual shards that are mapped to this physical shard.
 		/// The returned Set is unmodifiable.
 		/// </summary>
-		Set<ShardId> ShardIds { get; }
-
-		/// <summary>
-		/// Add a open Session event 
-		/// </summary>
-		/// <param name="event">the event to add</param>
-		void AddOpenSessionEvent(IOpenSessionEvent @event);
+		ICollection<ShardId> ShardIds { get; }
 
 		/// <summary>
 		/// establish a Session using the SessionFactoryImplementor associated

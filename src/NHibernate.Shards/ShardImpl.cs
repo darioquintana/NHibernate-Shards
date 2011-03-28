@@ -1,17 +1,19 @@
 using System.Collections.Generic;
-using Iesi.Collections.Generic;
 using NHibernate.Engine;
 using NHibernate.Shards.Criteria;
 using NHibernate.Shards.Query;
 using NHibernate.Shards.Session;
 using NHibernate.Shards.Util;
+using NHibernate.Shards.Engine;
 
 namespace NHibernate.Shards
 {
 	public class ShardImpl : IShard
 	{
-		// ids of virtual shards mapped to this physical shard
-		private readonly Set<ShardId> shardIds;
+        private IShardedSessionImplementor shardedSession;
+
+        // ids of virtual shards mapped to this physical shard
+		private readonly ICollection<ShardId> shardIds;
 
 		// the SessionFactory that owns this Session
 		private readonly ISessionFactoryImplementor sessionFactory;
@@ -26,9 +28,6 @@ namespace NHibernate.Shards
 		// the actual Session!  Will be null until someone calls establishSession()
 		private ISession session;
 
-		// events that need to fire when the Session is opened
-		private readonly LinkedList<IOpenSessionEvent> openSessionEvents = new LinkedList<IOpenSessionEvent>();
-
 		// maps criteria ids to Criteria objects for quick lookup
 		private IDictionary<CriteriaId, ICriteria> criteriaMap = new Dictionary<CriteriaId, ICriteria>();
 
@@ -41,26 +40,13 @@ namespace NHibernate.Shards
 			new Dictionary<QueryId, LinkedList<IQueryEvent>>();
 
 
-		public ShardImpl(ShardId shardId, ISessionFactoryImplementor sessionFactory)
-			: this(new HashedSet<ShardId>(new List<ShardId> {shardId}), sessionFactory)
-		{
-		}
-
-		public ShardImpl(Set<ShardId> shardIds, ISessionFactoryImplementor sessionFactory)
-			: this(shardIds, sessionFactory, null)
-		{
-		}
-
-		public ShardImpl(Set<ShardId> shardIds, ISessionFactoryImplementor sessionFactory, /*@Nullable*/
-		                 IInterceptor interceptor)
-		{
-			// make a copy to be safe
-			//this.shardIds = Collections.unmodifiableSet(Sets.newHashSet(shardIds));
-			this.shardIds = new HashedSet<ShardId>(shardIds); //TODO:make it a readonly Set
-			hashCode = shardIds.GetHashCode();
-			this.sessionFactory = sessionFactory;
-			this.interceptor = interceptor;
-		}
+        public ShardImpl(IShardedSessionImplementor shardedSession, IShardMetadata shardMetadata)
+        {
+            // make a copy to be safe
+            this.shardedSession = shardedSession;
+            this.shardIds = new HashSet<ShardId>(shardMetadata.ShardIds); //TODO:make it a readonly Set
+            this.sessionFactory = shardMetadata.SessionFactory;
+        }
 
 		/// <summary>
 		/// SessionFactoryImplementor that owns the Session associated with this Shard
@@ -83,19 +69,9 @@ namespace NHibernate.Shards
 		/// Ids of the virtual shards that are mapped to this physical shard.
 		/// The returned Set is unmodifiable.
 		/// </summary>
-		public Set<ShardId> ShardIds
+		public ICollection<ShardId> ShardIds
 		{
 			get { return shardIds; }
-		}
-
-		/// <summary>
-		/// Add a open Session event 
-		/// </summary>
-		/// <param name="event">the event to add</param>
-		public void AddOpenSessionEvent(IOpenSessionEvent @event)
-		{
-			Preconditions.CheckNotNull(@event);
-			openSessionEvents.AddLast(@event);
 		}
 
 		/// <summary>
@@ -115,14 +91,6 @@ namespace NHibernate.Shards
 				else
 				{
 					session = sessionFactory.OpenSession(interceptor);
-				}
-				if (openSessionEvents != null)
-				{
-					foreach (IOpenSessionEvent ose in openSessionEvents)
-					{
-						ose.OnOpenSession(session);
-					}
-					openSessionEvents.Clear();
 				}
 			}
 			return session;
@@ -272,14 +240,6 @@ namespace NHibernate.Shards
 		public object UniqueResult(QueryId queryId)
 		{
 			return queryMap[queryId].UniqueResult();
-		}
-
-		///<summary>
-		/// <returns>the OpenSessionEvents that are waiting to fire</returns>
-		/// </summary>
-		public LinkedList<IOpenSessionEvent> GetOpenSessionEvents()
-		{
-			return openSessionEvents;
 		}
 	}
 }

@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Runtime.Serialization;
 using NHibernate.Engine;
+using NHibernate.Id;
 using NHibernate.Shards.Session;
 
 namespace NHibernate.Shards.Id
 {
-    internal class ShardedTableHiLoGenerator : IGeneratorRequiringControlSessionProvider
+    internal class ShardedTableHiLoGenerator : TableHiLoGenerator, IGeneratorRequiringControlSessionProvider
     {
         private IControlSessionProvider controlSessionProvider;
 
@@ -14,28 +14,19 @@ namespace NHibernate.Shards.Id
             controlSessionProvider = provider;
         }
 
-        public ISerializable Generate(ISessionImplementor session, Object obj)
+        public override object Generate(ISessionImplementor session, Object obj)
         {
-            ISerializable id;
-            ISessionImplementor controlSession = null;
-            try
+            if (controlSessionProvider != null)
             {
-                controlSession = controlSessionProvider.OpenControlSession();
-                id = SuperGenerate(controlSession, obj);
-            }
-            finally
-            {
-                if (controlSession != null)
+                using (var controlSession = controlSessionProvider.OpenControlSession())
                 {
-                    ((ISession) controlSession).Close();
+                    return base.Generate(controlSession.GetSessionImplementation(), obj);
                 }
             }
-            return id;
-        }
 
-        private ISerializable SuperGenerate(ISessionImplementor controlSession, Object obj)
-        {
-            return Generate(controlSession, obj);
+            // Fallback behaviour defaults to regular TableHiLoGenerator, if not initialized 
+            // for use in sharded environment.
+            return base.Generate(session, obj);
         }
     }
 }
