@@ -1617,14 +1617,12 @@ namespace NHibernate.Shards.Session
                                            new CriteriaFactoryImpl(entityName,alias), shardStrategy.ShardAccessStrategy);
         }
 
-
-        public IQueryOver<T> QueryOver<T>() where T : class
+        IQueryOver<T, T> ISession.QueryOver<T>(Expression<Func<T>> alias)
         {
             throw new NotSupportedException();
         }
 
-
-        public IQueryOver<T> QueryOver<T>(Expression<Func<T>> alias) where T : class
+        IQueryOver<T, T> ISession.QueryOver<T>()
         {
             throw new NotSupportedException();
         }
@@ -1638,6 +1636,11 @@ namespace NHibernate.Shards.Session
         {
             return new ShardedQueryImpl(new QueryId(nextQueryId++), shards, new AdHocQueryFactoryImpl(queryString),
                                         shardStrategy.ShardAccessStrategy);
+        }
+
+        public IQuery CreateQuery(IQueryExpression queryExpression)
+        {
+            throw new NotSupportedException();
         }
 
 		//public IQuery CreateQuery(IQueryExpression queryExpression)

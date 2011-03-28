@@ -553,6 +553,16 @@ namespace NHibernate.Shards.Criteria
             return CreateSubCriteria(factory);
         }
 
+        public ICriteria CreateAlias(string associationPath, string alias, JoinType joinType, ICriterion withClause)
+        {
+            throw new System.NotSupportedException();
+        }
+
+        public ICriteria CreateCriteria(string associationPath, string alias, JoinType joinType, ICriterion withClause)
+        {
+            throw new System.NotSupportedException();
+        }
+
         public IShardedCriteria ParentCriteria
         {
             get { return this.parent; }
@@ -568,6 +578,5 @@ namespace NHibernate.Shards.Criteria
         {
             get { return this.shardToEventListMap; }
         }
-
     }
 }

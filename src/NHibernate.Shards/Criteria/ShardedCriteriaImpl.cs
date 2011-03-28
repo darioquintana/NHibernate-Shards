@@ -135,7 +135,7 @@ namespace NHibernate.Shards.Criteria
 
         public ICriteria SetProjection(params IProjection[] projection)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public ICriteria Add(ICriterion criterion)
@@ -302,6 +302,16 @@ namespace NHibernate.Shards.Criteria
         {
             ISubcriteriaFactory factory = new SubcriteriaFactoryImpl(associationPath, alias, joinType);
             return CreateSubcriteria(factory);
+        }
+
+        public ICriteria CreateAlias(string associationPath, string alias, JoinType joinType, ICriterion withClause)
+        {
+            throw new NotSupportedException();
+        }
+
+        public ICriteria CreateCriteria(string associationPath, string alias, JoinType joinType, ICriterion withClause)
+        {
+            throw new NotSupportedException();
         }
 
         public ICriteria SetResultTransformer(IResultTransformer resultTransformer)
@@ -493,47 +503,47 @@ namespace NHibernate.Shards.Criteria
 
         public IEnumerable<T> Future<T>()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public IFutureValue<T> FutureValue<T>()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public void List(IList results)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public IList<T> List<T>()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public T UniqueResult<T>()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public void ClearOrders()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public ICriteria GetCriteriaByPath(string path)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public ICriteria GetCriteriaByAlias(string alias)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public System.Type GetRootEntityTypeIfAvailable()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public string Alias
@@ -543,7 +553,7 @@ namespace NHibernate.Shards.Criteria
 
         public object Clone()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 }
