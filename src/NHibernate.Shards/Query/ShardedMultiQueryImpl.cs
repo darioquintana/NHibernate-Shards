@@ -372,7 +372,7 @@ namespace NHibernate.Shards.Query
         {
             public readonly string Key;
             public readonly IShardedQuery ShardedQuery;
-            private readonly Func<IList> ResultFactory;
+            private readonly Func<IList> resultFactory;
 
             public QueryEntry(IQuery query, Func<IList> resultFactory)
                 : this(null, query, resultFactory)
@@ -382,7 +382,7 @@ namespace NHibernate.Shards.Query
             {
                 this.Key = key;
                 this.ShardedQuery = ToShardedQuery(query);
-                this.ResultFactory = resultFactory;
+                this.resultFactory = resultFactory;
             }
 
             public IListExitStrategy<object> BuildListExitStrategy()
@@ -392,7 +392,7 @@ namespace NHibernate.Shards.Query
 
             public IList BuildResultList(IEnumerable result)
             {
-                var list = this.ResultFactory();
+                var list = this.resultFactory();
                 foreach (var item in result)
                 {
                     list.Add(item);

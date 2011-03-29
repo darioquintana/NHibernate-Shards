@@ -12,11 +12,9 @@ using NHibernate.Transform;
 
 namespace NHibernate.Shards.Criteria
 {
-    /**
-	 * Concrete implementation of the {@link ShardedCriteria} interface.
-	 *
-	 * @author maxr@google.com (Max Ross)
-	 */
+    /// <summary>
+    /// Concrete implementation of <see cref="IShardedCriteria"/> interface.
+    /// </summary>
     public class ShardedCriteriaImpl : IShardedCriteria
     {
         private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedCriteriaImpl));
@@ -37,15 +35,6 @@ namespace NHibernate.Shards.Criteria
 
         #region Constructor(s)
 
-        /**
-		 * Construct a ShardedCriteriaImpl
-		 *
-		 * @param criteriaId unique id for this ShardedCriteria
-		 * @param shards the shards that this ShardedCriteria is aware of
-		 * @param criteriaFactory factory that knows how to create concrete {@link Criteria} objects
-		 * @param shardAccessStrategy the access strategy we use when we execute this
-		 * ShardedCriteria across multiple shards.
-		 */
         public ShardedCriteriaImpl(IShardedSessionImplementor session, Func<ISession, ICriteria> criteriaFactory)
         {
             Preconditions.CheckNotNull(session);
@@ -489,7 +478,7 @@ namespace NHibernate.Shards.Criteria
 
         private class ListShardOperation<T> : IShardOperation<IEnumerable<T>>
         {
-            private IShardedCriteria shardedCriteria;
+            private readonly IShardedCriteria shardedCriteria;
 
             public ListShardOperation(IShardedCriteria shardedCriteria)
             {
@@ -579,7 +568,7 @@ namespace NHibernate.Shards.Criteria
         private class Subcriteria : ICriteria
         {
             private readonly ShardedCriteriaImpl root;
-            private readonly string alias;
+            private readonly string subcriteriaAlias;
             private readonly Func<ICriteria, ICriteria> subcriteriaFactory;
             private readonly IDictionary<IShard, ICriteria> establishedSubcriteriaByShard = new Dictionary<IShard, ICriteria>();
             private readonly ICollection<Action<ICriteria>> establishActions = new List<Action<ICriteria>>();
@@ -587,7 +576,7 @@ namespace NHibernate.Shards.Criteria
             public Subcriteria(ShardedCriteriaImpl root, string alias, Func<ICriteria, ICriteria> subcriteriaFactory)
             {
                 this.root = root;
-                this.alias = alias;
+                this.subcriteriaAlias = alias;
                 this.subcriteriaFactory = subcriteriaFactory;
             }
 
@@ -643,7 +632,7 @@ namespace NHibernate.Shards.Criteria
 
             public string Alias
             {
-                get { return alias; }
+                get { return subcriteriaAlias; }
             }
 
             public ICriteria SetProjection(params IProjection[] projections)

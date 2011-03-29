@@ -1,75 +1,47 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NHibernate.Shards.Strategy.Exit;
 using NUnit.Framework;
 
 namespace NHibernate.Shards.Test.Strategy.Exit
 {
-	[TestFixture]
-	public class FirstResultExitOperationTest
-	{
-		private static void AssertNoNullElements(IList objects)
-		{
-			foreach (Object obj in objects)
-			{
-				Assert.IsNotNull(obj);
-			}
-		}
+    [TestFixture]
+    public class FirstResultExitOperationTest
+    {
+        [Test]
+        public void TestApply()
+        {
+            var input = CreateList<object>(1, 2, null, 3, 4, 5);
+            VerifyFirstResultOperation(1, input, CreateList<object>(2, 3, 4, 5), "FirstResult = 1");
+            VerifyFirstResultOperation(2, input, CreateList<object>(3, 4, 5), "FirstResult = 2");
+        }
 
-		[Test]
-		public void TestApply()
-		{
-			FirstResultExitOperation exitOp = new FirstResultExitOperation(1);
+        [Test]
+        public void TestApplyWhenFirstResultIsTooBig()
+        {
+            var input = CreateList<object>(1, 2, null, 3, 4, 5);
+            VerifyFirstResultOperation(9, input, CreateList<object>(), "FirstResult > result set size");
+            VerifyFirstResultOperation(input.Count, input, CreateList<object>(), "FirstResult = result set size");
+        }
 
-			var list = new List<object> {1, 2, null, 3, 4, 5};
+        [Test]
+        public void TestApplyWhenNoResults()
+        {
+            VerifyFirstResultOperation(9, CreateList<object>(), CreateList<object>(), "Empty result set");
+            VerifyFirstResultOperation(9, CreateList<object>(null, null, null), CreateList<object>(), "Result set with nulls only");
+        }
 
-			IList objects = exitOp.Apply(list);
-			Assert.AreEqual(4, objects.Count);
+        private static IList<T> CreateList<T>(params T[] input)
+        {
+            return input;
+        }
 
-			AssertNoNullElements(objects);
-			Assert.AreEqual(new List<object> {2, 3, 4, 5}, objects);
-			exitOp = new FirstResultExitOperation(2);
-
-			list = new List<object> {1, 2, null, 3, 4, 5};
-
-			objects = exitOp.Apply(list);
-			Assert.AreEqual(3, objects.Count);
-			AssertNoNullElements(objects);
-			Assert.AreEqual(new List<object> {3, 4, 5}, objects);
-		}
-
-		[Test]
-		public void TestApplyWhenFirstResultIsTooBig()
-		{
-			FirstResultExitOperation exitOp = new FirstResultExitOperation(9);
-
-			List<Object> list = new List<object> {1, 2, null, 3, 4, 5};
-
-			IList objects = exitOp.Apply(list);
-			Assert.IsEmpty(objects);
-
-			// edge case
-			exitOp = new FirstResultExitOperation(list.Count);
-			objects = exitOp.Apply(list);
-			Assert.IsEmpty(objects);
-		}
-
-		[Test]
-		public void TestApplyWhenNoResults()
-		{
-			FirstResultExitOperation exitOp = new FirstResultExitOperation(9);
-
-			List<Object> list = new List<object>();
-
-			IList objects = exitOp.Apply(list);
-			Assert.IsEmpty(objects);
-
-			Object nullObj = null;
-			list = new List<object> {nullObj, nullObj, nullObj};
-
-			objects = exitOp.Apply(list);
-			Assert.IsEmpty(objects);
-		}
-	}
+        private static void VerifyFirstResultOperation<T>(int firstResult, IList<T> input, IList<T> expected, string description)
+        {
+            var listExitOperation = new ListExitOperation(null, firstResult, false, null, null);
+            var result = listExitOperation.Execute(input).ToList();
+            Assert.That(result, Is.EqualTo(expected), description);
+        }
+    }
 }

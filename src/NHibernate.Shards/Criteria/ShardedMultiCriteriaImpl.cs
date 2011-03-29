@@ -246,13 +246,13 @@ namespace NHibernate.Shards.Criteria
         {
             public readonly string Key;
             public readonly IShardedCriteria ShardedCriteria;
-            private readonly Func<IList> ResultFactory;
+            private readonly Func<IList> resultFactory;
 
             public CriteriaEntry(string key, IShardedCriteria shardedCriteria, Func<IList> resultFactory)
             {
                 this.Key = key;
                 this.ShardedCriteria = shardedCriteria;
-                this.ResultFactory = resultFactory;
+                this.resultFactory = resultFactory;
             }
 
             public IListExitStrategy<object> BuildListExitStrategy()
@@ -262,7 +262,7 @@ namespace NHibernate.Shards.Criteria
 
             public IList BuildResultList(IEnumerable result)
             {
-                var list = this.ResultFactory();
+                var list = this.resultFactory();
                 foreach (var item in result)
                 {
                     list.Add(item);

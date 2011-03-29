@@ -13,7 +13,7 @@ namespace NHibernate.Shards.Session
         #region Instance fields
 
         private readonly IShardedSessionImplementor shardedSession;
-        private readonly string name;
+        private readonly string filterName;
 
         private readonly IDictionary<ISession, IFilter> enabledFiltersBySession = new Dictionary<ISession, IFilter>();
         private readonly ICollection<Action<IFilter>> enableActions = new List<Action<IFilter>>();
@@ -27,7 +27,7 @@ namespace NHibernate.Shards.Session
             Preconditions.CheckNotNull(shardedSession);
             Preconditions.CheckNotNull(name);
             this.shardedSession = shardedSession;
-            this.name = name;
+            this.filterName = name;
 		}
 
         #endregion
@@ -52,7 +52,7 @@ namespace NHibernate.Shards.Session
             IFilter result;
             if (!this.enabledFiltersBySession.TryGetValue(session, out result))
             {
-                result = session.EnableFilter(this.name);
+                result = session.EnableFilter(this.filterName);
                 foreach (var action in enableActions)
                 {
                     action(result);
@@ -66,7 +66,7 @@ namespace NHibernate.Shards.Session
         {
             foreach (var session in this.enabledFiltersBySession.Keys)
             {
-                session.DisableFilter(this.name);
+                session.DisableFilter(this.filterName);
             }
             this.enabledFiltersBySession.Clear();
             this.enableActions.Clear();
@@ -83,7 +83,7 @@ namespace NHibernate.Shards.Session
 
         public string Name
         {
-            get { return this.name; }
+            get { return this.filterName; }
         }
 
         public IFilter SetParameter(string name, object value)

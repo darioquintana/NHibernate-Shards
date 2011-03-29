@@ -104,7 +104,6 @@
     <Compile Include="Strategy\Exit\FirstNonNullResultExitStrategyTest.cs" />
     <Compile Include="Strategy\Exit\FirstResultExitOperationTest.cs" />
     <Compile Include="Strategy\Exit\MaxResultExitOperationTest.cs" />
-    <Compile Include="Strategy\Exit\ProjectionExitOperationFactoryTest.cs" />
     <Compile Include="Strategy\Selection\LoadBalancedShardSelectionStrategyTest.cs" />
     <Compile Include="Transaction\ShardedTransactionTest.cs" />
     <Compile Include="Id\ShardedUUIDGeneratorFixture.cs" />
@@ -112,11 +111,8 @@
     <Compile Include="ShardedConfigurationTest.cs" />
     <Compile Include="ShardImplTest.cs" />
     <Compile Include="Strategy\Access\ParallelShardAccessStrategyFixture.cs" />
-    <Compile Include="Strategy\Exit\ExitOperationUtilsFixture.cs" />
-    <Compile Include="Strategy\Exit\ExitStrategyDefaultMock.cs" />
     <Compile Include="Strategy\Exit\OrderExitOperationFixture.cs" />
     <Compile Include="Strategy\Exit\Collections.cs" />
-    <Compile Include="Threading\AtomicIntegerFixture.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

@@ -16,25 +16,20 @@ namespace NHibernate.Shards.Id
 		{
 			Preconditions.CheckNotNull(identifier);
 
-			var id = (string) identifier;
-
-			int shardId = int.Parse(id.Substring(0, 4), NumberStyles.AllowHexSpecifier);
-
+			var id = (string)identifier;
+			short shardId = short.Parse(id.Substring(0, 4), NumberStyles.AllowHexSpecifier);
 			return new ShardId(shardId);
 		}
 
 		protected override string GenerateNewGuid()
 		{
-			byte[] guidArray = Guid.NewGuid().ToByteArray();
+            short shardId = GetShardId();
 
-			//Make clean the space for the ShardId: 0000xxxx...xxxx
-			Array.Copy(new byte[] {0, 0}, guidArray, 2);
-
-			byte[] shardIdArray = BitConverter.GetBytes(GetShardId());
-
-			Array.Copy(shardIdArray, 0, guidArray, shardIdArray.Length, shardIdArray.Length);
-
-			return new Guid(guidArray).ToString(format);
+            var g = Guid.NewGuid().ToByteArray();
+            var a = (BitConverter.ToUInt32(g, 0) & 0x0000FFFF) | (uint)shardId << 16;
+            var b = BitConverter.ToUInt16(g, 4);
+            var c = BitConverter.ToUInt16(g, 8);
+            return new Guid(a, b, c, g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]).ToString(format);
 		}
 
 		private short GetShardId()

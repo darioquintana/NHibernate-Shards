@@ -1,110 +1,47 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using NHibernate.Criterion;
+using System.Linq;
 using NHibernate.Shards.Strategy.Exit;
 using NUnit.Framework;
 
 namespace NHibernate.Shards.Test.Strategy.Exit
 {
-	[TestFixture]
-	public class AggregateExitOperationTest
-	{
-		private List<Object> data;
+    [TestFixture]
+    public class AggregateExitOperationTest
+    {
+        private IList<object> data;
 
-		private class MyInt : IComparable
-		{
-			private readonly int i;
+        [SetUp]
+        public void SetUp()
+        {
+            data = Enumerable
+                .Range(0, 6)
+                .Select(i => i != 4 ? (object)i : null)
+                .ToList();
+        }
 
-			public MyInt(int i)
-			{
-				this.i = i;
-			}
+        [Test]
+        public void TestMax()
+        {
+            VerifyAggregateListExitOperation(AggregationUtil.Max, data, new object[] { 5 }, "Max");
+        }
 
-			public int Value
-			{
-				get { return i; }
-			}
+        [Test]
+        public void TestMin()
+        {
+            VerifyAggregateListExitOperation(AggregationUtil.Min, data, new object[] { 0 }, "Max");
+        }
 
-			#region IComparable Members
+        [Test]
+        public void TestSum()
+        {
+            VerifyAggregateListExitOperation(AggregationUtil.GetSumFunc(typeof(int)), data, new object[] { 11 }, "Sum");
+        }
 
-			public int CompareTo(object obj)
-			{
-				MyInt i = (MyInt) obj;
-				return Value - i.Value;
-			}
-
-			#endregion
-		}
-
-		[SetUp]
-		public void SetUp()
-		{
-			data = new List<object>();
-			for (int i = 0; i < 6; i++)
-			{
-				if (i == 4)
-				{
-					data.Add(null);
-				}
-				else
-				{
-					data.Add(new MyInt(i));
-				}
-			}
-		}
-
-		[Test]
-		public void TestCtor()
-		{
-			try
-			{
-				new AggregateExitOperation(new AvgProjection("foo"));
-				Assert.Fail();
-			}
-			catch (ArgumentException e)
-			{
-				// good
-			}
-			try
-			{
-				new AggregateExitOperation(new AvgProjection("foo"));
-				Assert.Fail();
-			}
-			catch (ArgumentException e)
-			{
-				// good
-			}
-			new AggregateExitOperation(Projections.Max("foo"));
-			new AggregateExitOperation(Projections.Min("foo"));
-			new AggregateExitOperation(Projections.Sum("foo"));
-		}
-
-		[Test]
-		public void TestMax()
-		{
-			AggregateExitOperation exitOp = new AggregateExitOperation(Projections.Max("value"));
-
-			IList result = exitOp.Apply(data);
-			Assert.AreEqual(5, ((MyInt) result[0]).Value);
-		}
-
-		[Test]
-		public void TestMin()
-		{
-			AggregateExitOperation exitOp = new AggregateExitOperation(Projections.Min("value"));
-
-			IList result = exitOp.Apply(data);
-			Assert.AreEqual(0, ((MyInt) result[0]).Value);
-		}
-
-		[Test,Ignore]
-		public void TestSum()
-		{
-			AggregateExitOperation exitOp = new AggregateExitOperation(Projections.Sum("value"));
-
-			IList result = exitOp.Apply(data);
-			Assert.AreEqual(11.0m, (decimal) result[0]);
-		}
-	}
+        private static void VerifyAggregateListExitOperation<T>(AggregationFunc aggregation, IList<T> input, IList<T> expected, string description)
+        {
+            var listExitOperation = new ListExitOperation(null, 0, false, aggregation, null);
+            var result = listExitOperation.Execute(input);
+            Assert.That(result, Is.EqualTo(expected), description);
+        }
+    }
 }

@@ -17,6 +17,7 @@ using NHibernate.Shards.Transaction;
 using NHibernate.Shards.Util;
 using NHibernate.Stat;
 using NHibernate.Type;
+using NHibernate.Util;
 using System.Globalization;
 
 namespace NHibernate.Shards.Session
@@ -47,7 +48,7 @@ namespace NHibernate.Shards.Session
         private readonly IShardStrategy shardStrategy;
         private readonly IInterceptor interceptor;
 
-        private readonly EntityMode entityMode;
+        private readonly EntityMode currentEntityMode;
         private readonly ShardedSessionImpl rootSession;
         private Dictionary<EntityMode, IShardedSession> childSessionsByEntityMode;
 
@@ -100,7 +101,7 @@ namespace NHibernate.Shards.Session
             this.shardStrategy = shardStrategy;
             this.classesWithoutTopLevelSaveSupport = new HashSet<System.Type>(classesWithoutTopLevelSaveSupport);
             this.interceptor = interceptor;
-            this.entityMode = EntityMode.Poco;
+            this.currentEntityMode = EntityMode.Poco;
             this.checkAllAssociatedObjectsForDifferentShards = checkAllAssociatedObjectsForDifferentShards;
 
             foreach (var shardMetadata in shardedSessionFactory.GetShardMetadata())
@@ -121,7 +122,7 @@ namespace NHibernate.Shards.Session
             this.shardStrategy = parent.shardStrategy;
             this.classesWithoutTopLevelSaveSupport = parent.classesWithoutTopLevelSaveSupport;
             this.interceptor = parent.interceptor;
-            this.entityMode = entityMode;
+            this.currentEntityMode = entityMode;
             this.checkAllAssociatedObjectsForDifferentShards = parent.checkAllAssociatedObjectsForDifferentShards;
             this.shardsById = parent.shardsById;
         }
@@ -206,7 +207,7 @@ namespace NHibernate.Shards.Session
                 }
                 else
                 {
-                    result = this.rootSession.EstablishFor(shard).GetSession(this.entityMode);
+                    result = this.rootSession.EstablishFor(shard).GetSession(this.currentEntityMode);
                 }
 
                 foreach (var action in establishActions)
@@ -281,7 +282,7 @@ namespace NHibernate.Shards.Session
         /// <summary>
         ///  Gets the ShardId of the shard with which the objects is associated.
         /// </summary>
-        /// <param name="entityName">Entity name of <paramref name="entity"/>.</param>
+        /// <param name="entityName">Entity name of <paramref name="obj"/>.</param>
         /// <param name="obj">the object for which we want the Session</param>
         /// <returns>
         /// the ShardId of the Shard with which this object is associated, or
@@ -299,12 +300,14 @@ namespace NHibernate.Shards.Session
         /// <summary>
         ///  Gets the ShardId of the shard with which the object is associated.
         /// </summary>
-        /// <param name="entityName">Entity name of <paramref name="entity"/>.</param>
+        /// <param name="entityName">Entity name of <paramref name="obj"/>.</param>
         /// <param name="obj">the object for which we want the Session</param>
+        /// <param name="result">Returns the <see cref="ShardId"/> of the shard with 
+        /// which <paramref name="obj"/> is associated if this operation succeeds, 
+        /// or <c>null</c> otherwise.</param>
         /// <returns>
-        /// the ShardId of the Shard with which this object is associated, or
-        /// null if the object is not associated with a shard belonging to this
-        /// ShardedSession
+        /// Returns <c>true</c> is <paramref name="obj"/> is associated with a shard
+        /// that is within the scope of this sharded session.
         /// </returns>
         public bool TryGetShardIdForAttachedObject(string entityName, object obj, out ShardId result)
         {
@@ -479,7 +482,7 @@ namespace NHibernate.Shards.Session
 
             if (rootSession != null)
             {
-                rootSession.childSessionsByEntityMode.Remove(this.entityMode);
+                rootSession.childSessionsByEntityMode.Remove(this.currentEntityMode);
             }
 
             foreach (var session in establishedSessionsByShard.Values)
@@ -781,6 +784,7 @@ namespace NHibernate.Shards.Session
             ShardId shardId;
             if (TryResolveToSingleShardId(key, out shardId))
             {
+                // Attached object
                 currentSubgraphShardId = shardId;
                 shardsById[shardId].EstablishSession().Replicate(key.EntityName, entity, replicationMode);
                 return;
@@ -789,11 +793,13 @@ namespace NHibernate.Shards.Session
             IUniqueResult<object> persistent;
             if (TryGet(key, out persistent))
             {
+                // Detached object
                 Evict(persistent.Value);
                 persistent.Shard.EstablishSession().Replicate(key.EntityName, entity, replicationMode);
             }
             else
             {
+                // Transient object
                 currentSubgraphShardId = shardId = SelectShardIdForNewEntity(key.EntityName, entity);
                 shardsById[shardId].EstablishSession().Replicate(key.EntityName, entity, replicationMode);
             }
@@ -824,7 +830,7 @@ namespace NHibernate.Shards.Session
             }
 
             var classMetadata = shardedSessionFactory.GetClassMetadata(entityName);
-            var id = classMetadata.GetIdentifier(entity, this.entityMode);
+            var id = classMetadata.GetIdentifier(entity, this.currentEntityMode);
             return new ShardedEntityKey(entityName, id);
         }
 
@@ -864,11 +870,12 @@ namespace NHibernate.Shards.Session
             ShardId shardId;
             if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
             {
-                // Detached entity
+                // Transient object
                 shardId = SelectShardIdForNewEntity(entityName, obj);
                 Preconditions.CheckNotNull(shardId);
             }
 
+            // Attached object
             currentSubgraphShardId = shardId;
             Log.Debug(String.Format("Saving object of type '{0}' to shard {1}", entityName, shardId));
             return this.shardsById[shardId].EstablishSession().Save(entityName, obj);
@@ -973,7 +980,7 @@ namespace NHibernate.Shards.Session
             Dictionary<IAssociationType, ICollection> collectionAssociations = null;
 
             IClassMetadata classMetaData = shardedSessionFactory.ControlFactory.GetClassMetadata(entityName);
-            foreach (var pair in TypeUtil.GetAssociations(classMetaData, entity, this.entityMode))
+            foreach (var pair in GetAssociations(classMetaData, entity, this.currentEntityMode))
             {
                 if (pair.Key.IsCollectionType)
                 {
@@ -1029,6 +1036,32 @@ namespace NHibernate.Shards.Session
                     entityName, shardId, associatedShardId.Key, associatedShardId.Value);
                 Log.Error(message);
                 throw new CrossShardAssociationException(message);
+            }
+        }
+
+        private static IEnumerable<KeyValuePair<IAssociationType, object>> GetAssociations(
+            IClassMetadata classMetadata, object entity, EntityMode entityMode)
+        {
+            var propertyTypes = classMetadata.PropertyTypes;
+            var propertyValues = classMetadata.GetPropertyValues(entity, entityMode);
+            return GetAssociations(propertyTypes, propertyValues);
+
+        }
+
+        private static IEnumerable<KeyValuePair<IAssociationType, object>> GetAssociations(
+            IType[] propertyTypes, object[] propertyValues)
+        {
+            // we assume types and current state are the same length
+            Preconditions.CheckState(propertyTypes.Length == propertyValues.Length);
+
+            for (int i = 0; i < propertyTypes.Length; i++)
+            {
+                if (propertyTypes[i] != null &&
+                    propertyValues[i] != null &&
+                    propertyTypes[i].IsAssociationType)
+                {
+                    yield return new KeyValuePair<IAssociationType, object>((IAssociationType)propertyTypes[i], propertyValues[i]);
+                }
             }
         }
 
@@ -2028,7 +2061,7 @@ namespace NHibernate.Shards.Session
 
         public EntityMode ActiveEntityMode
         {
-            get { return this.entityMode; }
+            get { return this.currentEntityMode; }
         }
 
         /// <summary> Get the statistics for this session.</summary>
@@ -2104,28 +2137,28 @@ namespace NHibernate.Shards.Session
 
         private IEnumerable<IShard> ResolveToShards(ShardedEntityKey key)
         {
-            IShard firstShard = null;
-            HashSet<IShard> shards = null;
+            IShard firstResolvedShard = null;
+            HashSet<IShard> resolvedShards = null;
 
             foreach (var shardId in ResolveToShardIds(key))
             {
-                var shard = this.shardsById[shardId];
-                if (firstShard == null)
+                var resolvedShard = this.shardsById[shardId];
+                if (firstResolvedShard == null)
                 {
-                    firstShard = shard;
+                    firstResolvedShard = resolvedShard;
                 }
-                else if (shards != null)
+                else if (resolvedShards != null)
                 {
-                    shards.Add(shard);
+                    resolvedShards.Add(resolvedShard);
                 }
-                else if (shard != firstShard)
+                else if (resolvedShard != firstResolvedShard)
                 {
-                    shards = new HashSet<IShard> { firstShard, shard };
+                    resolvedShards = new HashSet<IShard> { firstResolvedShard, resolvedShard };
                 }
             }
 
-            if (shards != null) return shards;
-            if (firstShard != null) return new[] { firstShard };
+            if (resolvedShards != null) return resolvedShards;
+            if (firstResolvedShard != null) return new SingletonEnumerable<IShard>(firstResolvedShard);
             return Enumerable.Empty<IShard>();
         }
 
@@ -2154,15 +2187,10 @@ namespace NHibernate.Shards.Session
             ShardId singleShardId;
             if (!key.IsNull && this.shardedSessionFactory.TryExtractShardIdFromKey(key, out singleShardId))
             {
-                yield return singleShardId;
+                return new SingletonEnumerable<ShardId>(singleShardId);
             }
-            else
-            {
-                foreach (var shardId in this.shardStrategy.ShardResolutionStrategy.ResolveShardIds(key))
-                {
-                    yield return shardId;
-                }
-            }
+
+            return this.shardStrategy.ShardResolutionStrategy.ResolveShardIds(key);
         }
 
         private bool TryGetShardForAttachedEntity(object entity, out IShard result)
@@ -2250,13 +2278,13 @@ namespace NHibernate.Shards.Session
             public override bool OnFlushDirty(object entity, object id, object[] currentState, object[] previousState, string[] propertyNames, NHibernate.Type.IType[] types)
             {
                 this.detector.OnFlushDirty(entity, id, currentState, previousState, propertyNames, types);
-                return this.delegateInterceptor.OnFlushDirty(entity, id, currentState, previousState, propertyNames, types);
+                return base.OnFlushDirty(entity, id, currentState, previousState, propertyNames, types);
             }
 
             public override void OnCollectionUpdate(object collection, object key)
             {
                 this.detector.OnCollectionUpdate(collection, key);
-                this.delegateInterceptor.OnCollectionUpdate(collection, key);
+                base.OnCollectionUpdate(collection, key);
             }
         }
 

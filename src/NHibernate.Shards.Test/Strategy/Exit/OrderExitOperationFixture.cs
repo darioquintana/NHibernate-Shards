@@ -8,110 +8,102 @@ using NUnit.Framework;
 
 namespace NHibernate.Shards.Test.Strategy.Exit
 {
-	[TestFixture]
-	public class OrderExitOperationFixture : TestFixtureBaseWithMock
-	{
-		private List<object> data;
-		private List<object> shuffledList;
-		private List<object> nonNullData;
+    using System.Linq;
 
-		private class MyInt
-		{
-			private readonly int i;
+    [TestFixture]
+    public class OrderExitOperationFixture : TestFixtureBaseWithMock
+    {
+        private IList<object> data;
+        private IList<object> shuffledList;
+        private IList<object> nonNullData;
 
-			private readonly String name;
+        private class MyInt
+        {
+            private readonly int i;
 
-			private MyInt innerMyInt;
+            private readonly String name;
 
-			public MyInt(int i, String name)
-			{
-				this.i = i;
-				this.name = name;
-			}
+            private MyInt innerMyInt;
 
-			public MyInt InnerMyInt
-			{
-				get { return innerMyInt; }
-				set { innerMyInt = value; }
-			}
+            public MyInt(int i, String name)
+            {
+                this.i = i;
+                this.name = name;
+            }
 
-			public long Value
-			{
-				get { return i; }
-			}
+            public MyInt InnerMyInt
+            {
+                get { return innerMyInt; }
+                set { innerMyInt = value; }
+            }
 
-			public String Name
-			{
-				get { return name; }
-			}
+            public long Value
+            {
+                get { return i; }
+            }
 
-			public override bool Equals(Object obj)
-			{
-				MyInt myInt = (MyInt) obj;
-				return this.Name.Equals(myInt.Name) && this.Value.Equals(myInt.Value);
-			}
+            public String Name
+            {
+                get { return name; }
+            }
 
-			public override int GetHashCode()
-			{
-				return Value.GetHashCode();
-			}
-		}
+            public override bool Equals(Object obj)
+            {
+                MyInt myInt = (MyInt)obj;
+                return this.Name.Equals(myInt.Name) && this.Value.Equals(myInt.Value);
+            }
+
+            public override int GetHashCode()
+            {
+                return Value.GetHashCode();
+            }
+        }
 
 
-		protected override void OnSetUp()
-		{
-			String[] names = {"tomislav", "max", "maulik", "gut", "null", "bomb"};
-			data = new List<object>();
-			for(int i = 0; i < 6; i++)
-			{
-				if (i == 4)
-					data.Add(null);
-				else
-					data.Add(new MyInt(i, names[i]));
-			}
+        protected override void OnSetUp()
+        {
+            var names = new[] { "tomislav", "max", "maulik", "gut", "null", "bomb" };
+            data = Enumerable
+                .Range(0, 6)
+                .Select(i => i != 4 ? (object)new MyInt(i, names[i]) : null)
+                .ToList();
 
-			nonNullData = (List<object>) ExitOperationUtils.GetNonNullList(data);
+            nonNullData = data.OfType<object>().Where(o => o != null).ToList();
+            shuffledList = Collections.RandomList(nonNullData);
+        }
 
-			shuffledList = (List<object>) Collections.RandomList(nonNullData);
-		}
+        [Test]
+        public void Apply()
+        {
+            var orders = new[] { SortOrder.Ascending("Value") };
+            VerifyOrderedListExitOperation(orders, shuffledList, nonNullData, "Sort ascending on one property");
+        }
 
-		[Test]
-		public void Apply()
-		{
-			Order order = Order.Asc("Value");
-			OrderExitOperation oeo = new OrderExitOperation(order);
-			IList unRandomList = oeo.Apply(shuffledList);
+        [Test]
+        public void MultipleOrderings()
+        {
+            var orders = new[]
+                {
+                    SortOrder.Ascending("Value"),
+                    SortOrder.Ascending("Name")
+                };
+            var expected = new object[]
+             	{
+             		new MyInt(0, "tomislav"),
+             		new MyInt(1, "max"),
+             		new MyInt(2, "maulik"),
+             		new MyInt(3, "gut"),
+             		new MyInt(5, "bomb")
+             	};
+            VerifyOrderedListExitOperation(orders, shuffledList, expected, "Sort on two properties");
+        }
 
-			for(int i = 0; i < unRandomList.Count; i++)
-			{
-				Assert.IsTrue(unRandomList[i].Equals(nonNullData[i]));
-			}
-		}
-
-		[Test]
-		public void MultipleOrderings()
-		{
-			Order orderValue = Order.Asc("Value");
-			Order orderName = Order.Desc("Name");
-
-			OrderExitOperation oeoValue = new OrderExitOperation(orderValue);
-			OrderExitOperation oeoName = new OrderExitOperation(orderName);
-
-			List<MyInt> answer = new List<MyInt>(new MyInt[]
-			                                     	{
-			                                     		new MyInt(0, "tomislav"),
-			                                     		new MyInt(1, "max"),
-			                                     		new MyInt(2, "maulik"),
-			                                     		new MyInt(3, "gut"),
-			                                     		new MyInt(5, "bomb")
-			                                     	});
-
-			IList unShuffledList = oeoName.Apply(oeoValue.Apply(shuffledList));
-
-			for(int i=0;i< answer.Count;i++)
-			{
-				Assert.AreEqual(answer[i],unShuffledList[i],"The element {0} of the collecion is not equal",i);
-			}
-		}
-	}
+        private static void VerifyOrderedListExitOperation<T>(IEnumerable<SortOrder> orders, IList<T> input, IList<T> expected, string description)
+        {
+            var comparer = new SortOrderComparer(orders);
+            var listExitOperation = new ListExitOperation(null, 0, false, null, comparer);
+            var result = listExitOperation.Execute(input);
+            Assert.That(result, Is.EqualTo(expected) & Is.Ordered.Using((IComparer)comparer), description);
+        }
+    }
 }

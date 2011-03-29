@@ -17,12 +17,12 @@ namespace NHibernate.Shards.Cfg
             this.ConnectionStringName = PropertiesHelper.GetString(NHibernate.Cfg.Environment.ConnectionStringName, config.Properties, null);
             this.ShardCacheRegionPrefix = PropertiesHelper.GetString(NHibernate.Cfg.Environment.CacheRegionPrefix, config.Properties, null);
             this.ShardSessionFactoryName = PropertiesHelper.GetString(NHibernate.Cfg.Environment.SessionFactoryName, config.Properties, null);
-            this.ShardId = PropertiesHelper.GetInt32(ShardedEnvironment.ShardIdProperty, config.Properties, 0);
+            this.ShardId = (short)PropertiesHelper.GetInt32(ShardedEnvironment.ShardIdProperty, config.Properties, 0);
         }
 
         public string DefaultSchema { get; set; }
         public string ShardSessionFactoryName { get; set; }
-        public int ShardId { get; set; }
+        public short ShardId { get; set; }
         public string ShardCacheRegionPrefix { get; set; }
         public string ConnectionString { get; set; }
         public string ConnectionStringName { get; set; }

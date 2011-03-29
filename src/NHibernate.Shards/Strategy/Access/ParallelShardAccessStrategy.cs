@@ -27,7 +27,7 @@ namespace NHibernate.Shards.Strategy.Access
         /// <returns></returns>
         public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
         {
-            object syncLock = new object();
+            var syncLock = new object();
             int activeCount = 0;                // Number of active operations
             bool cancelled = false;             // Has cancellation been requested of uncompleted operations?
             Exception exception = null;

@@ -1,8 +1,4 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using NHibernate.SqlCommand;
 using NHibernate.Type;
 
@@ -10,7 +6,7 @@ namespace NHibernate.Shards.Util
 {
     public class InterceptorDecorator:IInterceptor
     {
-        protected IInterceptor delegateInterceptor;
+        private readonly IInterceptor delegateInterceptor;
 
         public InterceptorDecorator(IInterceptor delegateInterceptor)
         {

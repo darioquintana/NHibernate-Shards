@@ -11,7 +11,7 @@ namespace NHibernate.Shards.LoadBalance
 		{
 		}
 
-		public BaseShardLoadBalancer()
+		protected BaseShardLoadBalancer()
 		{
 		}
 
@@ -20,10 +20,7 @@ namespace NHibernate.Shards.LoadBalance
 		/// </summary>
 		public ShardId NextShardId
 		{
-			get 
-			{
-				return shardIds[NextIndex];
-			}
+			get { return ShardIds[NextIndex]; }
 		}
 		
 		/// <summary>

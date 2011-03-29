@@ -68,7 +68,7 @@ namespace NHibernate.Shards.Session
         /// <summary>
         /// Constructs a ShardedSessionFactoryImpl
         /// </summary>
-        /// <param name="sessionFactoryShardIdMap">Mapping of SessionFactories to shard ids. 
+        /// <param name="shardIdsBySessionFactory">Mapping of SessionFactories to shard ids. 
         ///  When using virtual shards, this map associates SessionFactories (physical
         ///  shards) with virtual shards (shard ids).  Map cannot be empty.
         ///  Map keys cannot be null.  Map values cannot be null or empty.</param>
@@ -297,21 +297,18 @@ namespace NHibernate.Shards.Session
         }
 
         /// <summary>
-        /// Open a <c>ISession</c> on the given connection
+        /// Not supported for sharded sessions.
         /// </summary>
-        /// <param name="conn">A connection provided by the application</param>
-        /// <returns>A session</returns>
-        /// <remarks>
-        /// Note that the second-level cache will be disabled if you
-        /// supply a ADO.NET connection. NHibernate will not be able to track
-        /// any statements you might have executed in the same transaction.
-        /// Consider implementing your own <see cref="IConnectionProvider" />.
-        /// </remarks>
+        /// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
         ISession ISessionFactory.OpenSession(IDbConnection conn)
         {
             throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
         }
 
+        /// <summary>
+        /// Not supported for sharded sessions.
+        /// </summary>
+        /// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
         ISession ISessionFactory.OpenSession(IDbConnection conn, IInterceptor interceptor)
         {
             throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
@@ -403,7 +400,7 @@ namespace NHibernate.Shards.Session
         /// <param name="id"></param>
         public void Evict(System.Type persistentClass, object id)
         {
-            foreach (ISessionFactoryImplementor factory in SessionFactories)
+            foreach (var factory in SessionFactories)
             {
                 factory.Evict(persistentClass, id);
             }
@@ -416,7 +413,7 @@ namespace NHibernate.Shards.Session
         /// </summary>
         public void EvictEntity(string entityName)
         {
-            foreach (ISessionFactoryImplementor factory in SessionFactories)
+            foreach (var factory in SessionFactories)
             {
                 factory.EvictEntity(entityName);
             }
@@ -424,9 +421,9 @@ namespace NHibernate.Shards.Session
 
         public void EvictEntity(string entityName, object id)
         {
-            foreach (ISessionFactory sf in SessionFactories)
+            foreach (var factory in SessionFactories)
             {
-                sf.EvictEntity(entityName, id);
+                factory.EvictEntity(entityName, id);
             }
         }
 
@@ -438,7 +435,7 @@ namespace NHibernate.Shards.Session
         /// <param name="roleName"></param>
         public void EvictCollection(string roleName)
         {
-            foreach (ISessionFactoryImplementor factory in SessionFactories)
+            foreach (var factory in SessionFactories)
             {
                 factory.EvictCollection(roleName);
             }
@@ -453,7 +450,7 @@ namespace NHibernate.Shards.Session
         /// <param name="id"></param>
         public void EvictCollection(string roleName, object id)
         {
-            foreach (ISessionFactoryImplementor factory in SessionFactories)
+            foreach (var factory in SessionFactories)
             {
                 factory.EvictCollection(roleName, id);
             }
@@ -464,7 +461,7 @@ namespace NHibernate.Shards.Session
         /// </summary>
         public void EvictQueries()
         {
-            foreach (ISessionFactoryImplementor factory in SessionFactories)
+            foreach (var factory in SessionFactories)
             {
                 factory.EvictQueries();
             }
@@ -476,7 +473,7 @@ namespace NHibernate.Shards.Session
         /// <param name="cacheRegion"></param>
         public void EvictQueries(string cacheRegion)
         {
-            foreach (ISessionFactoryImplementor factory in SessionFactories)
+            foreach (var factory in SessionFactories)
             {
                 factory.EvictQueries(cacheRegion);
             }
@@ -519,9 +516,9 @@ namespace NHibernate.Shards.Session
             get
             {
                 // a ShardedSessionFactory is closed if any of its SessionFactories are closed
-                foreach (ISessionFactory sf in SessionFactories)
+                foreach (var factory in SessionFactories)
                 {
-                    if (sf.IsClosed) return true;
+                    if (factory.IsClosed) return true;
                 }
                 return false;
             }
@@ -744,16 +741,11 @@ namespace NHibernate.Shards.Session
             get { return ControlFactory.CurrentSessionContext; }
         }
 
-        /// <summary>
-        ///  Unsupported.  This is a technical decision.  See <see cref="OpenSession(System.Data.IDbConnection)"/> for an explanation.
-        /// </summary>
-        /// <param name="connection"></param>
-        /// <param name="flushBeforeCompletionEnabled"></param>
-        /// <param name="autoCloseSessionEnabled"></param>
-        /// <param name="connectionReleaseMode"></param>
-        /// <returns></returns>
-        public ISession OpenSession(IDbConnection connection, bool flushBeforeCompletionEnabled, bool autoCloseSessionEnabled,
-                                    ConnectionReleaseMode connectionReleaseMode)
+        ISession ISessionFactoryImplementor.OpenSession(
+            IDbConnection connection, 
+            bool flushBeforeCompletionEnabled, 
+            bool autoCloseSessionEnabled,
+            ConnectionReleaseMode connectionReleaseMode)
         {
             throw new NotSupportedException();
         }

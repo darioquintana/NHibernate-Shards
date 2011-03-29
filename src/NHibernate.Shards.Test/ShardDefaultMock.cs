@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 
-using Iesi.Collections.Generic;
-
 namespace NHibernate.Shards.Test
 {
     public class ShardDefaultMock: IShard
@@ -17,7 +15,7 @@ namespace NHibernate.Shards.Test
             get { throw new NotSupportedException(); }
         }
 
-        public virtual ICollection<ShardId> ShardIds
+        public virtual IList<ShardId> ShardIds
         {
             get { throw new NotSupportedException(); }
         }

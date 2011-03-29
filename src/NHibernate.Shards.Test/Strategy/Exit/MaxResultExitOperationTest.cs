@@ -1,44 +1,39 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
+using System.Linq;
 using NHibernate.Shards.Strategy.Exit;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace NHibernate.Shards.Test.Strategy.Exit
 {
-	[TestFixture]
-	public class MaxResultExitOperationTest
-	{
-		private static void AssertNoNullElements(IList objects)
-		{
-			foreach (Object obj in objects)
-			{
-				Assert.IsNotNull(obj);
-			}
-		}
 
-		[Test]
-		public void TestApply()
-		{
-			MaxResultsExitOperation exitOp = new MaxResultsExitOperation(3);
+    [TestFixture]
+    public class MaxResultExitOperationTest
+    {
+        [Test]
+        public void TestApply()
+        {
+            var input = CreateList<object>(1, 2, null, 3, 4, 5);
+            VerifyMaxResultsOperation(3, input, CreateList<object>(1, 2, 3), "MaxResults = 3");
+        }
 
-			List<object> list = new List<object> {1, 2, null, 3, 4, 5};
+        [Test]
+        public void TestApplyWithFewerElementsThanMaxResults()
+        {
+            var input = CreateList<object>(1, 2, null, 3, 4, 5);
+            VerifyMaxResultsOperation(8, input, CreateList<object>(1, 2, 3, 4, 5), "MaxResults > result set size");
+        }
 
-			IList objects = exitOp.Apply(list);
-			Assert.AreEqual(3, objects.Count);
-			AssertNoNullElements(objects);
-			Assert.AreEqual(new List<object> {1, 2, 3}, objects);
-		}
+        private static IList<T> CreateList<T>(params T[] input)
+        {
+            return input;
+        }
 
-		[Test]
-		public void TestApplyWithFewerElementsThanMaxResults()
-		{
-			MaxResultsExitOperation exitOp = new MaxResultsExitOperation(8);
-			List<Object> list = new List<object> {1, 2, null, 3, 4, 5};
-			IList objects = exitOp.Apply(list);
-			Assert.AreEqual(5, objects.Count);
-			AssertNoNullElements(objects);
-			Assert.AreEqual(new List<object> {1, 2, 3, 4, 5}, objects);
-		}
-	}
+        private static void VerifyMaxResultsOperation<T>(int maxResults, IList<T> input, IList<T> expected, string description)
+        {
+            var listExitOperation = new ListExitOperation(maxResults, 0, false, null, null);
+            var result = listExitOperation.Execute(input).ToList();
+            Assert.That(result, Is.EqualTo(expected), description);
+        }
+    }
 }

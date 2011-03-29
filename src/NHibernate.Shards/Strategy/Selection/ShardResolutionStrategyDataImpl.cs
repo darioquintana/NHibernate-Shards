@@ -18,10 +18,6 @@ namespace NHibernate.Shards.Strategy.Selection
 		{
 		}
 
-		private ShardResolutionStrategyDataImpl()
-		{
-		}
-
 		#region IShardResolutionStrategyData Members
 
 		public string EntityName

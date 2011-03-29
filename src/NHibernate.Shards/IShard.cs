@@ -11,10 +11,9 @@ namespace NHibernate.Shards
         ISessionFactory SessionFactory { get; }
 
         /// <summary>
-        /// Ids of the virtual shards that are mapped to this physical shard.
-        /// The returned Set is unmodifiable.
+        /// Readonly set of the virtual shards that are mapped to this physical shard.
         /// </summary>
-        ICollection<ShardId> ShardIds { get; }
+        IList<ShardId> ShardIds { get; }
 
         /// <summary>
         /// Opens new session for this shard.

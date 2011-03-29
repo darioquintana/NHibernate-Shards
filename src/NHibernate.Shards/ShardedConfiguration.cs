@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NHibernate.Cfg;
 using NHibernate.Engine;
 using NHibernate.Mapping;
+using NHibernate.Shards.Cfg;
 using NHibernate.Shards.Session;
 using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Util;
 using NHibernate.Util;
 using Environment = NHibernate.Cfg.Environment;
 
-namespace NHibernate.Shards.Cfg
+namespace NHibernate.Shards
 {
-    using System.Linq;
-
     /// <summary>
     /// Like regular Hibernate's Configuration, this class helps construct your
     /// factories. Not extending Hibernate's Configuration because that is the one place
@@ -35,22 +35,22 @@ namespace NHibernate.Shards.Cfg
         private readonly IShardStrategyFactory shardStrategyFactory;
 
         // maps virtual shard ids to physical shard ids
-        private readonly Dictionary<int, int> virtualShardToShardMap;
+        private readonly Dictionary<short, short> virtualShardToShardMap;
 
         // maps physical shard ids to sets of virtual shard ids
-        private readonly Dictionary<int, ICollection<ShardId>> shardToVirtualShardIdMap;
+        private readonly Dictionary<short, ICollection<ShardId>> shardToVirtualShardIdMap;
 
         #region Ctors
 
         public ShardedConfiguration(Configuration prototypeConfiguration, IEnumerable<IShardConfiguration> shardConfigs, IShardStrategyFactory shardStrategyFactory)
-            : this(prototypeConfiguration, shardConfigs, shardStrategyFactory, new Dictionary<int, int>())
+            : this(prototypeConfiguration, shardConfigs, shardStrategyFactory, new Dictionary<short, short>())
         { }
 
         public ShardedConfiguration(
             Configuration prototypeConfiguration,
             IEnumerable<IShardConfiguration> shardConfigs,
             IShardStrategyFactory shardStrategyFactory,
-            Dictionary<int, int> virtualShardToShardMap)
+            Dictionary<short, short> virtualShardToShardMap)
         {
             Preconditions.CheckNotNull(prototypeConfiguration);
             Preconditions.CheckNotNull(shardConfigs);
@@ -67,7 +67,7 @@ namespace NHibernate.Shards.Cfg
             if (!(virtualShardToShardMap.Count == 0))
             {
                 // build the map from shard to set of virtual shards
-                shardToVirtualShardIdMap = new Dictionary<int, ICollection<ShardId>>();
+                shardToVirtualShardIdMap = new Dictionary<short, ICollection<ShardId>>();
 
                 foreach (var pair in virtualShardToShardMap)
                 {
@@ -84,7 +84,7 @@ namespace NHibernate.Shards.Cfg
             }
             else
             {
-                shardToVirtualShardIdMap = new Dictionary<int, ICollection<ShardId>>();
+                shardToVirtualShardIdMap = new Dictionary<short, ICollection<ShardId>>();
             }
         }
 
@@ -104,7 +104,7 @@ namespace NHibernate.Shards.Cfg
             {
                 PopulatePrototypeWithVariableProperties(config);
                 // get the shardId from the shard-specific config
-                int shardId = config.ShardId;
+                short shardId = config.ShardId;
 
                 //TODO: here HS check if shardId is not null and throw an exception
 
@@ -112,7 +112,7 @@ namespace NHibernate.Shards.Cfg
                 if (virtualShardToShardMap.Count == 0)
                 {
                     // simple case, virtual and physical are the same
-                    virtualShardIds = new HashSet<ShardId>(new[] { new ShardId(shardId) });
+                    virtualShardIds = new HashSet<ShardId> { new ShardId(shardId) };
                 }
                 else
                 {

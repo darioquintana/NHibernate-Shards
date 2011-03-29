@@ -12,6 +12,7 @@ using NHibernate.Shards.Strategy;
 using NHibernate.Shards.Strategy.Access;
 using NHibernate.Shards.Strategy.Resolution;
 using NHibernate.Shards.Strategy.Selection;
+using NHibernate.Shards.Tool;
 
 namespace NHibernate.Shards.Demo
 {
@@ -124,12 +125,12 @@ namespace NHibernate.Shards.Demo
 
         private IEnumerable<IShardConfiguration> BuildShardConfigurations()
         {
-            for (int i = 1; i <= 3; i++)
+            for (short i = 0; i < 3; i++)
             {
                 yield return new ShardConfiguration
                 {
                     ShardSessionFactoryName = "Shard" + i,
-                    ShardId = i - 1,
+                    ShardId = i,
                     ConnectionStringName = "shard" + i
                 };
             }

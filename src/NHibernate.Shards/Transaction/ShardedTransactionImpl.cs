@@ -48,7 +48,7 @@ namespace NHibernate.Shards.Transaction
         private IShardedSessionImplementor shardedSession;
         private IList<ITransaction> transactions;
         private IList<ISynchronization> synchronizations;
-        private IsolationLevel isolationLevel;
+        private IsolationLevel currentIsolationLevel;
         private bool begun;
         private bool commitFailed;
         private bool committed;
@@ -62,7 +62,7 @@ namespace NHibernate.Shards.Transaction
         public ShardedTransactionImpl(IShardedSessionImplementor shardedSession, IsolationLevel isolationLevel)
         {
             this.shardedSession = shardedSession;
-            this.isolationLevel = isolationLevel;
+            this.currentIsolationLevel = isolationLevel;
         }
 
         public bool IsActive
@@ -113,7 +113,7 @@ namespace NHibernate.Shards.Transaction
 
         public void Begin(IsolationLevel isolationLevel)
         {
-            this.isolationLevel = isolationLevel;
+            this.currentIsolationLevel = isolationLevel;
             Begin();
         }
 
@@ -218,13 +218,13 @@ namespace NHibernate.Shards.Transaction
 
             try
             {
-                transactions.Add(session.BeginTransaction(isolationLevel));
+                transactions.Add(session.BeginTransaction(currentIsolationLevel));
             }
             catch (HibernateException e)
             {
-                string message = "Cannot start underlying transaction";
-                Log.Warn(message, e);
-                throw new TransactionException(message, e);
+                const string MESSAGE = "Cannot start underlying transaction";
+                Log.Warn(MESSAGE, e);
+                throw new TransactionException(MESSAGE, e);
             }
         }
 
@@ -362,9 +362,10 @@ namespace NHibernate.Shards.Transaction
             {
                 shardedSession.AfterTransactionCompletion(this, success);
                 this.shardedSession = null;
-                this.shardedSession = null;
             }
+
             begun = false;
+            NotifyLocalSynchsAfterTransactionCompletion(success);
         }
 
         private void NotifyLocalSynchsBeforeTransactionCompletion()
@@ -388,7 +389,6 @@ namespace NHibernate.Shards.Transaction
 
         private void NotifyLocalSynchsAfterTransactionCompletion(bool? success)
         {
-            begun = false;
             if (synchronizations != null)
             {
                 for (int i = 0; i < synchronizations.Count; i++)

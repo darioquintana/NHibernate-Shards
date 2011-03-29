@@ -1,36 +1,45 @@
 namespace NHibernate.Shards
 {
-	/// <summary>
+    using System;
+
+    /// <summary>
 	/// Uniquely identifies a virtual shard.
 	/// </summary>
-	public class ShardId
+	public class ShardId: IEquatable<ShardId>
 	{
-		private readonly int shardId;
+		private readonly short shardId;
 
-		public ShardId(int shardId)
+		public ShardId(short shardId)
 		{
 			this.shardId = shardId;
 		}
 
-		public int Id
+		public short Id
 		{
 			get { return shardId; }
 		}
 
-		public override bool Equals(object o)
+        public static bool operator ==(ShardId left, ShardId right)
+        {
+            if (ReferenceEquals(left, right)) return true;
+            if (ReferenceEquals(left, null) || ReferenceEquals(right, null)) return false;
+
+            return left.shardId == right.shardId;
+        }
+
+        public static bool operator !=(ShardId left, ShardId right)
+        {
+            return !(left == right);
+        }
+
+        public bool Equals(ShardId other)
+        {
+            return this == other;
+        }
+
+        public override bool Equals(object obj)
 		{
-			if (this == o)
-			{
-				return true;
-			}
-			if (o == null || GetType() != o.GetType())
-			{
-				return false;
-			}
-
-			ShardId shardId1 = (ShardId) o;
-
-			return shardId == shardId1.shardId;
+            return this == obj as ShardId;
 		}
 
 		public override int GetHashCode()

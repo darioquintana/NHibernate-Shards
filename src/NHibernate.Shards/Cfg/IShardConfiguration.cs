@@ -18,7 +18,7 @@ namespace NHibernate.Shards.Cfg
         /// <summary>
         /// unique id of the shard
         /// </summary>
-        int ShardId { get; }
+        short ShardId { get; }
 
         /// <summary>
         /// the cache region prefix for the shard

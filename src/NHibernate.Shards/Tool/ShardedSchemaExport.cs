@@ -1,11 +1,10 @@
 ﻿using System;
-using NHibernate.Shards.Cfg;
 using NHibernate.Shards.Util;
+using NHibernate.Tool.hbm2ddl;
 
-namespace NHibernate.Shards
+namespace NHibernate.Shards.Tool
 {
     using NHibernate.Cfg;
-    using Tool.hbm2ddl;
 
     public class ShardedSchemaExport
     {
@@ -44,15 +43,15 @@ namespace NHibernate.Shards
             ForEachShard(e => e.Execute(script, export, justDrop));
         }
 
-        public ShardedSchemaExport SetDelimiter(string delimiter)
+        public ShardedSchemaExport SetDelimiter(string value)
         {
-            this.delimiter = delimiter;
+            this.delimiter = value;
             return this;
         }
 
-        public ShardedSchemaExport SetOutputFile(string outputFile)
+        public ShardedSchemaExport SetOutputFile(string value)
         {
-            this.outputFile = outputFile;
+            this.outputFile = value;
             return this;
         }
 

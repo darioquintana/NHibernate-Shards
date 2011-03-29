@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NHibernate.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
@@ -107,13 +108,9 @@ namespace NHibernate.Shards.Strategy.Exit
                 result = result.Take(this.MaxResults.Value);
             }
 
-            if (this.Aggregation != null)
-            {
-                var scalar = this.Aggregation(result);
-                return new[] {(T)scalar};
-            }
-
-            return result;
+            return this.Aggregation != null
+                ? new SingletonEnumerable<T>((T)this.Aggregation(result))
+                : result;
         }
     }
 }
