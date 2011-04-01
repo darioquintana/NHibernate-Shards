@@ -466,6 +466,10 @@ namespace NHibernate.Shards.Criteria
                 {
                     subcriteria.EstablishFor(shard, result);
                 }
+                foreach (Action<ICriteria> action in this.establishActions)
+                {
+                    action(result);
+                }
 
                 establishedCriteriaByShard.Add(shard, result);
             }
