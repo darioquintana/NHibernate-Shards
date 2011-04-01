@@ -763,7 +763,7 @@ namespace NHibernate.Shards.Session
         /// <param name="replicationMode"></param>
         public void Replicate(object obj, ReplicationMode replicationMode)
         {
-            Replicate(obj, ExtractKey(null, obj), null);
+            Replicate(obj, ExtractKey(null, obj), replicationMode);
         }
 
         /// <summary>
@@ -1537,7 +1537,13 @@ namespace NHibernate.Shards.Session
         /// <param name="obj">A persistent instance</param>
         public void Refresh(object obj)
         {
-            Refresh(obj, null);
+            IShard shard;
+            if (TryGetShardForAttachedEntity(obj, out shard))
+            {
+                // Attached object
+                shard.EstablishSession().Refresh(obj);
+                return;
+            }
         }
 
         /// <summary>
