@@ -61,6 +61,22 @@ namespace NHibernate.Shards.Criteria
 
         #region ICriteria implementation
 
+        public bool IsReadOnly
+        {
+            get { return this.SomeCriteria.IsReadOnly; }
+        }
+
+        public bool IsReadOnlyInitialized
+        {
+            get { return this.SomeCriteria.IsReadOnlyInitialized; }
+        }
+
+        public ICriteria SetReadOnly(bool readOnly)
+        {
+            ApplyActionToShards(c => c.SetReadOnly(readOnly));
+            return this;
+        }
+
         public ICriteria SetProjection(params IProjection[] projections)
         {
             foreach (var projection in projections)
@@ -639,6 +655,16 @@ namespace NHibernate.Shards.Criteria
                 get { return subcriteriaAlias; }
             }
 
+            public bool IsReadOnly
+            {
+                get { return root.IsReadOnly; }
+            }
+
+            public bool IsReadOnlyInitialized
+            {
+                get { return root.IsReadOnlyInitialized; }
+            }
+
             public ICriteria SetProjection(params IProjection[] projections)
             {
                 root.SetProjection(projections);
@@ -750,6 +776,12 @@ namespace NHibernate.Shards.Criteria
             public ICriteria SetCacheMode(CacheMode cacheMode)
             {
                 root.SetCacheMode(cacheMode);
+                return this;
+            }
+
+            public ICriteria SetReadOnly(bool readOnly)
+            {
+                root.SetReadOnly(readOnly);
                 return this;
             }
 

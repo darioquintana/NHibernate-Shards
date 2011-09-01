@@ -51,7 +51,7 @@ namespace NHibernate.Shards.Engine
         /// execution when any new shard-local sessions are established within the 
         /// scope of this sharded session.
         /// </remarks>
-        void AddEstablishAction(Action<ISession> action);
+        void ApplyActionToShards(Action<ISession> action);
 
         /// <summary>
         /// Establishes a shard-local session for a given shard.

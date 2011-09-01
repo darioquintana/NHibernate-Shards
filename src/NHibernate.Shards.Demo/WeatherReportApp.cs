@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using NHibernate.ByteCode.LinFu;
 using NHibernate.Cfg;
 using NHibernate.Cfg.Loquacious;
 using NHibernate.Criterion;
@@ -110,7 +109,6 @@ namespace NHibernate.Shards.Demo
                 .Proxy(p =>
                 {
                     p.Validation = false;
-                    p.ProxyFactoryFactory<ProxyFactoryFactory>();
                 })
                 .DataBaseIntegration(db =>
                 {

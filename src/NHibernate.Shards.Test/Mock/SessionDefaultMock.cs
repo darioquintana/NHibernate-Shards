@@ -425,5 +425,47 @@ namespace NHibernate.Shards.Test.Mock
         {
             throw new NotSupportedException();
         }
+
+        public bool DefaultReadOnly
+        {
+            get
+            {
+                throw new NotSupportedException();
+            }
+            set
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        public bool IsReadOnly(object entityOrProxy)
+        {
+            throw new NotSupportedException();
+        }
+
+        public T Merge<T>(string entityName, T entity) where T : class
+        {
+            throw new NotSupportedException();
+        }
+
+        public T Merge<T>(T entity) where T : class
+        {
+            throw new NotSupportedException();
+        }
+
+        public IQueryOver<T, T> QueryOver<T>(string entityName, Expression<Func<T>> alias) where T : class
+        {
+            throw new NotSupportedException();
+        }
+
+        public IQueryOver<T, T> QueryOver<T>(string entityName) where T : class
+        {
+            throw new NotSupportedException();
+        }
+
+        public void SetReadOnly(object entityOrProxy, bool readOnly)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

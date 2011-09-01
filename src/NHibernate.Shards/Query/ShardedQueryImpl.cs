@@ -60,6 +60,11 @@ namespace NHibernate.Shards.Query
             this.queryFactory = queryFactory;
         }
 
+        public bool IsReadOnly
+        {
+            get { return this.SomeQuery.IsReadOnly; }
+        }
+
         /**
          * This method currently wraps list().
          *
@@ -255,15 +260,15 @@ namespace NHibernate.Shards.Query
             return this;
         }
 
-        // public IQuery SetParameterList(string name, IEnumerable vals, IType type)
-        public IQuery SetParameterList(string name, object[] vals, IType type)
+        public IQuery SetParameterList(string name, IEnumerable vals, IType type)
+        // public IQuery SetParameterList(string name, object[] vals, IType type)
         {
             ApplyActionToShards(q => q.SetParameterList(name, vals, type));
             return this;
         }
 
-        // public IQuery SetParameterList(string name, IEnumerable vals)
-        public IQuery SetParameterList(string name, object[] vals)
+        public IQuery SetParameterList(string name, IEnumerable vals)
+        //public IQuery SetParameterList(string name, object[] vals)
         {
             ApplyActionToShards(q => q.SetParameterList(name, vals));
             return this;
@@ -476,6 +481,54 @@ namespace NHibernate.Shards.Query
         public IQuery SetGuid(string name, Guid val)
         {
             ApplyActionToShards(q => q.SetGuid(name, val));
+            return this;
+        }
+
+        public IQuery SetDateTime2(string name, DateTime val)
+        {
+            ApplyActionToShards(q => q.SetDateTime2(name, val));
+            return this;
+        }
+
+        public IQuery SetDateTime2(int position, DateTime val)
+        {
+            ApplyActionToShards(q => q.SetDateTime2(position, val));
+            return this;
+        }
+
+        public IQuery SetDateTimeOffset(string name, DateTimeOffset val)
+        {
+            ApplyActionToShards(q => q.SetDateTimeOffset(name, val));
+            return this;
+        }
+
+        public IQuery SetDateTimeOffset(int position, DateTimeOffset val)
+        {
+            ApplyActionToShards(q => q.SetDateTimeOffset(position, val));
+            return this;
+        }
+
+        public IQuery SetTimeAsTimeSpan(string name, TimeSpan val)
+        {
+            ApplyActionToShards(q => q.SetTimeAsTimeSpan(name, val));
+            return this;
+        }
+
+        public IQuery SetTimeAsTimeSpan(int position, TimeSpan val)
+        {
+            ApplyActionToShards(q => q.SetTimeAsTimeSpan(position, val));
+            return this;
+        }
+
+        public IQuery SetTimeSpan(string name, TimeSpan val)
+        {
+            ApplyActionToShards(q => q.SetTimeSpan(name, val));
+            return this;
+        }
+
+        public IQuery SetTimeSpan(int position, TimeSpan val)
+        {
+            ApplyActionToShards(q => q.SetTimeSpan(position, val));
             return this;
         }
 

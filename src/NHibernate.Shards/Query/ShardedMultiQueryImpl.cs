@@ -263,6 +263,30 @@ namespace NHibernate.Shards.Query
             return this;
         }
 
+        public IMultiQuery SetDateTime2(string name, DateTime val)
+        {
+            ApplyActionToShards(q => q.SetDateTime2(name, val));
+            return this;
+        }
+
+        public IMultiQuery SetDateTimeOffset(string name, DateTimeOffset val)
+        {
+            ApplyActionToShards(q => q.SetDateTimeOffset(name, val));
+            return this;
+        }
+
+        public IMultiQuery SetTimeAsTimeSpan(string name, TimeSpan val)
+        {
+            ApplyActionToShards(q => q.SetTimeAsTimeSpan(name, val));
+            return this;
+        }
+
+        public IMultiQuery SetTimeSpan(string name, TimeSpan val)
+        {
+            ApplyActionToShards(q => q.SetTimeSpan(name, val));
+            return this;
+        }
+
         public IMultiQuery SetParameter(string name, object val)
         {
             ApplyActionToShards(q => q.SetParameter(name, val));

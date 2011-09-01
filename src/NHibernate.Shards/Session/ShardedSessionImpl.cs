@@ -177,7 +177,7 @@ namespace NHibernate.Shards.Session
         /// execution when any new shard-local sessions are established within the
         /// scope of this sharded session.
         /// </remarks>
-        public void AddEstablishAction(Action<ISession> action)
+        public void ApplyActionToShards(Action<ISession> action)
         {
             this.establishActions.Add(action);
             foreach (var session in this.establishedSessionsByShard.Values)
@@ -383,7 +383,7 @@ namespace NHibernate.Shards.Session
         public FlushMode FlushMode
         {
             get { return AnySession.FlushMode; }
-            set { AddEstablishAction(s => s.FlushMode = value); }
+            set { ApplyActionToShards(s => s.FlushMode = value); }
         }
 
         /// <summary> 
@@ -396,7 +396,7 @@ namespace NHibernate.Shards.Session
         public CacheMode CacheMode
         {
             get { return AnySession.CacheMode; }
-            set { AddEstablishAction(s => s.CacheMode = value); }
+            set { ApplyActionToShards(s => s.CacheMode = value); }
         }
 
         /// <summary>
@@ -557,6 +557,43 @@ namespace NHibernate.Shards.Session
                 if (session.IsDirty()) return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// The read-only status for entities (and proxies) loaded into this Session.
+        /// </summary>
+        /// <seealso cref="NHibernate.ISession.IsReadOnly(System.Object)"/>
+        /// <seealso cref="NHibernate.ISession.SetReadOnly(System.Object,System.Boolean)"/>
+        public bool DefaultReadOnly
+        {
+            get { return this.AnySession.DefaultReadOnly; }
+            set { ApplyActionToShards(s => { s.DefaultReadOnly = value; }); }
+        }
+
+        /// <summary>
+        /// Is the specified entity (or proxy) read-only?
+        /// </summary>
+        /// <param name="entityOrProxy">An entity (or <see cref="NHibernate.Proxy.INHibernateProxy"/>)</param>
+        /// <returns>
+        ///   <c>true</c> if the entity (or proxy) is read-only, otherwise <c>false</c>.
+        /// </returns>
+        /// <seealso cref="NHibernate.ISession.DefaultReadOnly"/>
+        /// <seealso cref="NHibernate.ISession.SetReadOnly(System.Object,System.Boolean)"/>
+        public bool IsReadOnly(object entityOrProxy)
+        {
+            return ApplyShardFuncToAttachedObject((s, o) => s.IsReadOnly(entityOrProxy), entityOrProxy);
+        }
+
+        /// <summary>
+        /// Change the read-only status of an entity (or proxy).
+        /// </summary>
+        /// <param name="entityOrProxy">An entity (or <see cref="NHibernate.Proxy.INHibernateProxy"/>).</param>
+        /// <param name="readOnly">If <c>true</c>, the entity or proxy is made read-only; if <c>false</c>, it is made modifiable.</param>
+        /// <seealso cref="NHibernate.ISession.DefaultReadOnly"/>
+        /// <seealso cref="NHibernate.ISession.IsReadOnly(System.Object)"/>
+        public void SetReadOnly(object entityOrProxy, bool readOnly)
+        {
+            ApplyShardActionToAttachedObject((s, o) => s.SetReadOnly(o, readOnly), entityOrProxy);
         }
 
         /// <summary>
@@ -1221,6 +1258,16 @@ namespace NHibernate.Shards.Session
 
         #region Merge
 
+        public T Merge<T>(string entityName, T entity) where T : class
+        {
+            return (T)Merge(entityName, entity);
+        }
+
+        public T Merge<T>(T entity) where T : class
+        {
+            return (T)Merge(null, entity);
+        }
+
         /// <summary>
         /// Copy the state of the given object onto the persistent object with the same
         /// identifier. If there is no persistent instance currently associated with
@@ -1325,6 +1372,7 @@ namespace NHibernate.Shards.Session
         /// </summary>
         /// <param name="obj">a transient instance with state to be copied</param>
         /// <returns>an updated persistent instance</returns>
+        [Obsolete("No direct replacement. Use Merge instead")]
         public object SaveOrUpdateCopy(object obj)
         {
             return SaveOrUpdateCopy(null, obj);
@@ -1341,6 +1389,7 @@ namespace NHibernate.Shards.Session
         /// <param name="obj">a persistent or transient instance with state to be copied</param>
         /// <param name="id">the identifier of the instance to copy to</param>
         /// <returns>an updated persistent instance</returns>
+        [Obsolete("No direct replacement. Use Merge instead")]
         public object SaveOrUpdateCopy(object obj, object id)
         {
             var key = ExtractKey(null, obj);
@@ -1699,6 +1748,16 @@ namespace NHibernate.Shards.Session
             throw new NotSupportedException();
         }
 
+        IQueryOver<T, T> ISession.QueryOver<T>(string entityName, Expression<Func<T>> alias)
+        {
+            throw new NotSupportedException();
+        }
+
+        IQueryOver<T, T> ISession.QueryOver<T>(string entityName)
+        {
+            throw new NotSupportedException();
+        }
+
         /// <summary>
         /// Create a new instance of <c>Query</c> for the given query string
         /// </summary>
@@ -2030,7 +2089,7 @@ namespace NHibernate.Shards.Session
         /// <returns></returns>
         public ISession SetBatchSize(int batchSize)
         {
-            AddEstablishAction(s => s.SetBatchSize(batchSize));
+            ApplyActionToShards(s => s.SetBatchSize(batchSize));
             return this;
         }
 
@@ -2078,7 +2137,7 @@ namespace NHibernate.Shards.Session
                 if (this.statistics == null)
                 {
                     this.statistics = new ShardedSessionStatistics();
-                    AddEstablishAction(s => statistics.CollectFor(s));
+                    ApplyActionToShards(s => statistics.CollectFor(s));
                 }
                 return this.statistics;
             }

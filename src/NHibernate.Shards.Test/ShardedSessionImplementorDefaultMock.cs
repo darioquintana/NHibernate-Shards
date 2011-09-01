@@ -57,7 +57,7 @@ namespace NHibernate.Shards.Test
             throw new NotSupportedException();
         }
 
-        public virtual void AddEstablishAction(Action<ISession> action)
+        public virtual void ApplyActionToShards(Action<ISession> action)
         {
             throw new NotSupportedException();
         }
