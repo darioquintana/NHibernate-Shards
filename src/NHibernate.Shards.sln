@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NHibernate.Shards", "NHibernate.Shards\NHibernate.Shards.csproj", "{9DEF9516-EB32-479D-99BF-FE8175956112}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NHibernate.Shards.Test", "NHibernate.Shards.Test\NHibernate.Shards.Test.csproj", "{186131D7-16AB-4E44-9279-C1B70B4178B7}"

@@ -200,7 +200,14 @@ namespace NHibernate.Shards.Criteria
         public ICriteria AddOrder(Order order)
         {
             this.listExitOperationBuilder.Orders.Add(ToSortOrder(order));
+            ApplyActionToShards(c => c.AddOrder(order));
             return this;
+        }
+
+        public void ClearOrders()
+        {
+            this.listExitOperationBuilder.Orders.Clear();
+            ApplyActionToShards(c => c.ClearOrders());
         }
 
         private static SortOrder ToSortOrder(Order order)
@@ -322,13 +329,25 @@ namespace NHibernate.Shards.Criteria
         public ICriteria SetMaxResults(int maxResults)
         {
             this.listExitOperationBuilder.MaxResults = maxResults;
+            ApplyLimitsToShards();
             return this;
         }
 
         public ICriteria SetFirstResult(int firstResult)
         {
             this.listExitOperationBuilder.FirstResult = firstResult;
+            ApplyLimitsToShards();
             return this;
+        }
+
+        private void ApplyLimitsToShards()
+        {
+            if (this.listExitOperationBuilder.MaxResults.HasValue)
+            {
+                var maxResults = this.listExitOperationBuilder.MaxResults.Value
+                    + this.listExitOperationBuilder.FirstResult;
+                ApplyActionToShards(c => c.SetMaxResults(maxResults));
+            }
         }
 
         public ICriteria SetFetchSize(int fetchSize)
@@ -425,11 +444,6 @@ namespace NHibernate.Shards.Criteria
         public IListExitStrategy<T> BuildListExitStrategy<T>()
         {
             return new ListExitStrategy<T>(listExitOperationBuilder.BuildListOperation());
-        }
-
-        public void ClearOrders()
-        {
-            ApplyActionToShards(c => c.ClearOrders());
         }
 
         public ICriteria GetCriteriaByPath(string path)
