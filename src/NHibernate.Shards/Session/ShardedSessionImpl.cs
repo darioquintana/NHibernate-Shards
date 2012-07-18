@@ -1522,9 +1522,11 @@ namespace NHibernate.Shards.Session
                 this.deleteAction = deleteAction;
             }
 
-            public int Execute(IShard shard)
+            public Func<int> Prepare(IShard shard)
             {
-                return deleteAction(shard.EstablishSession());
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var session = shard.EstablishSession();
+                return () => deleteAction(session);
             }
 
             public string OperationName
@@ -1956,23 +1958,26 @@ namespace NHibernate.Shards.Session
                 this.lockMode = lockMode;
             }
 
-            public object Execute(IShard shard)
+            public Func<object> Prepare(IShard shard)
             {
-                var session = shard.EstablishSession();
-                // TODO: NHibernate seems to miss an ISession.Get(string entityName, object id, LockMode lockMode) overload.
+				// TODO: NHibernate seems to miss an ISession.Get(string entityName, object id, LockMode lockMode) overload.
+				var session = shard.EstablishSession();
                 if (this.lockMode == null)
                 {
-                    return session.Get(this.key.EntityName, this.key.Id);
+                	return () => session.Get(this.key.EntityName, this.key.Id);
                 }
 
-                try
+				return () =>
                 {
-                    return session.Load(this.key.EntityName, this.key.Id, this.lockMode);
-                }
-                catch (ObjectNotFoundException)
-                {
-                    return null;
-                }
+					try
+					{
+                		return session.Load(this.key.EntityName, this.key.Id, this.lockMode);
+					}
+					catch (ObjectNotFoundException)
+					{
+						return null;
+					}
+				};
             }
 
             public string OperationName
