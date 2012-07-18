@@ -617,9 +617,11 @@ namespace NHibernate.Shards.Query
                 this.shardedQuery = shardedQuery;
             }
 
-            public T Execute(IShard shard)
+            public Func<T> Prepare(IShard shard)
             {
-                return this.shardedQuery.EstablishFor(shard).UniqueResult<T>();
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var query = this.shardedQuery.EstablishFor(shard);
+                return query.UniqueResult<T>;
             }
 
             public string OperationName
@@ -637,9 +639,11 @@ namespace NHibernate.Shards.Query
                 this.shardedQuery = shardedQuery;
             }
 
-            public IEnumerable<T> Execute(IShard shard)
+            public Func<IEnumerable<T>> Prepare(IShard shard)
             {
-                return this.shardedQuery.EstablishFor(shard).List<T>();
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var query = this.shardedQuery.EstablishFor(shard);
+				return query.List<T>;
             }
 
             public string OperationName
@@ -658,9 +662,9 @@ namespace NHibernate.Shards.Query
                     .ToDictionary(s => s, s => shardedQuery.EstablishFor(s).Future<T>());
             }
 
-            public IEnumerable<T> Execute(IShard shard)
+            public Func<IEnumerable<T>> Prepare(IShard shard)
             {
-                return this.futuresByShard[shard];
+                return () => this.futuresByShard[shard];
             }
 
             public string OperationName
@@ -681,9 +685,9 @@ namespace NHibernate.Shards.Query
                     .ToDictionary(s => s, s => shardedQuery.EstablishFor(s).FutureValue<T>());
             }
 
-            public T Execute(IShard shard)
+            public Func<T> Prepare(IShard shard)
             {
-                return this.futuresByShard[shard].Value;
+                return () => this.futuresByShard[shard].Value;
             }
 
             public T Value
@@ -706,9 +710,11 @@ namespace NHibernate.Shards.Query
                 this.shardedQuery = shardedQuery;
             }
 
-            public int Execute(IShard shard)
+            public Func<int> Prepare(IShard shard)
             {
-                return this.shardedQuery.EstablishFor(shard).ExecuteUpdate();
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var query = this.shardedQuery.EstablishFor(shard);
+				return query.ExecuteUpdate;
             }
 
             public string OperationName

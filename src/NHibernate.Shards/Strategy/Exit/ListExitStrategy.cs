@@ -13,7 +13,7 @@ namespace NHibernate.Shards.Strategy.Exit
         private IEnumerable<T> result;
 
         // maximum number of results requested by the client
-        private ListExitOperation exitOperation;
+        private readonly ListExitOperation exitOperation;
 
         public ListExitStrategy(ListExitOperation exitOperation)
         {
@@ -33,8 +33,8 @@ namespace NHibernate.Shards.Strategy.Exit
             Preconditions.CheckNotNull(partialResult);
 
             result = result == null
-                ? partialResult.Cast<T>()
-                : result.Concat(partialResult.Cast<T>());
+                ? partialResult
+                : result.Concat(partialResult);
             return false;
         }
 

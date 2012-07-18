@@ -519,9 +519,11 @@ namespace NHibernate.Shards.Criteria
                 this.shardedCriteria = shardedCriteria;
             }
 
-            public IEnumerable<T> Execute(IShard shard)
+            public Func<IEnumerable<T>> Prepare(IShard shard)
             {
-                return this.shardedCriteria.EstablishFor(shard).List<T>();
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var criteria = this.shardedCriteria.EstablishFor(shard);
+                return criteria.List<T>;
             }
 
             public string OperationName
@@ -539,9 +541,11 @@ namespace NHibernate.Shards.Criteria
                 this.shardedCriteria = shardedCriteria;
             }
 
-            public T Execute(IShard shard)
+            public Func<T> Prepare(IShard shard)
             {
-                return shardedCriteria.EstablishFor(shard).UniqueResult<T>();
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var criteria = shardedCriteria.EstablishFor(shard);
+                return criteria.UniqueResult<T>;
             }
 
             public string OperationName
@@ -560,9 +564,9 @@ namespace NHibernate.Shards.Criteria
                     .ToDictionary(s => s, s => shardedCriteria.EstablishFor(s).Future<T>());
             }
 
-            public IEnumerable<T> Execute(IShard shard)
+            public Func<IEnumerable<T>> Prepare(IShard shard)
             {
-                return futuresByShard[shard];
+                return () => futuresByShard[shard];
             }
 
             public string OperationName
@@ -583,9 +587,9 @@ namespace NHibernate.Shards.Criteria
                     .ToDictionary(s => s, s => shardedCriteria.EstablishFor(s).FutureValue<T>());
             }
 
-            public T Execute(IShard shard)
+            public Func<T> Prepare(IShard shard)
             {
-                return futuresByShard[shard].Value;
+                return () => futuresByShard[shard].Value;
             }
 
             public T Value

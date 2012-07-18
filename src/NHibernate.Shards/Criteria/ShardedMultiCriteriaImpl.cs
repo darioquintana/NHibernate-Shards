@@ -280,9 +280,11 @@ namespace NHibernate.Shards.Criteria
                 this.shardedMultiCriteria = shardedMultiCriteria;
             }
 
-            public IList Execute(IShard shard)
+            public Func<IList> Prepare(IShard shard)
             {
-                return this.shardedMultiCriteria.EstablishFor(shard).List();
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var multiCriteria = this.shardedMultiCriteria.EstablishFor(shard);
+            	return multiCriteria.List;
             }
 
             public string OperationName

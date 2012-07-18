@@ -1,17 +1,23 @@
 namespace NHibernate.Shards
 {
+	using System;
+
 	/// <summary>
-	/// Simple interface used to reference something we can do against a <see cref="IShard"/>.
+	/// Represents a single operation that can be performed on a shard.
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">Operation result type</typeparam>
 	public interface IShardOperation<T>
 	{
 		/// <summary>
-		/// The shard to Execute against
+		/// Creates thread-safe delegate that will perform the operation on a given shard.
 		/// </summary>
-		/// <param name="shard"></param>
-		/// <returns>the result of the operation</returns>
-		T Execute(IShard shard);
+		/// <param name="shard">The shard to execute against</param>
+		/// <returns>Thread-safe delegate that will perform the operation on <paramref name="shard"/>.</returns>
+		/// <remarks>The delegate returned by this method may be executed in parallel for multiple 
+		/// shards. The delegate MUST therefore not perform any operations on state that is shared 
+		/// across shards. This implies that the establishing of shard-specific sessions, queries and/or 
+		/// criterias must be done before the delegate is returned by this method.</remarks>
+		Func<T> Prepare(IShard shard);
 
 		/// <summary>
 		/// The name of the operation (useful for logging and debugging)
