@@ -3,83 +3,213 @@
 		name="NHibernate.Shards"
 		default="build"
 		description="NHibernate Shards for horizontal partitioning of databases"
-		xmlns="http://nant.sf.net/release/0.85/nant.xsd">
+		xmlns="http://nant.sf.net/release/0.91-alpha2/nant.xsd">
 
-	<property name="framework.family" value="${framework::get-family(framework::get-target-framework())}"/>
-	<property name="framework.version" value="${framework::get-version(framework::get-target-framework())}"/>
+	<property name="debug" value="true" overwrite="false" />
 
-	<property name="folders.lib" value="../../lib/${framework.family}/${framework.version}" />
-	<property name="folders.build" value="build" />
-	
-	<target name="build">
-		<mkdir dir="${folders.build}"/>
+	<property name="build.dir" value="build" overwrite="false"/>
+	<property name="lib.dir" value="lib" overwrite="false"/>
+	<property name="package.dir" value="src/packages" />
+	<property name="src.dir" value="src" />
+	<property name="tool.dir" value="tools" />
 
-		<csc target="library"
-			 output="${folders.build}/NHibernate.Shards.dll"
-		>
-			<nowarn>
-				<warning number="1591" />
-				<!-- No XML comment for publicly visible member -->
-			</nowarn>
-			<sources basedir="src/NHibernate.Shards">
-				<include name="**/*.cs"/>
-			</sources>
-			<references>
-				<include name="${folders.lib}/NHibernate.dll"/>
-				<include name="${folders.lib}/log4net.dll"/>
-				<include name="${folders.lib}/Iesi.Collections.dll"/>
-			</references>
-		</csc>
+	<target name="init">
+		<property name="project.config" value="${if(debug, 'debug', 'release')}" />
+		<property name="project.version" value="3.3.1.CR1" overwrite="false" />
+		<property name="project.defines" value="${if(debug, 'DEBUG', '')}" />
 
-		<csc target="library"
-			 output="${folders.build}/NHibernate.Shards.Tests.dll"
-		>
-			<nowarn>
-				<warning number="1591" />
-				<!-- No XML comment for publicly visible member -->
-			</nowarn>
-			<sources basedir="src/NHibernate.Shards.Test">
-				<include name="**/*.cs"/>
-			</sources>
-			<references>
-				<include name="${folders.lib}/NHibernate.dll"/>
-				<include name="${folders.lib}/log4net.dll"/>
-				<include name="${folders.lib}/Iesi.Collections.dll"/>
-				<include name="${folders.lib}/nunit.framework.dll"/>
-				<include name="${folders.build}/NHibernate.Shards.dll"/>
-				<include name="${folders.lib}/Rhino.Mocks.dll"/>
-			</references>
-		</csc>
+		<property name="nuget.sources" value="http://nuget.org/api/v2/" overwrite="false"/>
 
-		<copy file="src/NHibernate.Shards.Test/App.config"
-			  tofile="${folders.build}/NHibernate.Shards.Tests.dll.config"
-			  if="${file::exists('src/NHibernate.Shards.Test/App.config')}"
-		/>
+		<!-- Compute and set project.version.numeric from project.version -->
+		<script language="C#">
+			<code>
+				<![CDATA[
+					public const int BaseAlpha = 1000;
+					public const int BaseBeta  = 2000;
+					public const int BaseCR    = 3000;
+					public const int BaseGA    = 4000;
+					// SP is same as GA because GA has no number and SP's start with 1.
+					public const int BaseSP    = 4000;
 
-		<copy todir="${folders.build}" flatten="true">
-			<fileset>
-				<include name="${folders.lib}/NHibernate.dll"/>
-				<include name="${folders.lib}/Iesi.Collections.dll"/>
-				<include name="${folders.lib}/Castle.Core.dll"/>
-				<include name="${folders.lib}/Castle.DynamicProxy2.dll"/>
-				<include name="${folders.lib}/log4net.dll"/>
-				<include name="${folders.lib}/nunit.framework.dll"/>
-				<include name="${folders.lib}/Rhino.Mocks.dll"/>
-			</fileset>
-		</copy>
+					public static void ScriptMain(Project project)
+					{
+						string version = project.Properties["project.version"];
+						
+						int qualifierStart = version.LastIndexOf('.') + 1;
+						int qualifierNumberStart = version.IndexOfAny(
+							"0123456789".ToCharArray(),
+							qualifierStart);
+						if (qualifierNumberStart < 0) qualifierNumberStart = version.Length;
+
+						string qualifier = version.Substring(qualifierStart, qualifierNumberStart - qualifierStart);
+						int revisionBase = GetRevisionBase(qualifier);
+						int qualifierNumber = qualifierNumberStart < version.Length
+							? int.Parse(version.Substring(qualifierNumberStart))
+							: 0;
+
+						string versionBase = version.Substring(0, qualifierStart-1);
+						string revisionNumber = (revisionBase + qualifierNumber).ToString();
+
+						project.Properties["project.version.numeric"] = versionBase + "." + revisionNumber;
+						project.Properties["project.version.semantic"] = versionBase + "-" + version.Substring(qualifierStart);
+					}
+
+					public static int GetRevisionBase(string qualifier)
+					{
+						switch (qualifier)
+						{
+							case "Alpha": return BaseAlpha;
+							case "Beta":  return BaseBeta;
+							case "CR":    return BaseCR;
+							case "GA":    return BaseGA;
+							case "SP":    return BaseSP; 
+							default:			throw new BuildException("Unknown version qualifier " + qualifier);
+						}
+					}
+				]]>
+			</code>
+		</script>
 	</target>
 
-	<target name="test"
-			depends="build">
+	<target name="clean" depends="init">
+		<delete dir="${build.dir}" failonerror="false"/>
+	</target>
+
+	<target name="resolve" description="Installs and updates NuGet dependencies" depends="init">
+		<foreach item="File" property="_packageConfigFile">
+			<in>
+				<items basedir="${src.dir}">
+					<include name="**/packages.config"/>
+				</items>
+			</in>
+			<do>
+				<!-- Force package refresh for release builds -->
+				<if test="${not debug}">
+					<delete includeemptydirs="true">
+						<fileset basedir="${package.dir}">
+							<include name="**/*.*" />
+							<exclude name="*.config" />
+						</fileset>
+					</delete>
+					
+					<exec program="nuget.exe" basedir="${tool.dir}" unless="${debug}">
+						<arg value="update" />
+						<arg file="${_packageConfigFile}" />
+						<arg value="-Source" />
+						<arg value="${nuget.sources}" />
+						<arg value="-RepositoryPath" />
+						<arg path="${package.dir}" />
+						<arg value="-Verbose" />
+					</exec>
+				</if>
+
+				<exec program="nuget.exe" basedir="${tool.dir}">
+					<arg value="install" />
+					<arg file="${_packageConfigFile}" />
+					<arg value="-Source" />
+					<arg value="${nuget.sources}" />
+					<arg value="-OutputDirectory" />
+					<arg path="${package.dir}" />
+				</exec>
+			</do>
+		</foreach>
+	</target>
+
+	<target name="build" depends="init resolve">
+		<property name="compile.targetframework" value="${framework::get-target-framework()}" />
+		<property name="compile.targetframework.nuget" value="${string::replace(string::replace(compile.targetframework, '.', ''), '-', '')}" />
+		<property name="compile.build.dir" value="${build.dir}/${compile.targetframework.nuget}" />
+
+		<property name="compile.project.name" value="NHibernate.Shards" />
+		<assemblyfileset id="compile.references">
+			<include name="${package.dir}/NHibernate.*/lib/${compile.targetframework.nuget}/NHibernate.dll"/>
+			<include name="${package.dir}/Iesi.Collections.*/lib/${compile.targetframework.nuget}/Iesi.Collections.dll"/>
+		</assemblyfileset>
+		<call target="build.project" />
+
+		<property name="compile.project.name" value="NHibernate.Shards.Test" />
+		<assemblyfileset id="compile.references">
+			<include name="${compile.build.dir}/NHibernate.Shards.dll"/>
+			<include name="${package.dir}/NHibernate.*/lib/${compile.targetframework.nuget}/NHibernate.dll"/>
+			<include name="${package.dir}/Iesi.Collections.*/lib/${compile.targetframework.nuget}/Iesi.Collections.dll"/>
+			<include name="${package.dir}/NUnit.*/lib/nunit.framework.dll"/>
+			<include name="${package.dir}/RhinoMocks.*/lib/net/Rhino.Mocks.dll"/>
+		</assemblyfileset>
+		<call target="build.project" />
+	</target>
+
+	<target name="build.project">
+		<asminfo language="CSharp" output="${src.dir}/${compile.project.name}/AssemblyInfo.cs">
+			<imports>
+				<import namespace="System" />
+				<import namespace="System.Reflection" />
+			</imports>
+			<attributes>
+				<attribute type="CLSCompliantAttribute" value="true" />
+				<attribute type="AssemblyTitleAttribute" value="${compile.project.name}" />
+				<attribute type="AssemblyCompanyAttribute" value="nhforge.org" />
+				<attribute type="AssemblyProductAttribute" value="${project::get-name()}" />
+				<attribute type="AssemblyCopyrightAttribute" value="Licensed under LGPL." />
+				<attribute type="AssemblyVersionAttribute" value="${project.version.numeric}" />
+				<attribute type="AssemblyFileVersionAttribute" value="${project.version.numeric}" />
+				<attribute type="AssemblyInformationalVersionAttribute" value="${project.version.numeric}" />
+			</attributes>
+		</asminfo>
+
+		<csc target="library" 
+				 output="${compile.build.dir}/${compile.project.name}.dll" 
+				 doc="${compile.build.dir}/${compile.project.name}.xml"
+				 define="${project.defines}" 
+				 debug="${if(debug, 'Full', 'PdbOnly')}" >
+			<nowarn>
+				<warning number="1591" />
+				<!-- No XML comment for publicly visible member -->
+			</nowarn>
+			<sources basedir="${src.dir}/${compile.project.name}">
+				<include name="**/*.cs"/>
+			</sources>
+			<references refid="compile.references" />
+		</csc>
+
+		<property name="_appConfigFile" value="${src.dir}/${compile.project.name}/App.config" />		
+		<copy file="${_appConfigFile}" tofile="${compile.build.dir}/${compile.project.name}.dll.config" 
+					if="${file::exists(_appConfigFile)}" />
+
+		<copy todir="${compile.build.dir}" flatten="true">
+			<fileset refid="compile.references" />
+		</copy>
+	</target>
+	
+	<target name="test" depends="build">
 		<nunit2>
-			<formatter type="Xml"
-			           usefile="true"
-			           extension=".xml" />
-			<test assemblyname="${folders.build}/NHibernate.Shards.Tests.dll"/>
+			<formatter type="Xml" usefile="true" extension=".xml" />
+			<test assemblyname="${build.dir}/NHibernate.Shards.Tests.dll"/>
 		</nunit2>
 	</target>
 
-	<target name="clean">
-		<delete dir="${folders.build}" failonerror="false"/>
+	<target name="nuspec" depends="build">
+		<foreach item="File" property="_nuspecFile">
+			<in>
+				<items basedir="${src.dir}">
+					<include name="**/*.nuspec" />
+				</items>
+			</in>
+			<do>
+				<exec program="nuget.exe" basedir="${tool.dir}" verbose="true">
+					<arg value="pack" />
+					<arg file="${_nuspecFile}" />
+					<arg value="-Version" />
+					<arg value="${project.version.numeric}" />
+					<arg value="-BasePath" />
+					<arg path="${project::get-base-directory()}" />
+					<arg value="-OutputDirectory" />
+					<arg path="${build.dir}" />
+					<arg value="-Symbols" />
+					<arg value="-Properties" />
+					<arg value="Configuration=${project.config};version=${project.version.numeric}" />
+					<arg value="-Verbose" />
+				</exec>
+			</do>
+		</foreach>
 	</target>
 </project>
