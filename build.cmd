@@ -1,0 +1,1 @@
+tools\nant\bin\nant.exe -buildfile:default.build -targetframework:net-3.5 %*
