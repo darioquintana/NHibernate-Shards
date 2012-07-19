@@ -12,7 +12,7 @@ using System.Reflection;
 //------------------------------------------------------------------------------
 
 [assembly: CLSCompliantAttribute(true)]
-[assembly: AssemblyTitleAttribute("NHibernate.Shards")]
+[assembly: AssemblyTitleAttribute("NHibernate.Shards.Test")]
 [assembly: AssemblyCompanyAttribute("nhforge.org")]
 [assembly: AssemblyProductAttribute("NHibernate.Shards")]
 [assembly: AssemblyCopyrightAttribute("Licensed under LGPL.")]
