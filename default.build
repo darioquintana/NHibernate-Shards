@@ -116,37 +116,39 @@
 	</target>
 
 	<target name="build" depends="init resolve">
-		<property name="compile.targetframework" value="${framework::get-target-framework()}" />
-		<property name="compile.targetframework.nuget" value="${string::replace(string::replace(compile.targetframework, '.', ''), '-', '')}" />
-		<property name="compile.build.dir" value="${build.dir}/${compile.targetframework.nuget}" />
+		<property name="current.targetframework" value="${framework::get-target-framework()}" />
+		<property name="current.targetframework.nuget" value="${string::replace(string::replace(current.targetframework, '.', ''), '-', '')}" />
+		<property name="current.build.dir" value="${build.dir}/${current.targetframework.nuget}" />
 
-		<property name="compile.project.name" value="NHibernate.Shards" />
-		<assemblyfileset id="compile.references">
-			<include name="${package.dir}/NHibernate.*/lib/${compile.targetframework.nuget}/NHibernate.dll"/>
-			<include name="${package.dir}/Iesi.Collections.*/lib/${compile.targetframework.nuget}/Iesi.Collections.dll"/>
+		<property name="current.project.name" value="NHibernate.Shards" />
+		<assemblyfileset id="current.project.references">
+			<include name="${package.dir}/NHibernate.*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
+			<include name="${package.dir}/Iesi.Collections.*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
 		</assemblyfileset>
-		<call target="build.project" />
+		<call target="build.current.project" />
 
-		<property name="compile.project.name" value="NHibernate.Shards.Test" />
-		<assemblyfileset id="compile.references">
-			<include name="${compile.build.dir}/NHibernate.Shards.dll"/>
-			<include name="${package.dir}/NHibernate.*/lib/${compile.targetframework.nuget}/NHibernate.dll"/>
-			<include name="${package.dir}/Iesi.Collections.*/lib/${compile.targetframework.nuget}/Iesi.Collections.dll"/>
+		<property name="current.project.name" value="NHibernate.Shards.Test" />
+		<assemblyfileset id="current.project.references">
+			<include name="${current.build.dir}/NHibernate.Shards.dll"/>
+			<include name="${package.dir}/NHibernate.*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
+			<include name="${package.dir}/Iesi.Collections.*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
 			<include name="${package.dir}/NUnit.*/lib/nunit.framework.dll"/>
 			<include name="${package.dir}/RhinoMocks.*/lib/net/Rhino.Mocks.dll"/>
 		</assemblyfileset>
-		<call target="build.project" />
+		<call target="build.current.project" />
+
+		<call target="test.current" />
 	</target>
 
-	<target name="build.project">
-		<asminfo language="CSharp" output="${src.dir}/${compile.project.name}/AssemblyInfo.cs">
+	<target name="build.current.project">
+		<asminfo language="CSharp" output="${src.dir}/${current.project.name}/AssemblyInfo.cs">
 			<imports>
 				<import namespace="System" />
 				<import namespace="System.Reflection" />
 			</imports>
 			<attributes>
 				<attribute type="CLSCompliantAttribute" value="true" />
-				<attribute type="AssemblyTitleAttribute" value="${compile.project.name}" />
+				<attribute type="AssemblyTitleAttribute" value="${current.project.name}" />
 				<attribute type="AssemblyCompanyAttribute" value="nhforge.org" />
 				<attribute type="AssemblyProductAttribute" value="${project::get-name()}" />
 				<attribute type="AssemblyCopyrightAttribute" value="Licensed under LGPL." />
@@ -157,31 +159,33 @@
 		</asminfo>
 
 		<csc target="library" 
-				 output="${compile.build.dir}/${compile.project.name}.dll" 
-				 doc="${compile.build.dir}/${compile.project.name}.xml"
+				 output="${current.build.dir}/${current.project.name}.dll" 
+				 doc="${current.build.dir}/${current.project.name}.xml"
 				 define="${project.defines}" 
 				 debug="${if(project.debug, 'Full', 'PdbOnly')}" >
 			<nowarn>
 				<warning number="1591" />
 				<!-- No XML comment for publicly visible member -->
 			</nowarn>
-			<sources basedir="${src.dir}/${compile.project.name}">
+			<sources basedir="${src.dir}/${current.project.name}">
 				<include name="**/*.cs"/>
 			</sources>
-			<references refid="compile.references" />
+			<references refid="current.project.references" />
 		</csc>
 
-		<property name="_appConfigFile" value="${src.dir}/${compile.project.name}/App.config" />		
-		<copy file="${_appConfigFile}" tofile="${compile.build.dir}/${compile.project.name}.dll.config" 
+		<property name="_appConfigFile" value="${src.dir}/${current.project.name}/App.config" />		
+		<copy file="${_appConfigFile}" tofile="${current.build.dir}/${current.project.name}.dll.config" 
 					if="${file::exists(_appConfigFile)}" />
 
-		<copy todir="${compile.build.dir}" flatten="true">
-			<fileset refid="compile.references" />
+		<copy todir="${current.build.dir}" flatten="true">
+			<fileset refid="current.project.references" />
 		</copy>
+	</target>
 
+	<target name="test.current">
 		<exec program="nunit-console" basedir="${tool.dir}/nunit">
 			<arg value="/framework:${nant.settings.currentframework}" />
-			<arg file="${compile.build.dir}/NHibernate.Shards.Test.dll" />
+			<arg file="${current.build.dir}/NHibernate.Shards.Test.dll" />
 		</exec>
 	</target>
 	
