@@ -5,7 +5,9 @@
 		description="NHibernate Shards for horizontal partitioning of databases"
 		xmlns="http://nant.sf.net/release/0.91-alpha2/nant.xsd">
 
-	<property name="debug" value="true" overwrite="false" />
+	<property name="project.config" value="debug" overwrite="false" />
+	<property name="project.version" value="3.3.1.CR1" overwrite="false" />
+	<property name="project.debug" value="${project.config == 'debug'}" />
 
 	<property name="build.dir" value="build" overwrite="false"/>
 	<property name="lib.dir" value="lib" overwrite="false"/>
@@ -14,9 +16,7 @@
 	<property name="tool.dir" value="tools" />
 
 	<target name="init">
-		<property name="project.config" value="${if(debug, 'debug', 'release')}" />
-		<property name="project.version" value="3.3.1.CR1" overwrite="false" />
-		<property name="project.defines" value="${if(debug, 'DEBUG', '')}" />
+		<property name="project.defines" value="${if(project.debug, 'DEBUG', '')}" />
 
 		<property name="nuget.sources" value="http://nuget.org/api/v2/" overwrite="false"/>
 
@@ -84,7 +84,7 @@
 			</in>
 			<do>
 				<!-- Force package refresh for release builds -->
-				<if test="${not debug}">
+				<if test="${not project.debug}">
 					<delete includeemptydirs="true">
 						<fileset basedir="${package.dir}">
 							<include name="**/*.*" />
@@ -92,7 +92,7 @@
 						</fileset>
 					</delete>
 					
-					<exec program="nuget.exe" basedir="${tool.dir}" unless="${debug}">
+					<exec program="nuget.exe" basedir="${tool.dir}" unless="${project.debug}">
 						<arg value="update" />
 						<arg file="${_packageConfigFile}" />
 						<arg value="-Source" />
@@ -160,7 +160,7 @@
 				 output="${compile.build.dir}/${compile.project.name}.dll" 
 				 doc="${compile.build.dir}/${compile.project.name}.xml"
 				 define="${project.defines}" 
-				 debug="${if(debug, 'Full', 'PdbOnly')}" >
+				 debug="${if(project.debug, 'Full', 'PdbOnly')}" >
 			<nowarn>
 				<warning number="1591" />
 				<!-- No XML comment for publicly visible member -->
