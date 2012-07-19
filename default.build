@@ -178,16 +178,14 @@
 		<copy todir="${compile.build.dir}" flatten="true">
 			<fileset refid="compile.references" />
 		</copy>
+
+		<exec program="nunit-console" basedir="${tool.dir}/nunit">
+			<arg value="/framework:${nant.settings.currentframework}" />
+			<arg file="${compile.build.dir}/NHibernate.Shards.Test.dll" />
+		</exec>
 	</target>
 	
-	<target name="test" depends="build">
-		<nunit2>
-			<formatter type="Xml" usefile="true" extension=".xml" />
-			<test assemblyname="${build.dir}/NHibernate.Shards.Tests.dll"/>
-		</nunit2>
-	</target>
-
-	<target name="nuspec" depends="build">
+	<target name="pack" depends="init build">
 		<foreach item="File" property="_nuspecFile">
 			<in>
 				<items basedir="${src.dir}">
@@ -208,6 +206,23 @@
 					<arg value="-Properties" />
 					<arg value="Configuration=${project.config};version=${project.version.numeric}" />
 					<arg value="-Verbose" />
+				</exec>
+			</do>
+		</foreach>
+	</target>
+
+	<target name="publish" depends="init pack">
+		<foreach item="File" property="_packageFile">
+			<in>
+				<items basedir="${build.dir}">
+					<include name="*.nupkg" />
+					<exclude name="*.symbols.nupkg"/>
+				</items>
+			</in>
+			<do>
+				<exec program="nuget.exe" basedir="${tool.dir}" verbose="true">
+					<arg value="push" />
+					<arg file="${_packageFile}" />
 				</exec>
 			</do>
 		</foreach>
