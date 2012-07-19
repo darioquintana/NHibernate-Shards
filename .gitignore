@@ -21,9 +21,8 @@
 *.sbr
 *.scc
 *.tokens
+TestResult*.xml
 [Bb]uild/
-[Bb]in/
-[Oo]bj/
 [Db]ebug*/
 [Rr]elease*/
 *resharper*
