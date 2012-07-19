@@ -15,144 +15,144 @@ using NHibernate.Shards.Tool;
 
 namespace NHibernate.Shards.Demo
 {
-    internal class WeatherReportApp
-    {
-        private ISessionFactory sessionFactory;
+	internal class WeatherReportApp
+	{
+		private ISessionFactory sessionFactory;
 
-        public static void Main(string[] args)
-        {
-            var app = new WeatherReportApp();
-            app.Run();
-        }
+		public static void Main(string[] args)
+		{
+			var app = new WeatherReportApp();
+			app.Run();
+		}
 
-        private void Run()
-        {
-            var shardedConfiguration = BuildShardedConfiguration();
-            CreateSchema(shardedConfiguration);
-            sessionFactory = shardedConfiguration.BuildShardedSessionFactory();
+		private void Run()
+		{
+			var shardedConfiguration = BuildShardedConfiguration();
+			CreateSchema(shardedConfiguration);
+			sessionFactory = shardedConfiguration.BuildShardedSessionFactory();
 
-            AddData();
+			AddData();
 
-            ISession session = sessionFactory.OpenSession();
-            try
-            {
-                ICriteria crit = session.CreateCriteria(typeof(WeatherReport), "weather");
-                var count = crit.List();
-                if (count != null) Console.WriteLine(count.Count);
-                crit.Add(Restrictions.Gt("Temperature", 33));
-                var reports = crit.List();
-                if (reports != null) Console.WriteLine(reports.Count);
-            }
-            finally
-            {
-                session.Close();
-            }
+			ISession session = sessionFactory.OpenSession();
+			try
+			{
+				ICriteria crit = session.CreateCriteria(typeof(WeatherReport), "weather");
+				var count = crit.List();
+				if (count != null) Console.WriteLine(count.Count);
+				crit.Add(Restrictions.Gt("Temperature", 33));
+				var reports = crit.List();
+				if (reports != null) Console.WriteLine(reports.Count);
+			}
+			finally
+			{
+				session.Close();
+			}
 
-            sessionFactory.Dispose();
-            Console.WriteLine("Done.");
-            Console.ReadKey(true);
-        }
+			sessionFactory.Dispose();
+			Console.WriteLine("Done.");
+			Console.ReadKey(true);
+		}
 
-        private static void CreateSchema(ShardedConfiguration shardedConfiguration)
-        {
-            var shardedSchemaExport = new ShardedSchemaExport(shardedConfiguration);
-            shardedSchemaExport.Drop(false, true);
-            shardedSchemaExport.Create(false, true);
-        }
+		private static void CreateSchema(ShardedConfiguration shardedConfiguration)
+		{
+			var shardedSchemaExport = new ShardedSchemaExport(shardedConfiguration);
+			shardedSchemaExport.Drop(false, true);
+			shardedSchemaExport.Create(false, true);
+		}
 
-        private void AddData()
-        {
-            ISession session = sessionFactory.OpenSession();
-            try
-            {
-                session.BeginTransaction();
-                var report = new WeatherReport
-                {
-                    Continent = "North America",
-                    Latitude = 25,
-                    Longitude = 30,
-                    ReportTime = DateTime.Now,
-                    Temperature = 44
-                };
-                session.Save(report);
+		private void AddData()
+		{
+			ISession session = sessionFactory.OpenSession();
+			try
+			{
+				session.BeginTransaction();
+				var report = new WeatherReport
+				{
+					Continent = "North America",
+					Latitude = 25,
+					Longitude = 30,
+					ReportTime = DateTime.Now,
+					Temperature = 44
+				};
+				session.Save(report);
 
-                report = new WeatherReport
-                {
-                    Continent = "Africa",
-                    Latitude = 44,
-                    Longitude = 99,
-                    ReportTime = DateTime.Now,
-                    Temperature = 31
-                };
-                session.Save(report);
+				report = new WeatherReport
+				{
+					Continent = "Africa",
+					Latitude = 44,
+					Longitude = 99,
+					ReportTime = DateTime.Now,
+					Temperature = 31
+				};
+				session.Save(report);
 
-                report = new WeatherReport
-                {
-                    Continent = "Asia",
-                    Latitude = 13,
-                    Longitude = 12,
-                    ReportTime = DateTime.Now,
-                    Temperature = 104
-                };
-                session.Save(report);
-                session.Transaction.Commit();
-            }
-            finally
-            {
-                session.Close();
-            }
-        }
+				report = new WeatherReport
+				{
+					Continent = "Asia",
+					Latitude = 13,
+					Longitude = 12,
+					ReportTime = DateTime.Now,
+					Temperature = 104
+				};
+				session.Save(report);
+				session.Transaction.Commit();
+			}
+			finally
+			{
+				session.Close();
+			}
+		}
 
-        public ShardedConfiguration BuildShardedConfiguration()
-        {
-            var prototypeConfig = new Configuration()
-                .Proxy(p =>
-                {
-                    p.Validation = false;
-                })
-                .DataBaseIntegration(db =>
-                {
-                    db.Dialect<MsSql2008Dialect>();
-                })
-                .AddResource("NHibernate.Shards.Demo.Mappings.hbm.xml", Assembly.GetExecutingAssembly());
+		public ShardedConfiguration BuildShardedConfiguration()
+		{
+			var prototypeConfig = new Configuration()
+				.Proxy(p =>
+				{
+					p.Validation = false;
+				})
+				.DataBaseIntegration(db =>
+				{
+					db.Dialect<MsSql2008Dialect>();
+				})
+				.AddResource("NHibernate.Shards.Demo.Mappings.hbm.xml", Assembly.GetExecutingAssembly());
 
-            var shardConfigs = BuildShardConfigurations();
-            var shardStrategyFactory = BuildShardStrategyFactory();
-            return new ShardedConfiguration(prototypeConfig, shardConfigs, shardStrategyFactory);
-        }
+			var shardConfigs = BuildShardConfigurations();
+			var shardStrategyFactory = BuildShardStrategyFactory();
+			return new ShardedConfiguration(prototypeConfig, shardConfigs, shardStrategyFactory);
+		}
 
-        private IEnumerable<IShardConfiguration> BuildShardConfigurations()
-        {
-            for (short i = 0; i < 3; i++)
-            {
-                yield return new ShardConfiguration
-                {
-                    ShardSessionFactoryName = "Shard" + i,
-                    ShardId = i,
-                    ConnectionStringName = "shard" + i
-                };
-            }
-        }
+		private IEnumerable<IShardConfiguration> BuildShardConfigurations()
+		{
+			for (short i = 0; i < 3; i++)
+			{
+				yield return new ShardConfiguration
+				{
+					ShardSessionFactoryName = "Shard" + i,
+					ShardId = i,
+					ConnectionStringName = "shard" + i
+				};
+			}
+		}
 
-        private static IShardStrategyFactory BuildShardStrategyFactory()
-        {
-            return new MyStrategy();
-        }
-    }
+		private static IShardStrategyFactory BuildShardStrategyFactory()
+		{
+			return new MyStrategy();
+		}
+	}
 
-    public class MyStrategy : IShardStrategyFactory
-    {
-        #region IShardStrategyFactory Members
+	public class MyStrategy : IShardStrategyFactory
+	{
+		#region IShardStrategyFactory Members
 
-        public IShardStrategy NewShardStrategy(IEnumerable<ShardId> shardIds)
-        {
-            var loadBalancer = new RoundRobinShardLoadBalancer(shardIds);
-            var pss = new RoundRobinShardSelectionStrategy(loadBalancer);
-            IShardResolutionStrategy prs = new AllShardsShardResolutionStrategy(shardIds);
-            IShardAccessStrategy pas = new SequentialShardAccessStrategy();
-            return new ShardStrategyImpl(pss, prs, pas);
-        }
+		public IShardStrategy NewShardStrategy(IEnumerable<ShardId> shardIds)
+		{
+			var loadBalancer = new RoundRobinShardLoadBalancer(shardIds);
+			var pss = new RoundRobinShardSelectionStrategy(loadBalancer);
+			IShardResolutionStrategy prs = new AllShardsShardResolutionStrategy(shardIds);
+			IShardAccessStrategy pas = new SequentialShardAccessStrategy();
+			return new ShardStrategyImpl(pss, prs, pas);
+		}
 
-        #endregion
-    }
+		#endregion
+	}
 }
