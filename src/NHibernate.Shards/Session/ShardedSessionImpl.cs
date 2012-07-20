@@ -172,7 +172,7 @@ namespace NHibernate.Shards.Session
         /// <param name="action">The action to be performed once on an opened
         /// shard-local session.</param>
         /// <remarks>
-        /// The <see cref="action"/> is performed immediately on all shard-local
+        /// The <paramref name="action"/> is performed immediately on all shard-local
         /// sessions that have already been established. It is also scheduled for
         /// execution when any new shard-local sessions are established within the
         /// scope of this sharded session.
@@ -683,7 +683,7 @@ namespace NHibernate.Shards.Session
         /// </summary>
         /// <remarks>
         /// You should not use this method to determine if an instance exists (use a query or
-        /// <see cref="ISession.Get(Type,object)" /> instead). Use this only to retrieve an instance
+        /// <see cref="Get(System.Type,object)"/> instead). Use this only to retrieve an instance
         /// that you assume exists, where non-existence would be an actual error.
         /// </remarks>
         /// <param name="clazz">A persistent class</param>
@@ -1021,7 +1021,7 @@ namespace NHibernate.Shards.Session
             {
                 if (pair.Key.IsCollectionType)
                 {
-                    /**
+                    /*
                      * collection types are more expensive to evaluate (might involve
                      * lazy-loading the contents of the collection from the db), so
                      * let's hold off until the end on the chance that we can fail
@@ -1153,7 +1153,7 @@ namespace NHibernate.Shards.Session
                     return;
                 }
 
-                /**
+                /*
                  * Too bad, we've got a detached object that could be on more than 1 shard.
                  * The only safe way to handle this is to try and lookup the object, and if
                  * it exists, do a merge, and if it doesn't, do a save.
@@ -1231,11 +1231,11 @@ namespace NHibernate.Shards.Session
                     return;
                 }
 
-                /**
-                  * Too bad, we've got a detached object that could be on more than 1 shard.
-                  * The only safe way to perform the update is to load the object and then
-                  * do a merge.
-                  */
+                /*
+				 * Too bad, we've got a detached object that could be on more than 1 shard.
+				 * The only safe way to perform the update is to load the object and then
+				 * do a merge.
+				 */
                 IUniqueResult<object> persistent;
                 if (TryGet(key, out persistent))
                 {
@@ -1244,7 +1244,7 @@ namespace NHibernate.Shards.Session
                 }
             }
 
-            /**
+            /*
              * This is an error condition.  In order to provide the same behavior
              * as a non-sharded session we're just going to dispatch the update
              * to a random shard (we know it will fail because either we don't have
@@ -1440,7 +1440,7 @@ namespace NHibernate.Shards.Session
                 return;
             }
 
-            /**
+            /*
 			 * Detached object.
 			 * We can't just try to delete on each shard because if you have an
 			 * object associated with Session x and you try to delete that object in
@@ -1460,7 +1460,7 @@ namespace NHibernate.Shards.Session
                     return;
                 }
 
-                /**
+                /*
                  * Too bad, we've got a detached object that could be on more than 1 shard.
                  * The only safe way to perform the delete is to load the object before
                  * deleting.
@@ -1911,7 +1911,7 @@ namespace NHibernate.Shards.Session
         }
 
         /// <summary>
-        /// Strongly-typed version of <see cref="ISession.Get(Type,object)" />
+        /// Strongly-typed version of <see cref="Get{T}(object)" />
         /// </summary>
         public T Get<T>(object id)
         {
@@ -1919,7 +1919,7 @@ namespace NHibernate.Shards.Session
         }
 
         /// <summary>
-        /// Strongly-typed version of <see cref="ISession.Get(Type,object,LockMode)" />
+        /// Strongly-typed version of <see cref="Get{T}(object,LockMode)" />
         /// </summary>
         public T Get<T>(object id, LockMode lockMode)
         {

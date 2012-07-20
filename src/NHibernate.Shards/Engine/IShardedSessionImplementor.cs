@@ -46,7 +46,7 @@ namespace NHibernate.Shards.Engine
         /// <param name="action">The action to be performed once on an opened
         /// shard-local session.</param>
         /// <remarks>
-        /// The <see cref="action"/> is performed immediately on all shard-local 
+        /// The <paramref name="action"/> is performed immediately on all shard-local 
         /// sessions that have already been established. It is also scheduled for
         /// execution when any new shard-local sessions are established within the 
         /// scope of this sharded session.

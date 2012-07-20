@@ -74,7 +74,7 @@ namespace NHibernate.Shards.Strategy.Exit
                 result = result.Where(i => i != null);
             }
 
-            /**
+            /*
              * Herein lies the glory
              *
              * hibernate has done as much as it can, we're going to have to deal with

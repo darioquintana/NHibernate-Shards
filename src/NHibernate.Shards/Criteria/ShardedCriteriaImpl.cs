@@ -408,7 +408,7 @@ namespace NHibernate.Shards.Criteria
 
         public void List(IList results)
         {
-            /**
+            /*
              * We don't support shard selection for criteria queries.  If you want
              * custom shards, create a ShardedSession with only the shards you want.
              * We're going to concatenate all our results and then use our
