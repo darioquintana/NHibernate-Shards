@@ -16,11 +16,10 @@
 	<property name="tool.dir" value="tools" />
 
 	<property name="sign.keyfile" value="${src.dir}/NHibernate.Shards/NHibernate.Shards.snk" overwrite="false" />
+	<property name="nuget.sources" value="http://nuget.org/api/v2/" overwrite="false"/>
 
 	<target name="init">
 		<property name="project.defines" value="${if(project.debug, 'DEBUG', '')}" />
-
-		<property name="nuget.sources" value="http://nuget.org/api/v2/" overwrite="false"/>
 
 		<!-- Compute and set project.version.numeric from project.version -->
 		<script language="C#">
@@ -78,6 +77,8 @@
 	</target>
 
 	<target name="resolve" description="Installs and updates NuGet dependencies" depends="init">
+		<echo message="Resolving packages from sources ${nuget.sources}."/>
+		
 		<foreach item="File" property="_packageConfigFile">
 			<in>
 				<items basedir="${src.dir}">
@@ -85,27 +86,27 @@
 				</items>
 			</in>
 			<do>
-				<!-- Force package refresh for release builds -->
-				<if test="${not project.debug}">
-					<delete includeemptydirs="true">
-						<fileset basedir="${package.dir}">
-							<include name="**/*.*" />
-							<exclude name="*.config" />
-						</fileset>
-					</delete>
-					
-					<exec program="nuget.exe" basedir="${tool.dir}" unless="${project.debug}">
-						<arg value="update" />
-						<arg file="${_packageConfigFile}" />
-						<arg value="-Source" />
-						<arg value="${nuget.sources}" />
-						<arg value="-RepositoryPath" />
-						<arg path="${package.dir}" />
-						<arg value="-Verbose" />
-					</exec>
-				</if>
+				<delete includeemptydirs="true">
+					<fileset basedir="${package.dir}">
+						<include name="**" />
+						<exclude name="*.config" />
+						<exclude name=".*" />
+					</fileset>
+				</delete>
 
-				<exec program="nuget.exe" basedir="${tool.dir}">
+				<!-- Update packages to latest version -->
+				<exec program="nuget.exe" basedir="${tool.dir}" unless="${project.debug}">
+					<arg value="update" />
+					<arg file="${_packageConfigFile}" />
+					<arg value="-Source" />
+					<arg value="${nuget.sources}" />
+					<arg value="-RepositoryPath" />
+					<arg path="${package.dir}" />
+					<arg value="-Verbose" />
+				</exec>
+
+				<!-- Update Visual Studio project references -->
+				<exec program="nuget.exe" basedir="${tool.dir}" verbose="true">
 					<arg value="install" />
 					<arg file="${_packageConfigFile}" />
 					<arg value="-Source" />
@@ -124,18 +125,18 @@
 
 		<property name="current.project.name" value="NHibernate.Shards" />
 		<assemblyfileset id="current.project.references">
-			<include name="${package.dir}/NHibernate.*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
-			<include name="${package.dir}/Iesi.Collections.*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
+			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
+			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
 		</assemblyfileset>
 		<call target="build.current.project" />
 
 		<property name="current.project.name" value="NHibernate.Shards.Test" />
 		<assemblyfileset id="current.project.references">
 			<include name="${current.build.dir}/NHibernate.Shards.dll"/>
-			<include name="${package.dir}/NHibernate.*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
-			<include name="${package.dir}/Iesi.Collections.*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
-			<include name="${package.dir}/NUnit.*/lib/nunit.framework.dll"/>
-			<include name="${package.dir}/RhinoMocks.*/lib/net/Rhino.Mocks.dll"/>
+			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
+			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
+			<include name="${package.dir}/*/lib/nunit.framework.dll"/>
+			<include name="${package.dir}/*/lib/net/Rhino.Mocks.dll"/>
 		</assemblyfileset>
 		<call target="build.current.project" />
 
