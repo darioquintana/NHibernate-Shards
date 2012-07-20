@@ -16,7 +16,7 @@ using System.Reflection;
 [assembly: AssemblyCompanyAttribute("nhforge.org")]
 [assembly: AssemblyProductAttribute("NHibernate.Shards")]
 [assembly: AssemblyCopyrightAttribute("Licensed under LGPL.")]
-[assembly: AssemblyVersionAttribute("3.3.1.3001")]
-[assembly: AssemblyFileVersionAttribute("3.3.1.3001")]
-[assembly: AssemblyInformationalVersionAttribute("3.3.1.3001")]
+[assembly: AssemblyVersionAttribute("3.3.1.3002")]
+[assembly: AssemblyFileVersionAttribute("3.3.1.3002")]
+[assembly: AssemblyInformationalVersionAttribute("3.3.1.3002")]
 

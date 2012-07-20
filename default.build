@@ -6,7 +6,7 @@
 		xmlns="http://nant.sf.net/release/0.91-alpha2/nant.xsd">
 
 	<property name="project.config" value="debug" overwrite="false" />
-	<property name="project.version" value="3.3.1.CR1" overwrite="false" />
+	<property name="project.version" value="3.3.1.CR2" overwrite="false" />
 	<property name="project.debug" value="${project.config == 'debug'}" />
 
 	<property name="build.dir" value="build" overwrite="false"/>
@@ -14,6 +14,8 @@
 	<property name="package.dir" value="src/packages" />
 	<property name="src.dir" value="src" />
 	<property name="tool.dir" value="tools" />
+
+	<property name="sign.keyfile" value="${src.dir}/NHibernate.Shards/NHibernate.Shards.snk" overwrite="false" />
 
 	<target name="init">
 		<property name="project.defines" value="${if(project.debug, 'DEBUG', '')}" />
@@ -159,10 +161,11 @@
 		</asminfo>
 
 		<csc target="library" 
-				 output="${current.build.dir}/${current.project.name}.dll" 
+				 output="${current.build.dir}/${current.project.name}.dll"
 				 doc="${current.build.dir}/${current.project.name}.xml"
 				 define="${project.defines}" 
-				 debug="${if(project.debug, 'Full', 'PdbOnly')}" >
+				 debug="${if(project.debug, 'Full', 'PdbOnly')}"
+				 keyfile="${sign.keyfile}">
 			<nowarn>
 				<warning number="1591" />
 				<!-- No XML comment for publicly visible member -->
@@ -215,7 +218,7 @@
 		</foreach>
 	</target>
 
-	<target name="publish" depends="init pack">
+	<target name="publish" depends="init clean pack">
 		<foreach item="File" property="_packageFile">
 			<in>
 				<items basedir="${build.dir}">
