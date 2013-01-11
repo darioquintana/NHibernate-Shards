@@ -124,6 +124,11 @@ namespace NHibernate.Shards.Test.Mock
 			throw new NotSupportedException();
 		}
 
+		public void Save(string entityName, object obj, object id)
+		{
+			throw new NotImplementedException();
+		}
+
 		public virtual void SaveOrUpdate(object obj)
 		{
 			throw new NotSupportedException();
@@ -132,6 +137,11 @@ namespace NHibernate.Shards.Test.Mock
 		public virtual void SaveOrUpdate(string entityName, object obj)
 		{
 			throw new NotSupportedException();
+		}
+
+		public void SaveOrUpdate(string entityName, object obj, object id)
+		{
+			throw new NotImplementedException();
 		}
 
 		public virtual void Update(object obj)
@@ -147,6 +157,20 @@ namespace NHibernate.Shards.Test.Mock
 		public virtual void Update(string entityName, object obj)
 		{
 			throw new NotSupportedException();
+		}
+
+		/// <summary>
+		/// Update the persistent instance associated with the given identifier.
+		/// </summary>
+		/// <param name="entityName">The Entity name.</param><param name="obj">a detached instance containing updated state </param><param name="id">Identifier of persistent instance</param>
+		/// <remarks>
+		/// If there is a persistent instance with the same identifier,
+		///             an exception is thrown. This operation cascades to associated instances
+		///             if the association is mapped with <tt>cascade="save-update"</tt>.
+		/// </remarks>
+		public void Update(string entityName, object obj, object id)
+		{
+			throw new NotImplementedException();
 		}
 
 		public virtual object Merge(object obj)
