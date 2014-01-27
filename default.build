@@ -86,34 +86,15 @@
 				</items>
 			</in>
 			<do>
-				<delete includeemptydirs="true">
-					<fileset basedir="${package.dir}">
-						<include name="**" />
-						<exclude name="*.config" />
-						<exclude name=".*" />
-					</fileset>
-				</delete>
-
 				<!-- Update packages to latest version -->
-				<exec program="nuget.exe" basedir="${tool.dir}" unless="${project.debug}">
-					<arg value="update" />
+				<exec program="nuget.exe" basedir="${src.dir}/.nuget">
+					<arg value="restore" />
 					<arg file="${_packageConfigFile}" />
 					<arg value="-Source" />
 					<arg value="${nuget.sources}" />
-					<arg value="-RepositoryPath" />
+					<arg value="-PackagesDirectory" />
 					<arg path="${package.dir}" />
-					<arg value="-Verbose" />
-				</exec>
-
-				<!-- Update Visual Studio project references -->
-				<exec program="nuget.exe" basedir="${tool.dir}" verbose="true">
-					<arg value="install" />
-					<arg file="${_packageConfigFile}" />
-					<arg value="-Source" />
-					<arg value="${nuget.sources}" />
-					<arg value="-OutputDirectory" />
-					<arg path="${package.dir}" />
-				</exec>
+        </exec>
 			</do>
 		</foreach>
 	</target>
@@ -187,7 +168,7 @@
 	</target>
 
 	<target name="test.current">
-		<exec program="nunit-console" basedir="${tool.dir}/nunit">
+		<exec program="nunit-console" basedir="${tool.dir}/nunit/bin">
 			<arg value="/framework:${nant.settings.currentframework}" />
 			<arg file="${current.build.dir}/NHibernate.Shards.Test.dll" />
 		</exec>
@@ -201,7 +182,7 @@
 				</items>
 			</in>
 			<do>
-				<exec program="nuget.exe" basedir="${tool.dir}" verbose="true">
+				<exec program="nuget.exe" basedir="${src.dir}/.nuget" verbose="true">
 					<arg value="pack" />
 					<arg file="${_nuspecFile}" />
 					<arg value="-Version" />
@@ -211,9 +192,8 @@
 					<arg value="-OutputDirectory" />
 					<arg path="${build.dir}" />
 					<arg value="-Symbols" />
-					<arg value="-Properties" />
+          <arg value="-Properties" />
 					<arg value="Configuration=${project.config};version=${project.version.numeric}" />
-					<arg value="-Verbose" />
 				</exec>
 			</do>
 		</foreach>
