@@ -30,7 +30,7 @@ namespace NHibernate.Shards.Query
         /// </summary>
         /// <param name="session">The Sharded session on which this query is to be executed.</param>
         public ShardedMultiQueryImpl(IShardedSessionImplementor session)
-		{
+        {
             this.session = session;
         }
 
@@ -287,25 +287,25 @@ namespace NHibernate.Shards.Query
             return this;
         }
 
-        public IMultiQuery SetParameter(string name, object val)
-        {
-            ApplyActionToShards(q => q.SetParameter(name, val));
-            return this;
-        }
-
         public IMultiQuery SetParameter(string name, object val, IType type)
         {
             ApplyActionToShards(q => q.SetParameter(name, val, type));
             return this;
         }
 
-        public IMultiQuery SetParameterList(string name, ICollection vals)
+        public IMultiQuery SetParameter(string name, object val)
+        {
+            ApplyActionToShards(q => q.SetParameter(name, val));
+            return this;
+        }
+
+        public IMultiQuery SetParameterList(string name, IEnumerable vals)
         {
             ApplyActionToShards(q => q.SetParameterList(name, vals));
             return this;
         }
 
-        public IMultiQuery SetParameterList(string name, ICollection vals, IType type)
+        public IMultiQuery SetParameterList(string name, IEnumerable vals, IType type)
         {
             ApplyActionToShards(q => q.SetParameterList(name, vals, type));
             return this;
@@ -436,8 +436,8 @@ namespace NHibernate.Shards.Query
 
             public Func<IList> Prepare(IShard shard)
             {
-				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
-				var multiQuery = this.shardedMultiQuery.EstablishFor(shard);
+                // NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+                var multiQuery = this.shardedMultiQuery.EstablishFor(shard);
                 return multiQuery.List;
             }
 

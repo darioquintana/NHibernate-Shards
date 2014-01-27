@@ -321,7 +321,7 @@ namespace NHibernate.Shards.Session
 
 			if (TryResolveToSingleShardId(shard.ShardIds, out result)) return true;
 
-			var key = CreateKey(entityName, obj);
+			var key = ExtractKey(entityName, obj);
 			if (this.shardedSessionFactory.TryExtractShardIdFromKey(key, out result)) return true;
 
 			throw new HibernateException(
@@ -765,7 +765,7 @@ namespace NHibernate.Shards.Session
 		/// <param name="id">A valid identifier of an existing persistent instance of the class</param>
 		public void Load(object obj, object id)
 		{
-			Load(obj, CreateKey(obj, id));
+			Load(obj, new ShardedEntityKey(GuessEntityName(obj), id));
 		}
 
 
@@ -844,27 +844,10 @@ namespace NHibernate.Shards.Session
 
 		#endregion
 
-		private ShardedEntityKey CreateKey(object entity, object id)
-		{
-			Preconditions.CheckNotNull(entity);
-			return new ShardedEntityKey(GuessEntityName(entity), id);
-		}
-
-		private ShardedEntityKey CreateKey(string entityName, object entity)
-		{
-			Preconditions.CheckNotNull(entity);
-			return new ShardedEntityKey(
-				entityName ?? GuessEntityName(entity),
-				GetIdentifier(entity));
-		}
-
 		private ShardedEntityKey ExtractKey(string entityName, object entity)
 		{
 			Preconditions.CheckNotNull(entity);
-			if (entityName == null)
-			{
-				entityName = GuessEntityName(entity);
-			}
+			if (entityName == null) entityName = GuessEntityName(entity);
 
 			var classMetadata = shardedSessionFactory.GetClassMetadata(entityName);
 			var id = classMetadata.GetIdentifier(entity, this.currentEntityMode);
@@ -925,8 +908,19 @@ namespace NHibernate.Shards.Session
 		/// <param name="id">An unused valid identifier</param>
 		public void Save(object obj, object id)
 		{
+			Save(null, obj, id);
+		}
+
+		/// <summary>
+		/// Persist the given transient instance, using the given identifier.
+		/// </summary>
+		/// <param name="entityName">The Entity name.</param>
+		/// <param name="obj">A transient instance of a persistent class</param>
+		/// <param name="id">An unused valid identifier</param>
+		public void Save(string entityName, object obj, object id)
+		{
 			Preconditions.CheckNotNull(obj);
-			var entityName = GuessEntityName(obj);
+			if (entityName == null) entityName = GuessEntityName(obj);
 
 			ShardId shardId;
 			if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
@@ -1160,7 +1154,46 @@ namespace NHibernate.Shards.Session
 				return;
 			}
 
-			var key = ExtractKey(entityName, obj);
+			var key = new ShardedEntityKey(entityName, obj);
+			if (!key.IsNull)
+			{
+				// detached object
+				if (TryResolveToSingleShard(key, out shard))
+				{
+					shard.EstablishSession().SaveOrUpdate(entityName, obj);
+					return;
+				}
+
+				/*
+				 * Too bad, we've got a detached object that could be on more than 1 shard.
+				 * The only safe way to handle this is to try and lookup the object, and if
+				 * it exists, do a merge, and if it doesn't, do a save.
+				 */
+				IUniqueResult<object> persistent;
+				if (TryGet(key, out persistent))
+				{
+					persistent.Shard.EstablishSession().Merge(entityName, obj);
+					return;
+				}
+			}
+
+			shard.EstablishSession().Save(entityName, obj);
+		}
+
+		public void SaveOrUpdate(string entityName, object obj, object id)
+		{
+			Preconditions.CheckNotNull(obj);
+			if (entityName == null) entityName = GuessEntityName(obj);
+
+			IShard shard;
+			if (TryGetShardForAttachedEntity(obj, out shard))
+			{
+				// attached object
+				shard.EstablishSession().SaveOrUpdate(entityName, obj);
+				return;
+			}
+
+			var key = new ShardedEntityKey(entityName, id);
 			if (!key.IsNull)
 			{
 				// detached object
@@ -1272,8 +1305,24 @@ namespace NHibernate.Shards.Session
 		/// </remarks>
 		public void Update(object obj, object id)
 		{
+			Update(null, obj, id);
+		}
+
+		/// <summary>
+		/// Update the persistent instance associated with the given identifier.
+		/// </summary>
+		/// <param name="entityName">The Entity name.</param>
+		/// <param name="obj">a detached instance containing updated state </param>
+		/// <param name="id">Identifier of persistent instance</param>
+		/// <remarks>
+		/// If there is a persistent instance with the same identifier, an exception 
+		/// is thrown. This operation cascades to associated instances if the association 
+		/// is mapped with <tt>cascade="save-update"</tt>.
+		/// </remarks>
+		public void Update(string entityName, object obj, object id)
+		{
 			Preconditions.CheckNotNull(obj);
-			var entityName = GuessEntityName(obj);
+			if (entityName == null) entityName = GuessEntityName(obj);
 
 			IShard shard;
 			if (TryGetShardForAttachedEntity(obj, out shard))
@@ -1283,7 +1332,7 @@ namespace NHibernate.Shards.Session
 				return;
 			}
 
-			var key = CreateKey(entityName, id);
+			var key = new ShardedEntityKey(entityName, id);
 			if (!key.IsNull)
 			{
 				if (TryResolveToSingleShard(key, out shard))
@@ -1417,61 +1466,6 @@ namespace NHibernate.Shards.Session
 			currentSubgraphShardId = shardId;
 			Log.Debug(string.Format("Persisting object of type '{0}' to shard '{1}'", entityName, shardId));
 			shardsById[shardId].EstablishSession().Persist(entityName, obj);
-		}
-
-		#endregion
-
-		#region SaveOrUpdateCopy
-
-		/// <summary>
-		/// Copy the state of the given object onto the persistent object with the same
-		/// identifier. If there is no persistent instance currently associated with 
-		/// the session, it will be loaded. Return the persistent instance. If the 
-		/// given instance is unsaved or does not exist in the database, save it and 
-		/// return it as a newly persistent instance. Otherwise, the given instance
-		/// does not become associated with the session.
-		/// </summary>
-		/// <param name="obj">a transient instance with state to be copied</param>
-		/// <returns>an updated persistent instance</returns>
-		[Obsolete("No direct replacement. Use Merge instead")]
-		public object SaveOrUpdateCopy(object obj)
-		{
-			return SaveOrUpdateCopy(null, obj);
-		}
-
-		/// <summary>
-		/// Copy the state of the given object onto the persistent object with the 
-		/// given identifier. If there is no persistent instance currently associated 
-		/// with the session, it will be loaded. Return the persistent instance. If
-		/// there is no database row with the given identifier, save the given instance
-		/// and return it as a newly persistent instance. Otherwise, the given instance
-		/// does not become associated with the session.
-		/// </summary>
-		/// <param name="obj">a persistent or transient instance with state to be copied</param>
-		/// <param name="id">the identifier of the instance to copy to</param>
-		/// <returns>an updated persistent instance</returns>
-		[Obsolete("No direct replacement. Use Merge instead")]
-		public object SaveOrUpdateCopy(object obj, object id)
-		{
-			var key = ExtractKey(null, obj);
-
-			ShardId shardId;
-			if (TryResolveToSingleShardId(key, out shardId))
-			{
-				// attached
-				currentSubgraphShardId = shardId;
-				return shardsById[shardId].EstablishSession().SaveOrUpdateCopy(obj, key.Id);
-			}
-
-			IUniqueResult<object> persistent;
-			if (TryGet(key, out persistent))
-			{
-				// detached
-				return persistent.Shard.EstablishSession().SaveOrUpdateCopy(obj, key.Id);
-			}
-
-			currentSubgraphShardId = shardId = SelectShardIdForNewEntity(key.EntityName, obj);
-			return shardsById[shardId].EstablishSession().SaveOrUpdateCopy(key.EntityName, obj);
 		}
 
 		#endregion
