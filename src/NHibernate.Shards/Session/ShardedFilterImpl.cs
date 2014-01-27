@@ -8,124 +8,124 @@ using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Session
 {
-    public class ShardedFilterImpl: IShardedFilter
-    {
-        #region Instance fields
+	public class ShardedFilterImpl: IShardedFilter
+	{
+		#region Instance fields
 
-        private readonly IShardedSessionImplementor shardedSession;
-        private readonly string filterName;
+		private readonly IShardedSessionImplementor shardedSession;
+		private readonly string filterName;
 
-        private readonly IDictionary<ISession, IFilter> enabledFiltersBySession = new Dictionary<ISession, IFilter>();
-        private readonly ICollection<Action<IFilter>> enableActions = new List<Action<IFilter>>();
+		private readonly IDictionary<ISession, IFilter> enabledFiltersBySession = new Dictionary<ISession, IFilter>();
+		private readonly ICollection<Action<IFilter>> enableActions = new List<Action<IFilter>>();
 
-        #endregion
+		#endregion
 
-        #region Ctor
+		#region Ctor
 
-        public ShardedFilterImpl(IShardedSessionImplementor shardedSession, string name)
+		public ShardedFilterImpl(IShardedSessionImplementor shardedSession, string name)
 		{
-            Preconditions.CheckNotNull(shardedSession);
-            Preconditions.CheckNotNull(name);
-            this.shardedSession = shardedSession;
-            this.filterName = name;
+			Preconditions.CheckNotNull(shardedSession);
+			Preconditions.CheckNotNull(name);
+			this.shardedSession = shardedSession;
+			this.filterName = name;
 		}
 
-        #endregion
+		#endregion
 
-        #region Properties
+		#region Properties
 
-        private IFilter SomeFilter
-        {
-            get
-            {
-                return this.enabledFiltersBySession.Values.FirstOrDefault()
-                    ?? EnableFor(shardedSession.AnyShard.EstablishSession());
-            }
-        }
+		private IFilter SomeFilter
+		{
+			get
+			{
+				return this.enabledFiltersBySession.Values.FirstOrDefault()
+					?? EnableFor(shardedSession.AnyShard.EstablishSession());
+			}
+		}
 
-        #endregion
+		#endregion
 
-        #region Public methods
+		#region Public methods
 
-        public IFilter EnableFor(ISession session)
-        {
-            IFilter result;
-            if (!this.enabledFiltersBySession.TryGetValue(session, out result))
-            {
-                result = session.EnableFilter(this.filterName);
-                foreach (var action in enableActions)
-                {
-                    action(result);
-                }
-                enabledFiltersBySession.Add(session, result);
-            }
-            return result;
-        }
+		public IFilter EnableFor(ISession session)
+		{
+			IFilter result;
+			if (!this.enabledFiltersBySession.TryGetValue(session, out result))
+			{
+				result = session.EnableFilter(this.filterName);
+				foreach (var action in enableActions)
+				{
+					action(result);
+				}
+				enabledFiltersBySession.Add(session, result);
+			}
+			return result;
+		}
 
-        public void Disable()
-        {
-            foreach (var session in this.enabledFiltersBySession.Keys)
-            {
-                session.DisableFilter(this.filterName);
-            }
-            this.enabledFiltersBySession.Clear();
-            this.enableActions.Clear();
-        }
+		public void Disable()
+		{
+			foreach (var session in this.enabledFiltersBySession.Keys)
+			{
+				session.DisableFilter(this.filterName);
+			}
+			this.enabledFiltersBySession.Clear();
+			this.enableActions.Clear();
+		}
 
-        #endregion
+		#endregion
 
-        #region IFilter Members
+		#region IFilter Members
 
-        public FilterDefinition FilterDefinition
-        {
-            get { return SomeFilter.FilterDefinition; }
-        }
+		public FilterDefinition FilterDefinition
+		{
+			get { return SomeFilter.FilterDefinition; }
+		}
 
-        public string Name
-        {
-            get { return this.filterName; }
-        }
+		public string Name
+		{
+			get { return this.filterName; }
+		}
 
-        public IFilter SetParameter(string name, object value)
-        {
-            ApplyActionToShards(f => f.SetParameter(name, value));
-            return this;
-        }
+		public IFilter SetParameter(string name, object value)
+		{
+			ApplyActionToShards(f => f.SetParameter(name, value));
+			return this;
+		}
 
-        public IFilter SetParameterList(string name, object[] values)
-        {
-            ApplyActionToShards(f => f.SetParameterList(name, values));
-            return this;
-        }
+		public IFilter SetParameterList(string name, object[] values)
+		{
+			ApplyActionToShards(f => f.SetParameterList(name, values));
+			return this;
+		}
 
-        public IFilter SetParameterList(string name, ICollection values)
-        {
-            ApplyActionToShards(f => f.SetParameterList(name, values));
-            return this;
-        }
+		public IFilter SetParameterList(string name, ICollection values)
+		{
+			ApplyActionToShards(f => f.SetParameterList(name, values));
+			return this;
+		}
 
-        /// <summary>
-        /// Perform validation of the filter state.  This is used to verify the
-        /// state of the filter after its enablement and before its use.
-        /// </summary>
-        public void Validate()
-        {
-            ApplyActionToShards(f => f.Validate());
-        }
+		/// <summary>
+		/// Perform validation of the filter state.  This is used to verify the
+		/// state of the filter after its enablement and before its use.
+		/// </summary>
+		public void Validate()
+		{
+			ApplyActionToShards(f => f.Validate());
+		}
 
-        #endregion
+		#endregion
 
-        #region Private methods
+		#region Private methods
 
-        protected void ApplyActionToShards(Action<IFilter> action)
-        {
-            enableActions.Add(action);
-            foreach (var query in this.enabledFiltersBySession.Values)
-            {
-                action(query);
-            }
-        }
+		protected void ApplyActionToShards(Action<IFilter> action)
+		{
+			enableActions.Add(action);
+			foreach (var query in this.enabledFiltersBySession.Values)
+			{
+				action(query);
+			}
+		}
 
-        #endregion
-    }
+		#endregion
+	}
 }

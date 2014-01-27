@@ -5,7 +5,7 @@ using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards
 {
-    /// <summary>
+	/// <summary>
 	/// Base implementation for HasShadIdList.
 	/// Takes care of null/empty checks.
 	/// </summary>
@@ -20,11 +20,11 @@ namespace NHibernate.Shards
 		{
 			Preconditions.CheckNotNull(shardIds);
 
-		    var shardIdList = shardIds.ToList();
-            Preconditions.CheckArgument(shardIdList.Count > 0); //not empty
-            
-            this.shardIds = new ReadOnlyCollection<ShardId>(shardIdList);
-        }
+			var shardIdList = shardIds.ToList();
+			Preconditions.CheckArgument(shardIdList.Count > 0); //not empty
+
+			this.shardIds = new ReadOnlyCollection<ShardId>(shardIdList);
+		}
 
 		protected BaseHasShardIdList()
 		{}

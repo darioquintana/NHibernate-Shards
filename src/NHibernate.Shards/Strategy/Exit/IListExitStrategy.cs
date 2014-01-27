@@ -2,7 +2,7 @@
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-    public interface IListExitStrategy<T>: IExitStrategy<IEnumerable<T>>
-    {
-    }
+	public interface IListExitStrategy<T>: IExitStrategy<IEnumerable<T>>
+	{
+	}
 }

@@ -23,13 +23,13 @@ namespace NHibernate.Shards.Id
 
 		protected override string GenerateNewGuid()
 		{
-            short shardId = GetShardId();
+			short shardId = GetShardId();
 
-            var g = Guid.NewGuid().ToByteArray();
-            var a = (BitConverter.ToUInt32(g, 0) & 0x0000FFFF) | (uint)shardId << 16;
-            var b = BitConverter.ToUInt16(g, 4);
-            var c = BitConverter.ToUInt16(g, 8);
-            return new Guid(a, b, c, g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]).ToString(format);
+			var g = Guid.NewGuid().ToByteArray();
+			var a = (BitConverter.ToUInt32(g, 0) & 0x0000FFFF) | (uint)shardId << 16;
+			var b = BitConverter.ToUInt16(g, 4);
+			var c = BitConverter.ToUInt16(g, 8);
+			return new Guid(a, b, c, g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]).ToString(format);
 		}
 
 		private short GetShardId()

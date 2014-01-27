@@ -3,17 +3,17 @@ using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-    internal interface IUniqueResult<T>
-    {
-        T Value { get; }
-        IShard Shard { get; }
-    }
-
-    public class UniqueResultExitStrategy<T> : IExitStrategy<T>, IUniqueResult<T>
+	internal interface IUniqueResult<T>
 	{
-        private int resultCount;
+		T Value { get; }
+		IShard Shard { get; }
+	}
+
+	public class UniqueResultExitStrategy<T> : IExitStrategy<T>, IUniqueResult<T>
+	{
+		private int resultCount;
 		private T firstResult;
-        private IShard firstShard;
+		private IShard firstShard;
 
 		/// <summary>
 		/// Add the provided result and return whether or not the caller can halt
@@ -26,25 +26,25 @@ namespace NHibernate.Shards.Strategy.Exit
 		/// <returns>Whether or not the caller can halt processing</returns>
 		public bool AddResult(T result, IShard shard)
 		{
-            Preconditions.CheckNotNull(result);
+			Preconditions.CheckNotNull(result);
 
-            if (Interlocked.Increment(ref resultCount) == 1)
-            {
-                firstResult = result;
-                firstShard = shard;
-            }
+			if (Interlocked.Increment(ref resultCount) == 1)
+			{
+				firstResult = result;
+				firstShard = shard;
+			}
 			return true;
 		}
 
-        public T Value
-        {
-            get { return firstResult; }
-        }
-        
-        public IShard Shard
-        {
-            get { return firstShard; }
-        }
+		public T Value
+		{
+			get { return firstResult; }
+		}
+		
+		public IShard Shard
+		{
+			get { return firstShard; }
+		}
 
 		public T CompileResults()
 		{

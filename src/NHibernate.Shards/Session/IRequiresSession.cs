@@ -5,8 +5,8 @@ namespace NHibernate.Shards.Session
 	/// is designed to be used in conjunction with stateful interceptors.
 	/// <seealso cref="IStatefulInterceptorFactory"/>
 	/// </summary>
-    public interface IRequiresSession
-    {
+	public interface IRequiresSession
+	{
 		void SetSession(ISession session);
-    }
+	}
 }

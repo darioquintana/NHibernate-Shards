@@ -2,23 +2,23 @@ using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-    public class ExecuteUpdateExitStrategy : IExitStrategy<int>
+	public class ExecuteUpdateExitStrategy : IExitStrategy<int>
 	{
-        private int result;
+		private int result;
 
-        #region IExitStrategy<int> Members
+		#region IExitStrategy<int> Members
 
-        public bool AddResult(int oneResult, IShard shard)
-        {
-            InterlockedUtil.Add(ref result, oneResult);
-            return false;
-        }
+		public bool AddResult(int oneResult, IShard shard)
+		{
+			InterlockedUtil.Add(ref result, oneResult);
+			return false;
+		}
 
-        public int CompileResults()
-        {
-            return result;
-        }
+		public int CompileResults()
+		{
+			return result;
+		}
 
-        #endregion
-    }
+		#endregion
+	}
 }

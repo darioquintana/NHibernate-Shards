@@ -7,30 +7,30 @@ using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Strategy.Access
 {
-    /// <summary>
-    /// Invokes the given operation on the given shards in parallel.
-    /// </summary>
-    public class ParallelShardAccessStrategy : IShardAccessStrategy
-    {
-        private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(30);
-        private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ParallelShardAccessStrategy));
+	/// <summary>
+	/// Invokes the given operation on the given shards in parallel.
+	/// </summary>
+	public class ParallelShardAccessStrategy : IShardAccessStrategy
+	{
+		private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(30);
+		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ParallelShardAccessStrategy));
 
-        #region IShardAccessStrategy Members
+		#region IShardAccessStrategy Members
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="shards"></param>
-        /// <param name="operation"></param>
-        /// <param name="exitStrategy"></param>
-        /// <returns></returns>
-        public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
-        {
-        	return new ParallelOperation<T>(shards, operation, exitStrategy).Complete();
-        }
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="shards"></param>
+		/// <param name="operation"></param>
+		/// <param name="exitStrategy"></param>
+		/// <returns></returns>
+		public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
+		{
+			return new ParallelOperation<T>(shards, operation, exitStrategy).Complete();
+		}
 
-        #endregion
+		#endregion
 
 		#region Inner classes
 
