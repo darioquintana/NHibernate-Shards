@@ -750,7 +750,7 @@ namespace NHibernate.Shards.Session
             throw new NotSupportedException();
         }
 
-        ISet<string> ISessionFactoryImplementor.GetCollectionRolesByEntityParticipant(string entityName)
+        Iesi.Collections.Generic.ISet<string> ISessionFactoryImplementor.GetCollectionRolesByEntityParticipant(string entityName)
         {
             // assumption is that all session factories are configured the same way,
             // so it doesn't matter which session factory answers this question
