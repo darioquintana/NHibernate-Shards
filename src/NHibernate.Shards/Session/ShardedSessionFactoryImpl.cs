@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
-using Iesi.Collections.Generic;
 using NHibernate.Cache;
 using NHibernate.Cfg;
 using NHibernate.Connection;
@@ -750,7 +749,7 @@ namespace NHibernate.Shards.Session
             throw new NotSupportedException();
         }
 
-        Iesi.Collections.Generic.ISet<string> ISessionFactoryImplementor.GetCollectionRolesByEntityParticipant(string entityName)
+        ISet<string> ISessionFactoryImplementor.GetCollectionRolesByEntityParticipant(string entityName)
         {
             // assumption is that all session factories are configured the same way,
             // so it doesn't matter which session factory answers this question

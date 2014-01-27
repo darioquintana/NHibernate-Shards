@@ -13,8 +13,7 @@
 		<language>en-US</language>
 		<tags>NHibernate, ORM, ObjectRelationalMapping, Sharding, Partitioning</tags>
 		<dependencies>
-			<dependency id="Iesi.Collections" version="3.3.1.4000" />
-			<dependency id="NHibernate" version="3.3.1.4000" />
+			<dependency id="NHibernate" version="[4,5)" />
 		</dependencies>
 	<projectUrl>
 		http://www.nhforge.org
