@@ -1,11 +1,10 @@
 ﻿using System;
+using NHibernate.Cfg;
 using NHibernate.Shards.Util;
 using NHibernate.Tool.hbm2ddl;
 
 namespace NHibernate.Shards.Tool
 {
-	using NHibernate.Cfg;
-
 	public class ShardedSchemaExport
 	{
 		private readonly ShardedConfiguration shardedConfiguration;
@@ -23,14 +22,14 @@ namespace NHibernate.Shards.Tool
 			ForEachShard(e => e.Create(scriptAction, export));
 		}
 
-		public void Create(bool script, bool export)
+		public void Create(bool useStdOutput, bool export)
 		{
-			ForEachShard(e => e.Create(script, export));
+			ForEachShard(e => e.Create(useStdOutput, export));
 		}
 
-		public void Drop(bool script, bool export)
+		public void Drop(bool useStdOutput, bool export)
 		{
-			ForEachShard(e => e.Drop(script, export));
+			ForEachShard(e => e.Drop(useStdOutput, export));
 		}
 
 		public void Execute(Action<string> scriptAction, bool export, bool justDrop)
@@ -38,9 +37,9 @@ namespace NHibernate.Shards.Tool
 			ForEachShard(e => e.Execute(scriptAction, export, justDrop));
 		}
 
-		public void Execute(bool script, bool export, bool justDrop)
+		public void Execute(bool useStdOutput, bool export, bool justDrop)
 		{
-			ForEachShard(e => e.Execute(script, export, justDrop));
+			ForEachShard(e => e.Execute(useStdOutput, export, justDrop));
 		}
 
 		public ShardedSchemaExport SetDelimiter(string value)

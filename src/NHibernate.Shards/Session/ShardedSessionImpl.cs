@@ -1025,7 +1025,7 @@ namespace NHibernate.Shards.Session
 			Dictionary<IAssociationType, ICollection> collectionAssociations = null;
 
 			IClassMetadata classMetaData = shardedSessionFactory.ControlFactory.GetClassMetadata(entityName);
-			foreach (var pair in GetAssociations(classMetaData, entity, this.currentEntityMode))
+			foreach (var pair in GetEntityAssociations(classMetaData, entity, this.currentEntityMode))
 			{
 				if (pair.Key.IsCollectionType)
 				{
@@ -1084,16 +1084,16 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-		private static IEnumerable<KeyValuePair<IAssociationType, object>> GetAssociations(
+		private static IEnumerable<KeyValuePair<IAssociationType, object>> GetEntityAssociations(
 			IClassMetadata classMetadata, object entity, EntityMode entityMode)
 		{
 			var propertyTypes = classMetadata.PropertyTypes;
 			var propertyValues = classMetadata.GetPropertyValues(entity, entityMode);
-			return GetAssociations(propertyTypes, propertyValues);
+			return GetEntityAssociations(propertyTypes, propertyValues);
 
 		}
 
-		private static IEnumerable<KeyValuePair<IAssociationType, object>> GetAssociations(
+		private static IEnumerable<KeyValuePair<IAssociationType, object>> GetEntityAssociations(
 			IType[] propertyTypes, object[] propertyValues)
 		{
 			// we assume types and current state are the same length
@@ -1103,7 +1103,8 @@ namespace NHibernate.Shards.Session
 			{
 				if (propertyTypes[i] != null &&
 					propertyValues[i] != null &&
-					propertyTypes[i].IsAssociationType)
+					propertyTypes[i].IsAssociationType &&
+					propertyTypes[i].IsEntityType)
 				{
 					yield return new KeyValuePair<IAssociationType, object>((IAssociationType)propertyTypes[i], propertyValues[i]);
 				}
