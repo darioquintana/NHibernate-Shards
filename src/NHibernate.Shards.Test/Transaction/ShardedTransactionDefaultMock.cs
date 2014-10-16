@@ -1,9 +1,9 @@
-﻿using System;
-using System.Data;
-using NHibernate.Transaction;
-
-namespace NHibernate.Shards.Test
+﻿namespace NHibernate.Shards.Test.Transaction
 {
+	using System;
+	using System.Data;
+	using NHibernate.Transaction;
+
 	public class ShardedTransactionDefaultMock: IShardedTransaction
 	{
 		public virtual void Dispose()

@@ -8,7 +8,7 @@ using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Stat;
 using NHibernate.Type;
 
-namespace NHibernate.Shards.Test
+namespace NHibernate.Shards.Test.Transaction
 {
 	public class ShardedSessionImplementorDefaultMock: IShardedSessionImplementor
 	{
