@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using NHibernate.Cfg;
 using NHibernate.Engine;
@@ -64,7 +65,7 @@ namespace NHibernate.Shards
 			this.shardStrategyFactory = shardStrategyFactory;
 			this.virtualShardToShardMap = virtualShardToShardMap;
 
-			if (!(virtualShardToShardMap.Count == 0))
+			if (virtualShardToShardMap.Count != 0)
 			{
 				// build the map from shard to set of virtual shards
 				shardToVirtualShardIdMap = new Dictionary<short, ICollection<ShardId>>();
@@ -108,18 +109,9 @@ namespace NHibernate.Shards
 
 				//TODO: here HS check if shardId is not null and throw an exception
 
-				ICollection<ShardId> virtualShardIds;
-				if (virtualShardToShardMap.Count == 0)
-				{
-					// simple case, virtual and physical are the same
-					virtualShardIds = new HashSet<ShardId> { new ShardId(shardId) };
-				}
-				else
-				{
-					// get the set of shard ids that are mapped to the physical shard
-					// described by this config
-					virtualShardIds = shardToVirtualShardIdMap[shardId];
-				}
+				var virtualShardIds = virtualShardToShardMap.Count == 0 
+					? new HashSet<ShardId> { new ShardId(shardId) } 
+					: shardToVirtualShardIdMap[shardId];
 				sessionFactories.Add(BuildSessionFactory(), virtualShardIds);
 			}
 
@@ -161,7 +153,7 @@ namespace NHibernate.Shards
 			SafeSet(prototypeConfiguration, Environment.CacheRegionPrefix, config.ShardCacheRegionPrefix);
 			SafeSet(prototypeConfiguration, Environment.DefaultSchema, config.DefaultSchema);
 			SafeSet(prototypeConfiguration, Environment.SessionFactoryName, config.ShardSessionFactoryName);
-			SafeSet(prototypeConfiguration, ShardedEnvironment.ShardIdProperty, config.ShardId.ToString());
+			SafeSet(prototypeConfiguration, ShardedEnvironment.ShardIdProperty, config.ShardId.ToString(CultureInfo.InvariantCulture));
 
 			if (config.DefaultSchema != null && config.DefaultSchema != oldDefaultSchema)
 			{
@@ -207,11 +199,11 @@ namespace NHibernate.Shards
 		{
 			foreach (PersistentClass classMapping in config.ClassMappings)
 			{
-				foreach (Property property in classMapping.PropertyClosureIterator)
+				foreach (var property in classMapping.PropertyClosureIterator)
 				{
 					if (property.Value is OneToOne)
 					{
-						System.Type mappedClass = classMapping.MappedClass;
+						var mappedClass = classMapping.MappedClass;
 						Log.InfoFormat("Type {0} does not support top-level saves.", mappedClass.Name);
 						yield return mappedClass;
 						break;

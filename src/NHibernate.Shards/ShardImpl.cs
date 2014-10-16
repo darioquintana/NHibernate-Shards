@@ -1,4 +1,5 @@
 using NHibernate.Shards.Engine;
+using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards
 {
@@ -14,7 +15,8 @@ namespace NHibernate.Shards
 		public ShardImpl(IShardedSessionImplementor shardedSession, IShardMetadata shardMetadata)
 			: base(shardMetadata.ShardIds)
 		{
-			// make a copy to be safe
+			Preconditions.CheckNotNull(shardedSession);
+			Preconditions.CheckNotNull(shardMetadata);
 			this.shardedSession = shardedSession;
 			this.sessionFactory = shardMetadata.SessionFactory;
 		}
