@@ -23,13 +23,13 @@ namespace NHibernate.Shards.Criteria
 
 		private readonly IShardedSessionImplementor session;
 		private readonly Func<ISession, ICriteria> criteriaFactory;
-		private readonly ListExitOperationBuilder listExitOperationBuilder = new ListExitOperationBuilder();
+		private readonly ListExitOperationBuilder listExitOperationBuilder;
 
-		private readonly IDictionary<IShard, ICriteria> establishedCriteriaByShard = new Dictionary<IShard, ICriteria>();
-		private readonly ICollection<Action<ICriteria>> establishActions = new List<Action<ICriteria>>();
+		private readonly Dictionary<IShard, ICriteria> establishedCriteriaByShard = new Dictionary<IShard, ICriteria>();
+		private readonly List<Action<ICriteria>> establishActions;
 
-		private readonly IDictionary<string, ICriteria> subcriteriaByAlias = new Dictionary<string, ICriteria>();
-		private readonly IDictionary<string, Subcriteria> subcriteriaByPath = new Dictionary<string, Subcriteria>();
+		private readonly Dictionary<string, ICriteria> subcriteriaByAlias;
+		private readonly Dictionary<string, Subcriteria> subcriteriaByPath;
 
 		#endregion
 
@@ -41,7 +41,22 @@ namespace NHibernate.Shards.Criteria
 			Preconditions.CheckNotNull(criteriaFactory);
 			this.session = session;
 			this.criteriaFactory = criteriaFactory;
-			this.subcriteriaByAlias[CriteriaSpecification.RootAlias] = this;
+			this.listExitOperationBuilder = new ListExitOperationBuilder();
+			this.establishActions = new List<Action<ICriteria>>();
+			this.subcriteriaByAlias = new Dictionary<string, ICriteria> { { CriteriaSpecification.RootAlias, this } };
+			this.subcriteriaByPath = new Dictionary<string, Subcriteria>();
+		}
+
+		public ShardedCriteriaImpl(ShardedCriteriaImpl other)
+		{
+			Preconditions.CheckNotNull(other);
+			
+			this.session = other.session;
+			this.criteriaFactory = other.criteriaFactory;
+			this.listExitOperationBuilder = new ListExitOperationBuilder(other.listExitOperationBuilder);
+			this.establishActions = new List<Action<ICriteria>>(other.establishActions);
+			this.subcriteriaByAlias = new Dictionary<string, ICriteria>(other.subcriteriaByAlias);
+			this.subcriteriaByPath = new Dictionary<string, Subcriteria>(other.subcriteriaByPath);
 		}
 
 		#endregion
@@ -474,7 +489,7 @@ namespace NHibernate.Shards.Criteria
 
 		public object Clone()
 		{
-			throw new NotImplementedException();
+			return new ShardedCriteriaImpl(this);
 		}
 
 		protected void ApplyActionToShards(Action<ICriteria> action)

@@ -2,12 +2,14 @@
 
 namespace NHibernate.Shards.Strategy.Exit
 {
+	using NHibernate.Shards.Util;
+
 	/// <summary>
 	/// A builder of <see cref="ListExitOperation"/> instances.
 	/// </summary>
 	public class ListExitOperationBuilder
 	{
-		private readonly IList<SortOrder> orders = new List<SortOrder>();
+		private readonly List<SortOrder> orders = new List<SortOrder>();
 
 		/// <summary>
 		/// Maximum number of results requested by the client.
@@ -33,6 +35,27 @@ namespace NHibernate.Shards.Strategy.Exit
 		public AggregationFunc Aggregation { get; set; }
 
 		/// <summary>
+		/// Creates empty <see cref="ListExitOperationBuilder"/> instance.
+		/// </summary>
+		public ListExitOperationBuilder()
+		{}
+
+		/// <summary>
+		/// Creates clone of another <see cref="ListExitOperationBuilder"/> instance.
+		/// </summary>
+		/// <param name="other">The builder to clone.</param>
+		public ListExitOperationBuilder(ListExitOperationBuilder other)
+		{
+			Preconditions.CheckNotNull(other);
+
+			this.orders.AddRange(other.orders);
+			this.MaxResults = other.MaxResults;
+			this.FirstResult = other.FirstResult;
+			this.Distinct = other.Distinct;
+			this.Aggregation = other.Aggregation;
+		}
+
+		/// <summary>
 		/// Sort order to be applied to the results.
 		/// </summary>
 		public IList<SortOrder> Orders
@@ -49,6 +72,11 @@ namespace NHibernate.Shards.Strategy.Exit
 		public ListExitOperation BuildListOperation()
 		{
 			return new ListExitOperation(this.MaxResults, this.FirstResult, this.Distinct, this.Aggregation, BuildComparer());
+		}
+
+		public ListExitOperationBuilder Clone()
+		{
+			return new ListExitOperationBuilder(this);
 		}
 
 		private IComparer<object> BuildComparer()
