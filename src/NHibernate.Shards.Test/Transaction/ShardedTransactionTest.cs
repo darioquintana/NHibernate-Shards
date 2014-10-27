@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using NHibernate.Shards.Test.Mock;
 using NHibernate.Shards.Transaction;
 using NHibernate.Transaction;
 using NUnit.Framework;

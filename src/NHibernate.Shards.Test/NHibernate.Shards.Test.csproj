@@ -78,17 +78,16 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Data" />
-    <Reference Include="System.Data.SQLite">
+    <Reference Include="System.Data.SQLite, Version=1.0.94.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Data.SQLite.Core.1.0.94.0\lib\net40\System.Data.SQLite.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DomainModel\Person.cs" />
     <Compile Include="ShardedIntegrationTests.cs" />
     <Compile Include="ShardedTestCase.cs" />
     <Compile Include="LoadBalance\RoundRobinShardLoadBalancerTest.cs" />
-    <Compile Include="Mock\SessionDefaultMock.cs" />
+    <Compile Include="Transaction\SessionDefaultMock.cs" />
     <Compile Include="Session\CrossShardRelationshipDetectingInterceptorDecoratorTest.cs" />
     <Compile Include="Session\ShardedSessionImplTests.cs" />
     <Compile Include="ShardDefaultMock.cs" />
@@ -102,7 +101,7 @@
     <Compile Include="Strategy\Selection\LoadBalancedShardSelectionStrategyTest.cs" />
     <Compile Include="Transaction\ShardedTransactionTest.cs" />
     <Compile Include="Id\ShardedUUIDGeneratorFixture.cs" />
-    <Compile Include="Mock\TestFixtureBaseWithMock.cs" />
+    <Compile Include="TestCaseWithMock.cs" />
     <Compile Include="ShardImplTest.cs" />
     <Compile Include="Strategy\Access\ParallelShardAccessStrategyFixture.cs" />
     <Compile Include="Strategy\Exit\OrderExitOperationFixture.cs" />
@@ -144,7 +143,6 @@
   <ItemGroup>
     <Folder Include="Criteria\" />
     <Folder Include="Properties\" />
-    <Folder Include="Query\" />
     <Folder Include="Strategy\Resolution\" />
   </ItemGroup>
   <ItemGroup>

@@ -97,9 +97,12 @@ namespace NHibernate.Shards.Session
 			IInterceptor interceptor,
 			bool checkAllAssociatedObjectsForDifferentShards)
 		{
+			Preconditions.CheckNotNull(shardedSessionFactory);
+			Preconditions.CheckNotNull(shardStrategy);
+
 			this.shardedSessionFactory = shardedSessionFactory;
 			this.shardStrategy = shardStrategy;
-			this.classesWithoutTopLevelSaveSupport = new HashSet<System.Type>(classesWithoutTopLevelSaveSupport);
+			this.classesWithoutTopLevelSaveSupport = new HashSet<System.Type>(classesWithoutTopLevelSaveSupport ?? Enumerable.Empty<System.Type>());
 			this.interceptor = interceptor;
 			this.currentEntityMode = EntityMode.Poco;
 			this.checkAllAssociatedObjectsForDifferentShards = checkAllAssociatedObjectsForDifferentShards;

@@ -13,13 +13,12 @@ namespace NHibernate.Shards.Test.Session
 {
 
 	[TestFixture]
-	public class ShardedSessionImplTests: TestFixtureBaseWithMock
+	public class ShardedSessionImplTests: ShardedTestCase
 	{
 		[Test]
 		public void CanCreateCriteria()
 		{
-			var shardedSessionFactoryImplementor = Stub<IShardedSessionFactoryImplementor>();
-			var shardedSession = new ShardedSessionImpl(shardedSessionFactoryImplementor, Stub<IShardStrategy>(), new System.Type[0], null, false);
+			var shardedSession = this.SessionFactory.OpenSession();
 			var criteria = shardedSession.CreateCriteria("a");
 			Assert.That(criteria, Is.Not.Null);
 		}

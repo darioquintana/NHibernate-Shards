@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace NHibernate.Shards.Test.Strategy.Exit
 {
 	[TestFixture]
-	public class FirstNonNullResultExitStrategyTest : TestFixtureBaseWithMock
+	public class FirstNonNullResultExitStrategyTest : TestCaseWithMock
 	{
 		public void TestAddResult()
 		{

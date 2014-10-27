@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace NHibernate.Shards.Test.Session
 {
 	[TestFixture]
-	public class CrossShardRelationshipDetectingInterceptorDecoratorTest : TestFixtureBaseWithMock
+	public class CrossShardRelationshipDetectingInterceptorDecoratorTest : ShardedTestCase
 	{
 	}
 }

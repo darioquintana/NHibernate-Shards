@@ -4,7 +4,7 @@ using Rhino.Mocks;
 namespace NHibernate.Shards.Test.Mock
 {
 	[TestFixture]
-	public class TestFixtureBaseWithMock
+	public class TestCaseWithMock
 	{
 		#region Setup/Teardown
 

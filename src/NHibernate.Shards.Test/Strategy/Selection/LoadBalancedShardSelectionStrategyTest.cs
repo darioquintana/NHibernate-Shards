@@ -8,7 +8,7 @@ using Rhino.Mocks;
 namespace NHibernate.Shards.Test.Strategy.Selection
 {
 	[TestFixture]
-	public class LoadBalancedShardSelectionStrategyTest : TestFixtureBaseWithMock
+	public class LoadBalancedShardSelectionStrategyTest : TestCaseWithMock
 	{
 		[Test]
 		public void TestSelectShardForNewObject()

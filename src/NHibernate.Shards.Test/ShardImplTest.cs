@@ -8,7 +8,7 @@ using Rhino.Mocks;
 namespace NHibernate.Shards.Test
 {
 	[TestFixture]
-	public class ShardImplTest : TestFixtureBaseWithMock
+	public class ShardImplTest : TestCaseWithMock
 	{
 		[Test]
 		public void EstablishSessionReturnsNewSessionOnFirstCall()

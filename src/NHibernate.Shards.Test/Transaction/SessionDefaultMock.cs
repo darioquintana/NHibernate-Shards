@@ -1,12 +1,12 @@
-﻿using System;
-using System.Data;
-using System.Linq.Expressions;
-using NHibernate.Engine;
-using NHibernate.Stat;
-using NHibernate.Type;
-
-namespace NHibernate.Shards.Test.Mock
+﻿namespace NHibernate.Shards.Test.Transaction
 {
+	using System;
+	using System.Data;
+	using System.Linq.Expressions;
+	using NHibernate.Engine;
+	using NHibernate.Stat;
+	using NHibernate.Type;
+
 	public class SessionDefaultMock: ISession
 	{
 		public virtual void Dispose()

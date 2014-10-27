@@ -11,7 +11,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 	using System.Linq;
 
 	[TestFixture]
-	public class OrderExitOperationFixture : TestFixtureBaseWithMock
+	public class OrderExitOperationFixture : TestCaseWithMock
 	{
 		private IList<object> data;
 		private IList<object> shuffledList;
