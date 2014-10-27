@@ -1,218 +1,229 @@
 <?xml version="1.0"?>
 <project
-		name="NHibernate.Shards"
-		default="build"
-		description="NHibernate Shards for horizontal partitioning of databases"
-		xmlns="http://nant.sf.net/release/0.91-alpha2/nant.xsd">
+    name="NHibernate.Shards"
+    default="build"
+    description="NHibernate Shards for horizontal partitioning of databases"
+    xmlns="http://nant.sf.net/release/0.91-alpha2/nant.xsd">
 
-	<property name="project.config" value="debug" overwrite="false" />
-	<property name="project.version" value="3.3.1.CR2" overwrite="false" />
-	<property name="project.debug" value="${project.config == 'debug'}" />
+  <property name="project.config" value="debug" overwrite="false" />
+  <property name="project.version" value="4.0.1.CR1" overwrite="false" />
+  <property name="project.debug" value="${project.config == 'debug'}" />
 
-	<property name="build.dir" value="build" overwrite="false"/>
-	<property name="lib.dir" value="lib" overwrite="false"/>
-	<property name="package.dir" value="src/packages" />
-	<property name="src.dir" value="src" />
-	<property name="tool.dir" value="tools" />
+  <property name="build.dir" value="build" overwrite="false"/>
+  <property name="lib.dir" value="lib" overwrite="false"/>
+  <property name="package.dir" value="src/packages" />
+  <property name="src.dir" value="src" />
+  <property name="tool.dir" value="tools" />
 
-	<property name="sign.keyfile" value="${src.dir}/NHibernate.Shards/NHibernate.Shards.snk" overwrite="false" />
-	<property name="nuget.sources" value="http://nuget.org/api/v2/" overwrite="false"/>
+  <property name="sign.keyfile" value="${src.dir}/NHibernate.Shards/NHibernate.Shards.snk" overwrite="false" />
+  <property name="nuget.sources" value="http://nuget.org/api/v2/" overwrite="false"/>
 
-	<target name="init">
-		<property name="project.defines" value="${if(project.debug, 'DEBUG', '')}" />
+  <target name="init">
+    <property name="project.defines" value="${if(project.debug, 'DEBUG', '')}" />
 
-		<!-- Compute and set project.version.numeric from project.version -->
-		<script language="C#">
-			<code>
-				<![CDATA[
-					public const int BaseAlpha = 1000;
-					public const int BaseBeta  = 2000;
-					public const int BaseCR    = 3000;
-					public const int BaseGA    = 4000;
-					// SP is same as GA because GA has no number and SP's start with 1.
-					public const int BaseSP    = 4000;
+    <!-- Compute and set project.version.numeric from project.version -->
+    <script language="C#">
+      <code>
+        <![CDATA[
+          public const int BaseAlpha = 1000;
+          public const int BaseBeta  = 2000;
+          public const int BaseCR    = 3000;
+          public const int BaseGA    = 4000;
+          // SP is same as GA because GA has no number and SP's start with 1.
+          public const int BaseSP    = 4000;
 
-					public static void ScriptMain(Project project)
-					{
-						string version = project.Properties["project.version"];
-						
-						int qualifierStart = version.LastIndexOf('.') + 1;
-						int qualifierNumberStart = version.IndexOfAny(
-							"0123456789".ToCharArray(),
-							qualifierStart);
-						if (qualifierNumberStart < 0) qualifierNumberStart = version.Length;
+          public static void ScriptMain(Project project)
+          {
+            string version = project.Properties["project.version"];
+            
+            int qualifierStart = version.LastIndexOf('.') + 1;
+            int qualifierNumberStart = version.IndexOfAny(
+              "0123456789".ToCharArray(),
+              qualifierStart);
+            if (qualifierNumberStart < 0) qualifierNumberStart = version.Length;
 
-						string qualifier = version.Substring(qualifierStart, qualifierNumberStart - qualifierStart);
-						int revisionBase = GetRevisionBase(qualifier);
-						int qualifierNumber = qualifierNumberStart < version.Length
-							? int.Parse(version.Substring(qualifierNumberStart))
-							: 0;
+            string qualifier = version.Substring(qualifierStart, qualifierNumberStart - qualifierStart);
+            int revisionBase = GetRevisionBase(qualifier);
+            int qualifierNumber = qualifierNumberStart < version.Length
+              ? int.Parse(version.Substring(qualifierNumberStart))
+              : 0;
 
-						string versionBase = version.Substring(0, qualifierStart-1);
-						string revisionNumber = (revisionBase + qualifierNumber).ToString();
+            string versionBase = version.Substring(0, qualifierStart-1);
+            string revisionNumber = (revisionBase + qualifierNumber).ToString();
 
-						project.Properties["project.version.numeric"] = versionBase + "." + revisionNumber;
-						project.Properties["project.version.semantic"] = versionBase + "-" + version.Substring(qualifierStart);
-					}
+            project.Properties["project.version.numeric"] = versionBase + "." + revisionNumber;
+            project.Properties["project.version.semantic"] = versionBase + "-" + version.Substring(qualifierStart);
+          }
 
-					public static int GetRevisionBase(string qualifier)
-					{
-						switch (qualifier)
-						{
-							case "Alpha": return BaseAlpha;
-							case "Beta":  return BaseBeta;
-							case "CR":    return BaseCR;
-							case "GA":    return BaseGA;
-							case "SP":    return BaseSP; 
-							default:			throw new BuildException("Unknown version qualifier " + qualifier);
-						}
-					}
-				]]>
-			</code>
-		</script>
-	</target>
+          public static int GetRevisionBase(string qualifier)
+          {
+            switch (qualifier)
+            {
+              case "Alpha": return BaseAlpha;
+              case "Beta":  return BaseBeta;
+              case "CR":    return BaseCR;
+              case "GA":    return BaseGA;
+              case "SP":    return BaseSP; 
+              default:			throw new BuildException("Unknown version qualifier " + qualifier);
+            }
+          }
+        ]]>
+      </code>
+    </script>
+  </target>
 
-	<target name="clean" depends="init">
-		<delete dir="${build.dir}" failonerror="false"/>
-	</target>
+  <target name="clean" depends="init">
+    <delete dir="${build.dir}" failonerror="false"/>
+  </target>
 
-	<target name="resolve" description="Installs and updates NuGet dependencies" depends="init">
-		<echo message="Resolving packages from sources ${nuget.sources}."/>
-		
-		<foreach item="File" property="_packageConfigFile">
-			<in>
-				<items basedir="${src.dir}">
-					<include name="**/packages.config"/>
-				</items>
-			</in>
-			<do>
-				<!-- Update packages to latest version -->
-				<exec program="nuget.exe" basedir="${src.dir}/.nuget">
-					<arg value="restore" />
-					<arg file="${_packageConfigFile}" />
-					<arg value="-Source" />
-					<arg value="${nuget.sources}" />
-					<arg value="-PackagesDirectory" />
-					<arg path="${package.dir}" />
+  <target name="resolve" description="Installs and updates NuGet dependencies" depends="init">
+    <echo message="Resolving packages from sources ${nuget.sources}."/>
+    
+    <foreach item="File" property="_packageConfigFile">
+      <in>
+        <items basedir="${src.dir}">
+          <include name="**/packages.config"/>
+        </items>
+      </in>
+      <do>
+        <!-- Update packages to latest version -->
+        <exec program="nuget.exe" basedir="${src.dir}/.nuget">
+          <arg value="restore" />
+          <arg file="${_packageConfigFile}" />
+          <arg value="-Source" />
+          <arg value="${nuget.sources}" />
+          <arg value="-PackagesDirectory" />
+          <arg path="${package.dir}" />
         </exec>
-			</do>
-		</foreach>
-	</target>
+      </do>
+    </foreach>
+  </target>
 
-	<target name="build" depends="init resolve">
-		<property name="current.targetframework" value="${framework::get-target-framework()}" />
-		<property name="current.targetframework.nuget" value="${string::replace(string::replace(current.targetframework, '.', ''), '-', '')}" />
-		<property name="current.build.dir" value="${build.dir}/${current.targetframework.nuget}" />
+  <target name="build" depends="init resolve">
+    <property name="current.targetframework" value="${framework::get-target-framework()}" />
+    <property name="current.targetframework.nuget" value="${string::replace(string::replace(current.targetframework, '.', ''), '-', '')}" />
+    <property name="current.build.dir" value="${build.dir}/${current.targetframework.nuget}" />
 
-		<property name="current.project.name" value="NHibernate.Shards" />
-		<assemblyfileset id="current.project.references">
-			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
-			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
-		</assemblyfileset>
-		<call target="build.current.project" />
+    <property name="current.project.name" value="NHibernate.Shards" />
+    <assemblyfileset id="current.project.references">
+      <include name="${package.dir}/*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
+      <include name="${package.dir}/*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
+    </assemblyfileset>
+    <call target="build.current.project" />
 
-		<property name="current.project.name" value="NHibernate.Shards.Test" />
-		<assemblyfileset id="current.project.references">
-			<include name="${current.build.dir}/NHibernate.Shards.dll"/>
-			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
-			<include name="${package.dir}/*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
-			<include name="${package.dir}/*/lib/nunit.framework.dll"/>
-			<include name="${package.dir}/*/lib/net/Rhino.Mocks.dll"/>
-		</assemblyfileset>
-		<call target="build.current.project" />
+    <property name="current.project.name" value="NHibernate.Shards.Test" />
+    <assemblyfileset id="current.project.references">
+      <include name="${current.build.dir}/NHibernate.Shards.dll"/>
+      <include name="${package.dir}/*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
+      <include name="${package.dir}/*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
+      <include name="${package.dir}/*/lib/nunit.framework.dll"/>
+      <include name="${package.dir}/*/lib/net/Rhino.Mocks.dll"/>
+      <include name="${package.dir}/*/lib/${current.targetframework.nuget}/System.Data.SQLite.dll"/>
+    </assemblyfileset>
+    <call target="build.current.project" />
 
-		<call target="test.current" />
-	</target>
+    <call target="test.current" />
+  </target>
 
-	<target name="build.current.project">
-		<asminfo language="CSharp" output="${src.dir}/${current.project.name}/AssemblyInfo.cs">
-			<imports>
-				<import namespace="System" />
-				<import namespace="System.Reflection" />
-			</imports>
-			<attributes>
-				<attribute type="CLSCompliantAttribute" value="true" />
-				<attribute type="AssemblyTitleAttribute" value="${current.project.name}" />
-				<attribute type="AssemblyCompanyAttribute" value="nhforge.org" />
-				<attribute type="AssemblyProductAttribute" value="${project::get-name()}" />
-				<attribute type="AssemblyCopyrightAttribute" value="Licensed under LGPL." />
-				<attribute type="AssemblyVersionAttribute" value="${project.version.numeric}" />
-				<attribute type="AssemblyFileVersionAttribute" value="${project.version.numeric}" />
-				<attribute type="AssemblyInformationalVersionAttribute" value="${project.version.numeric}" />
-			</attributes>
-		</asminfo>
+  <target name="build.current.project">
+    <asminfo language="CSharp" output="${src.dir}/${current.project.name}/AssemblyInfo.cs">
+      <imports>
+        <import namespace="System" />
+        <import namespace="System.Reflection" />
+      </imports>
+      <attributes>
+        <attribute type="CLSCompliantAttribute" value="true" />
+        <attribute type="AssemblyTitleAttribute" value="${current.project.name}" />
+        <attribute type="AssemblyCompanyAttribute" value="nhforge.org" />
+        <attribute type="AssemblyProductAttribute" value="${project::get-name()}" />
+        <attribute type="AssemblyCopyrightAttribute" value="Licensed under LGPL." />
+        <attribute type="AssemblyVersionAttribute" value="${project.version.numeric}" />
+        <attribute type="AssemblyFileVersionAttribute" value="${project.version.numeric}" />
+        <attribute type="AssemblyInformationalVersionAttribute" value="${project.version.numeric}" />
+      </attributes>
+    </asminfo>
 
-		<csc target="library" 
-				 output="${current.build.dir}/${current.project.name}.dll"
-				 doc="${current.build.dir}/${current.project.name}.xml"
-				 define="${project.defines}" 
-				 debug="${if(project.debug, 'Full', 'PdbOnly')}"
-				 keyfile="${sign.keyfile}">
-			<nowarn>
-				<warning number="1591" />
-				<!-- No XML comment for publicly visible member -->
-			</nowarn>
-			<sources basedir="${src.dir}/${current.project.name}">
-				<include name="**/*.cs"/>
-			</sources>
-			<references refid="current.project.references" />
-		</csc>
+    <csc target="library" 
+         output="${current.build.dir}/${current.project.name}.dll"
+         doc="${current.build.dir}/${current.project.name}.xml"
+         define="${project.defines}" 
+         debug="${if(project.debug, 'Full', 'PdbOnly')}"
+         keyfile="${sign.keyfile}">
+      <nowarn>
+        <warning number="1591" />
+        <!-- No XML comment for publicly visible member -->
+      </nowarn>
+      <sources basedir="${src.dir}/${current.project.name}">
+        <include name="**/*.cs"/>
+      </sources>
+      <references refid="current.project.references" />
+    </csc>
 
-		<property name="_appConfigFile" value="${src.dir}/${current.project.name}/App.config" />		
-		<copy file="${_appConfigFile}" tofile="${current.build.dir}/${current.project.name}.dll.config" 
-					if="${file::exists(_appConfigFile)}" />
+    <property name="_appConfigFile" value="${src.dir}/${current.project.name}/App.config" />		
+    <copy file="${_appConfigFile}" tofile="${current.build.dir}/${current.project.name}.dll.config" 
+          if="${file::exists(_appConfigFile)}" />
 
-		<copy todir="${current.build.dir}" flatten="true">
-			<fileset refid="current.project.references" />
-		</copy>
-	</target>
+    <copy todir="${current.build.dir}" flatten="true">
+      <fileset refid="current.project.references" />
+    </copy>
+    <copy todir="${current.build.dir}/x86" flatten="true">
+      <fileset>
+        <include name="${package.dir}/*/build/${current.targetframework.nuget}/x86/*.dll"/>
+      </fileset>
+    </copy>
+    <copy todir="${current.build.dir}/x64" flatten="true">
+      <fileset>
+        <include name="${package.dir}/*/build/${current.targetframework.nuget}/x64/*.dll"/>
+      </fileset>
+    </copy>
+  </target>
 
-	<target name="test.current">
-		<exec program="nunit-console" basedir="${tool.dir}/nunit/bin">
-			<arg value="/framework:${nant.settings.currentframework}" />
-			<arg file="${current.build.dir}/NHibernate.Shards.Test.dll" />
-		</exec>
-	</target>
-	
-	<target name="pack" depends="init build">
-		<foreach item="File" property="_nuspecFile">
-			<in>
-				<items basedir="${src.dir}">
-					<include name="**/*.nuspec" />
-				</items>
-			</in>
-			<do>
-				<exec program="nuget.exe" basedir="${src.dir}/.nuget" verbose="true">
-					<arg value="pack" />
-					<arg file="${_nuspecFile}" />
-					<arg value="-Version" />
-					<arg value="${project.version.numeric}" />
-					<arg value="-BasePath" />
-					<arg path="${project::get-base-directory()}" />
-					<arg value="-OutputDirectory" />
-					<arg path="${build.dir}" />
-					<arg value="-Symbols" />
+  <target name="test.current">
+    <exec program="nunit-console" basedir="${tool.dir}/nunit/bin">
+      <arg value="/framework:${nant.settings.currentframework}" />
+      <arg file="${current.build.dir}/NHibernate.Shards.Test.dll" />
+    </exec>
+  </target>
+
+  <target name="pack" depends="init build">
+    <foreach item="File" property="_nuspecFile">
+      <in>
+        <items basedir="${src.dir}">
+          <include name="**/*.nuspec" />
+        </items>
+      </in>
+      <do>
+        <exec program="nuget.exe" basedir="${src.dir}/.nuget" verbose="true">
+          <arg value="pack" />
+          <arg file="${_nuspecFile}" />
+          <arg value="-Version" />
+          <arg value="${project.version.numeric}" />
+          <arg value="-BasePath" />
+          <arg path="${project::get-base-directory()}" />
+          <arg value="-OutputDirectory" />
+          <arg path="${build.dir}" />
+          <arg value="-Symbols" />
           <arg value="-Properties" />
-					<arg value="Configuration=${project.config};version=${project.version.numeric}" />
-				</exec>
-			</do>
-		</foreach>
-	</target>
+          <arg value="Configuration=${project.config};version=${project.version.numeric}" />
+        </exec>
+      </do>
+    </foreach>
+  </target>
 
-	<target name="publish" depends="init clean pack">
-		<foreach item="File" property="_packageFile">
-			<in>
-				<items basedir="${build.dir}">
-					<include name="*.nupkg" />
-					<exclude name="*.symbols.nupkg"/>
-				</items>
-			</in>
-			<do>
-				<exec program="nuget.exe" basedir="${tool.dir}" verbose="true">
-					<arg value="push" />
-					<arg file="${_packageFile}" />
-				</exec>
-			</do>
-		</foreach>
-	</target>
+  <target name="publish" depends="init clean pack">
+    <foreach item="File" property="_packageFile">
+      <in>
+        <items basedir="${build.dir}">
+          <include name="*.nupkg" />
+          <exclude name="*.symbols.nupkg"/>
+        </items>
+      </in>
+      <do>
+        <exec program="nuget.exe" basedir="${tool.dir}/nuget" verbose="true">
+          <arg value="push" />
+          <arg file="${_packageFile}" />
+        </exec>
+      </do>
+    </foreach>
+  </target>
 </project>
