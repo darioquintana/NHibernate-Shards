@@ -6,7 +6,7 @@
     xmlns="http://nant.sf.net/release/0.91-alpha2/nant.xsd">
 
   <property name="project.config" value="debug" overwrite="false" />
-  <property name="project.version" value="4.0.1.CR1" overwrite="false" />
+  <property name="project.version" value="4.1.1.GA" overwrite="false" />
   <property name="project.debug" value="${project.config == 'debug'}" />
 
   <property name="build.dir" value="build" overwrite="false"/>
@@ -116,7 +116,7 @@
       <include name="${current.build.dir}/NHibernate.Shards.dll"/>
       <include name="${package.dir}/*/lib/${current.targetframework.nuget}/NHibernate.dll"/>
       <include name="${package.dir}/*/lib/${current.targetframework.nuget}/Iesi.Collections.dll"/>
-      <include name="${package.dir}/*/lib/nunit.framework.dll"/>
+      <include name="${package.dir}/*/lib/${current.targetframework.nuget}/nunit.framework.dll"/>
       <include name="${package.dir}/*/lib/net/Rhino.Mocks.dll"/>
       <include name="${package.dir}/*/lib/${current.targetframework.nuget}/System.Data.SQLite.dll"/>
     </assemblyfileset>
@@ -179,7 +179,7 @@
   </target>
 
   <target name="test.current">
-    <exec program="nunit-console" basedir="${tool.dir}/nunit/bin">
+    <exec program="nunit3-console" basedir="${tool.dir}/nunit/bin">
       <arg value="/framework:${nant.settings.currentframework}" />
       <arg file="${current.build.dir}/NHibernate.Shards.Test.dll" />
     </exec>
@@ -222,6 +222,8 @@
         <exec program="nuget.exe" basedir="${tool.dir}/nuget" verbose="true">
           <arg value="push" />
           <arg file="${_packageFile}" />
+          <arg value="-Source" />
+          <arg value="https://www.nuget.org/api/v2/package" />
         </exec>
       </do>
     </foreach>
