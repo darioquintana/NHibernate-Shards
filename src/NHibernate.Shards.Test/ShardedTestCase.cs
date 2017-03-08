@@ -39,7 +39,7 @@ namespace NHibernate.Shards.Test
 		private static int _prevShardId;
 		private readonly List<string> _databasePaths = new List<string>();
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void TestFixtureSetUp()
 		{
 			var currentAssembly = GetType().Assembly;
@@ -73,7 +73,7 @@ namespace NHibernate.Shards.Test
 			}
 		}
 
-		[TestFixtureTearDown]
+		[OneTimeTearDown]
 		public void TestFixtureTearDown()
 		{
 			CleanUp();

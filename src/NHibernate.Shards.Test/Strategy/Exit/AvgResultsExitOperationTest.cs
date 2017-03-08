@@ -9,7 +9,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 	[TestFixture]
 	public class AvgResultsExitOperationTest
 	{
-		[Test, Ignore]
+		[Test]
 		public void TestAvgProjectionComesBackAsDouble()
 		{
 			// sharded avg calculation assumes that the avg projection implementation
@@ -17,8 +17,8 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 			AvgProjection ap = new AvgProjection("yam");
 			IType[] types = ap.GetTypes(null, null);
 			Assert.NotNull(types);
-			Assert.AreEqual(1, types.Length);
-			Assert.AreEqual(typeof(DoubleType), types[0]);
+			Assert.That(types, Has.Length.EqualTo(1));
+			Assert.That(types[0], Is.InstanceOf<DoubleType>());
 		}
 
 		[Test]

@@ -13,7 +13,7 @@
 		<language>en-US</language>
 		<tags>NHibernate, ORM, ObjectRelationalMapping, Sharding, Partitioning</tags>
 		<dependencies>
-			<dependency id="NHibernate" version="[4,5)" />
+			<dependency id="NHibernate" version="[4.1.1.4000,5)" />
 		</dependencies>
 	<projectUrl>
 		http://www.nhforge.org
