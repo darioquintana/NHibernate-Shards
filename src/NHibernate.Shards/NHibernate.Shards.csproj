@@ -86,6 +86,7 @@
     <Compile Include="Criteria\IShardedMultiCriteria.cs" />
     <Compile Include="Criteria\ShardedCriteriaImpl.cs" />
     <Compile Include="Criteria\ShardedMultiCriteriaImpl.cs" />
+    <Compile Include="Criteria\ShardedQueryOver.cs" />
     <Compile Include="CrossShardAssociationException.cs" />
     <Compile Include="Engine\IShardedSessionFactoryImplementor.cs" />
     <Compile Include="Engine\IShardedSessionImplementor.cs" />
@@ -103,6 +104,9 @@
     <Compile Include="LoadBalance\IShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RandomShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RoundRobinShardLoadBalancer.cs" />
+    <Compile Include="Mapping\ByCode\ShardedGenerators.cs" />
+    <Compile Include="Mapping\ByCode\ShardedHighLowGeneratorDef.cs" />
+    <Compile Include="Mapping\ByCode\ShardedUUIDGeneratorDef.cs" />
     <Compile Include="Query\IShardedMultiQuery.cs" />
     <Compile Include="Query\IShardedQuery.cs" />
     <Compile Include="Query\IShardedSQLQuery.cs" />

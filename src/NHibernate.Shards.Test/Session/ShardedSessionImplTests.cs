@@ -1,26 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using NHibernate.Cfg;
 using NUnit.Framework;
-using NHibernate.Shards.Test.Mock;
-using NHibernate.Engine;
-using NHibernate.Shards.Engine;
-using NHibernate.Shards.Session;
-using NHibernate.Shards.Strategy;
 
 namespace NHibernate.Shards.Test.Session
 {
+    using System;
+    using System.Collections.Generic;
+    using NHibernate.Mapping.ByCode;
+    using NHibernate.Shards.Mapping.ByCode;
 
-	[TestFixture]
+    [TestFixture]
 	public class ShardedSessionImplTests: ShardedTestCase
 	{
-		[Test]
+        [Test]
 		public void CanCreateCriteria()
 		{
 			var shardedSession = this.SessionFactory.OpenSession();
-			var criteria = shardedSession.CreateCriteria("a");
-			Assert.That(criteria, Is.Not.Null);
+			Assert.That(shardedSession.CreateCriteria("a"), Is.Not.Null);
 		}
-	}
+
+	    [Test]
+	    public void CanQueryOver()
+	    {
+            var shardedSession = this.SessionFactory.OpenSession();
+	        Assert.That(shardedSession.QueryOver<object>(), Is.Not.Null);
+	    }
+    }
 }

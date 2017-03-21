@@ -12,7 +12,9 @@ using NHibernate.Transform;
 
 namespace NHibernate.Shards.Criteria
 {
-	/// <summary>
+    using NHibernate.Impl;
+
+    /// <summary>
 	/// Concrete implementation of <see cref="IShardedCriteria"/> interface.
 	/// </summary>
 	public class ShardedCriteriaImpl : IShardedCriteria

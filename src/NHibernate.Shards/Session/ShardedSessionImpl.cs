@@ -22,7 +22,10 @@ using System.Globalization;
 
 namespace NHibernate.Shards.Session
 {
-	/// <summary>
+    using NHibernate.Criterion;
+    using NHibernate.Impl;
+
+    /// <summary>
 	/// Concrete implementation of a ShardedSession, and also the central component of
 	/// Hibernate Shards' internal implementation. This class exposes two interfaces;
 	/// ShardedSession itself, to the application, and ShardedSessionImplementor, to
@@ -1797,32 +1800,34 @@ namespace NHibernate.Shards.Session
 			return new ShardedCriteriaImpl(this, s => s.CreateCriteria(entityName, alias));
 		}
 
-		IQueryOver<T, T> ISession.QueryOver<T>(Expression<Func<T>> alias)
-		{
-			throw new NotSupportedException();
-		}
+        public IQueryOver<T, T> QueryOver<T>() where T : class
+        {
+            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria<T>(), this);
+        }
 
-		IQueryOver<T, T> ISession.QueryOver<T>()
-		{
-			throw new NotSupportedException();
-		}
+        public IQueryOver<T, T> QueryOver<T>(Expression<Func<T>> alias) where T : class
+        {
+            string aliasPath = ExpressionProcessor.FindMemberExpression(alias.Body);
+            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria<T>(aliasPath), this);
+        }
 
-		IQueryOver<T, T> ISession.QueryOver<T>(string entityName, Expression<Func<T>> alias)
-		{
-			throw new NotSupportedException();
-		}
+        public IQueryOver<T, T> QueryOver<T>(string entityName) where T : class
+        {
+            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria(entityName), this);
+        }
 
-		IQueryOver<T, T> ISession.QueryOver<T>(string entityName)
-		{
-			throw new NotSupportedException();
-		}
+        public IQueryOver<T, T> QueryOver<T>(string entityName, Expression<Func<T>> alias) where T : class
+        {
+            string aliasPath = ExpressionProcessor.FindMemberExpression(alias.Body);
+            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria(entityName, aliasPath), this);
+        }
 
-		/// <summary>
-		/// Create a new instance of <c>Query</c> for the given query string
-		/// </summary>
-		/// <param name="queryString">A hibernate query string</param>
-		/// <returns>The query</returns>
-		public IQuery CreateQuery(string queryString)
+        /// <summary>
+        /// Create a new instance of <c>Query</c> for the given query string
+        /// </summary>
+        /// <param name="queryString">A hibernate query string</param>
+        /// <returns>The query</returns>
+        public IQuery CreateQuery(string queryString)
 		{
 			return ShardedQueryImpl.CreateQuery(this, queryString);
 		}

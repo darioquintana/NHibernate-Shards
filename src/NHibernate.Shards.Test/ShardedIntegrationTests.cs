@@ -1,9 +1,11 @@
 ﻿namespace NHibernate.Shards.Test
 {
-	using System.Collections.Generic;
+    using System;
+    using System.Collections.Generic;
 	using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
-	using NUnit.Framework;
+    using NHibernate.Shards.Mapping.ByCode;
+    using NUnit.Framework;
 
 	[TestFixture]
 	public class ShardedIntegrationTests : ShardedTestCase
@@ -12,7 +14,9 @@
 
 		protected override void Configure(NHibernate.Cfg.Configuration protoConfig)
 		{
-			var mapper = new ModelMapper();
+            protoConfig.Properties[NHibernate.Cfg.Environment.ShowSql] = "True";
+
+            var mapper = new ModelMapper();
 			mapper.AddMapping<PersonMap>();
 			protoConfig.AddMapping(mapper.CompileMappingForAllExplicitlyAddedEntities());
 		}
@@ -38,20 +42,60 @@
 			Assert.That(person.Id, Is.GreaterThan(0));
 		}
 
-		#endregion
+	    [Test]
+	    public void CanQueryOverEntity()
+	    {
+            var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+            var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
 
-		#region Domain model and mapping classes
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+                    session.Clear();
 
-		public class Person
+                    var persistentPersons = session.QueryOver<Person>()
+	                    .Where(p => p.LegalName.FirstName == "Mary")
+                        .List();
+                    Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
+	            }
+            }
+        }
+
+        #endregion
+
+        #region Domain model and mapping classes
+
+        public class Person
 		{
-			public int Id { get; set; }
-			public PersonName LegalName { get; set; }
+			public int? Id { get; set; }
+		    public Guid Guid { get; set; } = Guid.NewGuid();
+            public PersonName LegalName { get; set; }
 			public IList<PersonName> Aliases { get; protected set; }
 
 			public Person()
 			{
 				this.Aliases = new List<PersonName>();
 			}
+
+            public bool Equals(Person person)
+            {
+                if (ReferenceEquals(person, null)) return false;
+                return this.Guid == person.Guid;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Person);
+            }
+
+		    public override int GetHashCode()
+		    {
+		        return this.Guid.GetHashCode();
+		    }
 		}
 
 		public class PersonName
@@ -66,10 +110,11 @@
 			{
 				Id(x => x.Id, m =>
 				{
-					m.Generator(Generators.Identity);
+					m.Generator(Generators.Native);
 					m.Column("id");
 				});
 
+                Property(x => x.Guid, p => p.Column("uid"));
 				Component(x => x.LegalName, c =>
 				{
 					c.Property(x => x.FirstName, p => p.Column("first_name"));
