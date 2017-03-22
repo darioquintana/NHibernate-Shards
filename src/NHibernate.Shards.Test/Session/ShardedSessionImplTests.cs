@@ -1,13 +1,7 @@
-﻿using NHibernate.Cfg;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
 namespace NHibernate.Shards.Test.Session
 {
-    using System;
-    using System.Collections.Generic;
-    using NHibernate.Mapping.ByCode;
-    using NHibernate.Shards.Mapping.ByCode;
-
     [TestFixture]
 	public class ShardedSessionImplTests: ShardedTestCase
 	{

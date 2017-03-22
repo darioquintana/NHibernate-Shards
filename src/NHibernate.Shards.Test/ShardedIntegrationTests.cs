@@ -2,9 +2,9 @@
 {
     using System;
     using System.Collections.Generic;
-	using NHibernate.Mapping.ByCode;
+    using NHibernate.Criterion;
+    using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
-    using NHibernate.Shards.Mapping.ByCode;
     using NUnit.Framework;
 
 	[TestFixture]
@@ -42,8 +42,59 @@
 			Assert.That(person.Id, Is.GreaterThan(0));
 		}
 
-	    [Test]
-	    public void CanQueryOverEntity()
+        [Test]
+        public void CanQueryWithCriteria()
+        {
+            var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+            var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+            using (var session = SessionFactory.OpenSession())
+            {
+                using (session.BeginTransaction())
+                {
+                    session.Save(person1);
+                    session.Save(person2);
+                    session.Flush();
+                    session.Clear();
+
+                    var persistentPersons = session.CreateCriteria<Person>()
+                        .Add(Restrictions.Eq(nameof(Person.LegalName) + "." + nameof(PersonName.FirstName), "Mary"))
+                        .List();
+                    Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
+                }
+            }
+        }
+
+        [Test]
+        public void CanCountRowsWithCriteria()
+        {
+            var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+            var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+            using (var session = SessionFactory.OpenSession())
+            {
+                using (session.BeginTransaction())
+                {
+                    session.Save(person1);
+                    session.Save(person2);
+                    session.Flush();
+                    session.Clear();
+
+                    var rowCount = session.CreateCriteria<Person>()
+                        .SetProjection(Projections.RowCount())
+                        .UniqueResult<int>();
+                    Assert.That(rowCount, Is.EqualTo(2), "RowCount");
+
+                    var rowCountInt64 = session.CreateCriteria<Person>()
+                        .SetProjection(Projections.RowCountInt64())
+                        .UniqueResult<long>();
+                    Assert.That(rowCountInt64, Is.EqualTo(2), "RowCountInt64");
+                }
+            }
+        }
+
+        [Test]
+	    public void CanQueryWithQueryOver()
 	    {
             var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
             var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
@@ -62,6 +113,30 @@
                         .List();
                     Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
 	            }
+            }
+        }
+
+        [Test]
+        public void CanCountRowsWithQueryOver()
+        {
+            var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+            var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+            using (var session = SessionFactory.OpenSession())
+            {
+                using (session.BeginTransaction())
+                {
+                    session.Save(person1);
+                    session.Save(person2);
+                    session.Flush();
+                    session.Clear();
+
+                    var rowCount = session.QueryOver<Person>().RowCount();
+                    Assert.That(rowCount, Is.EqualTo(2), "RowCount");
+
+                    var rowCountInt64 = session.QueryOver<Person>().RowCountInt64();
+                    Assert.That(rowCountInt64, Is.EqualTo(2), "RowCountInt64");
+                }
             }
         }
 

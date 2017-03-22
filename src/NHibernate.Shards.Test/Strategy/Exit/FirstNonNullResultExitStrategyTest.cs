@@ -10,7 +10,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 	{
 		public void TestAddResult()
 		{
-			UniqueResultExitStrategy<object> fnnres = new UniqueResultExitStrategy<object>();
+			UniqueResultExitStrategy<object> fnnres = new UniqueResultExitStrategy<object>(null);
 			IShard shard1 = Mock<IShard>();
 
 			fnnres.AddResult(null, shard1);
@@ -33,7 +33,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 		[Test]
 		public void TestNullShard()
 		{
-			UniqueResultExitStrategy<object> fnnres = new UniqueResultExitStrategy<object>();
+			UniqueResultExitStrategy<object> fnnres = new UniqueResultExitStrategy<object>(null);
 			try
 			{
 				fnnres.AddResult(null, null);

@@ -65,7 +65,10 @@ namespace NHibernate.Shards.Criteria
 
 		#region Properties
 
-		private ICriteria SomeCriteria
+        /// <summary>
+        /// Gets arbitrary criteria implementation for a single shard.
+        /// </summary>
+		internal ICriteria SomeCriteria
 		{
 			get
 			{
@@ -445,7 +448,9 @@ namespace NHibernate.Shards.Criteria
 
 		public T UniqueResult<T>()
 		{
-			return this.session.Execute(new UniqueResultOperation<T>(this), new UniqueResultExitStrategy<T>());
+            return this.session.Execute(
+                new UniqueResultOperation<T>(this), 
+                new UniqueResultExitStrategy<T>(this.listExitOperationBuilder.Aggregation));
 		}
 
 		public IEnumerable<T> Future<T>()
@@ -523,11 +528,11 @@ namespace NHibernate.Shards.Criteria
 			return result;
 		}
 
-		#endregion
+        #endregion
 
-		#region Inner classes
+        #region Inner classes
 
-		private class ListShardOperation<T> : IShardOperation<IEnumerable<T>>
+        private class ListShardOperation<T> : IShardOperation<IEnumerable<T>>
 		{
 			private readonly IShardedCriteria shardedCriteria;
 
@@ -596,12 +601,14 @@ namespace NHibernate.Shards.Criteria
 		{
 			private readonly IShardedSessionImplementor session;
 			private readonly IDictionary<IShard, IFutureValue<T>> futuresByShard;
+		    private readonly IExitStrategy<T> exitStrategy;
 
 			public FutureValueShardOperation(ShardedCriteriaImpl shardedCriteria)
 			{
 				this.session = shardedCriteria.session;
 				this.futuresByShard = shardedCriteria.session.Shards
 					.ToDictionary(s => s, s => shardedCriteria.EstablishFor(s).FutureValue<T>());
+			    this.exitStrategy = new UniqueResultExitStrategy<T>(shardedCriteria.listExitOperationBuilder.Aggregation);
 			}
 
 			public Func<T> Prepare(IShard shard)
@@ -611,7 +618,7 @@ namespace NHibernate.Shards.Criteria
 
 			public T Value
 			{
-				get { return session.Execute(this, new UniqueResultExitStrategy<T>()); }
+				get { return session.Execute(this, this.exitStrategy); }
 			}
 
 			public string OperationName

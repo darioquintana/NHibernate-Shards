@@ -1,9 +1,10 @@
-using System.Threading;
-using NHibernate.Shards.Util;
+using System.Collections.Generic;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-	internal interface IUniqueResult<T>
+    using NHibernate.Shards.Util;
+
+    internal interface IUniqueResult<T>
 	{
 		T Value { get; }
 		IShard Shard { get; }
@@ -11,9 +12,14 @@ namespace NHibernate.Shards.Strategy.Exit
 
 	public class UniqueResultExitStrategy<T> : IExitStrategy<T>, IUniqueResult<T>
 	{
-		private int resultCount;
-		private T firstResult;
+	    private readonly AggregationFunc aggregation;
+	    private readonly List<T> results = new List<T>();
 		private IShard firstShard;
+
+	    public UniqueResultExitStrategy(AggregationFunc aggregation)
+	    {
+	        this.aggregation = aggregation;
+	    }
 
 		/// <summary>
 		/// Add the provided result and return whether or not the caller can halt
@@ -26,29 +32,38 @@ namespace NHibernate.Shards.Strategy.Exit
 		/// <returns>Whether or not the caller can halt processing</returns>
 		public bool AddResult(T result, IShard shard)
 		{
-			Preconditions.CheckNotNull(result);
-
-			if (Interlocked.Increment(ref resultCount) == 1)
-			{
-				firstResult = result;
-				firstShard = shard;
-			}
-			return true;
+            Preconditions.CheckNotNull(result);
+		    this.results.Add(result);
+            this.firstShard = this.results.Count == 1
+                ? shard
+                : null;
+			return false;
 		}
 
 		public T Value
 		{
-			get { return firstResult; }
-		}
+		    get
+		    {
+                if (this.results.Count <= 0) return default(T);
+                if (this.results.Count > 1) throw new NonUniqueResultException(this.results.Count);
+                return this.results[0];
+            }
+        }
 		
 		public IShard Shard
 		{
-			get { return firstShard; }
+			get { return this.firstShard; }
 		}
 
 		public T CompileResults()
 		{
-			return firstResult;
+		    if (this.aggregation != null)
+		    {
+		        var aggregationResult = (T)this.aggregation(this.results);
+		        this.results.Clear();
+		        this.results.Add(aggregationResult);
+		    }
+		    return this.Value;
 		}
-	}
+    }
 }

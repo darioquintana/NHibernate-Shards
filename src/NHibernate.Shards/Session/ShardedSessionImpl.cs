@@ -1802,24 +1802,24 @@ namespace NHibernate.Shards.Session
 
         public IQueryOver<T, T> QueryOver<T>() where T : class
         {
-            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria<T>(), this);
+            return new ShardedQueryOver<T>((ShardedCriteriaImpl)CreateCriteria<T>());
         }
 
         public IQueryOver<T, T> QueryOver<T>(Expression<Func<T>> alias) where T : class
         {
             string aliasPath = ExpressionProcessor.FindMemberExpression(alias.Body);
-            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria<T>(aliasPath), this);
+            return new ShardedQueryOver<T>((ShardedCriteriaImpl)CreateCriteria<T>(aliasPath));
         }
 
         public IQueryOver<T, T> QueryOver<T>(string entityName) where T : class
         {
-            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria(entityName), this);
+            return new ShardedQueryOver<T>((ShardedCriteriaImpl)CreateCriteria(entityName));
         }
 
         public IQueryOver<T, T> QueryOver<T>(string entityName, Expression<Func<T>> alias) where T : class
         {
             string aliasPath = ExpressionProcessor.FindMemberExpression(alias.Body);
-            return new ShardedQueryOver<T, T>((IShardedCriteria)CreateCriteria(entityName, aliasPath), this);
+            return new ShardedQueryOver<T>((ShardedCriteriaImpl)CreateCriteria(entityName, aliasPath));
         }
 
         /// <summary>
@@ -1992,7 +1992,7 @@ namespace NHibernate.Shards.Session
 		{
 			// we're not letting people customize shard selection by lockMode
 			var shardOperation = new GetShardOperation(key, mode);
-			var exitStrategy = new UniqueResultExitStrategy<object>();
+			var exitStrategy = new UniqueResultExitStrategy<object>(null);
 			this.shardStrategy.ShardAccessStrategy.Apply(ResolveToShards(key), shardOperation, exitStrategy);
 			return exitStrategy;
 		}

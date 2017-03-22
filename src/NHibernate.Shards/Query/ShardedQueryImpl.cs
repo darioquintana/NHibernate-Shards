@@ -128,7 +128,7 @@ namespace NHibernate.Shards.Query
 
 		public T UniqueResult<T>()
 		{
-			return this.session.Execute(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>());
+			return this.session.Execute(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>(null));
 		}
 
 		public IEnumerable<T> Future<T>()
@@ -692,7 +692,7 @@ namespace NHibernate.Shards.Query
 
 			public T Value
 			{
-				get { return this.session.Execute(this, new UniqueResultExitStrategy<T>()); }
+				get { return this.session.Execute(this, new UniqueResultExitStrategy<T>(null)); }
 			}
 
 			public string OperationName
