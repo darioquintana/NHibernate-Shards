@@ -2429,7 +2429,8 @@ namespace NHibernate.Shards.Session
 
 	    private class DelegatingSessionImpl : ISessionImplementor
 	    {
-	        private readonly ShardedSessionImpl shardedSession;
+            private readonly Guid sessionId = Guid.NewGuid();
+            private readonly ShardedSessionImpl shardedSession;
 	        private readonly ISessionImplementor anySessionImplementor;
 
 
@@ -2547,7 +2548,10 @@ namespace NHibernate.Shards.Session
                 get { throw new NotImplementedException(); }
             }
 
-	        public Guid SessionId { get; } = Guid.NewGuid();
+	        public Guid SessionId
+	        {
+	            get { return this.sessionId; }
+	        }
 
 	        public ITransactionContext TransactionContext
 	        {

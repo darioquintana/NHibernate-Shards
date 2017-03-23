@@ -60,7 +60,7 @@
                     session.Clear();
 
                     var persistentPersons = session.CreateCriteria<Person>()
-                        .Add(Restrictions.Eq(nameof(Person.LegalName) + "." + nameof(PersonName.FirstName), "Mary"))
+                        .Add(Restrictions.Eq("LegalName.FirstName", "Mary"))
                         .List();
                     Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
                 }
@@ -175,13 +175,14 @@
         public class Person
 		{
 			public int? Id { get; set; }
-		    public Guid Guid { get; set; } = Guid.NewGuid();
+		    public Guid Guid { get; private set; }
             public PersonName LegalName { get; set; }
 			public IList<PersonName> Aliases { get; protected set; }
 
 			public Person()
 			{
-				this.Aliases = new List<PersonName>();
+                this.Guid = Guid.NewGuid();
+                this.Aliases = new List<PersonName>();
 			}
 
             public bool Equals(Person person)

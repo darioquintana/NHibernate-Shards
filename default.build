@@ -6,7 +6,7 @@
     xmlns="http://nant.sf.net/release/0.91-alpha2/nant.xsd">
 
   <property name="project.config" value="debug" overwrite="false" />
-  <property name="project.version" value="4.1.1.GA" overwrite="false" />
+  <property name="project.version" value="4.2.0.Beta" overwrite="false" />
   <property name="project.debug" value="${project.config == 'debug'}" />
 
   <property name="build.dir" value="build" overwrite="false"/>
