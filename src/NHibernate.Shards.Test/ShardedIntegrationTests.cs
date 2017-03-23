@@ -2,7 +2,9 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using NHibernate.Criterion;
+    using NHibernate.Linq;
     using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
     using NUnit.Framework;
@@ -136,6 +138,32 @@
 
                     var rowCountInt64 = session.QueryOver<Person>().RowCountInt64();
                     Assert.That(rowCountInt64, Is.EqualTo(2), "RowCountInt64");
+                }
+            }
+        }
+
+        [Test]
+        public void CanQueryWithLinq()
+        {
+            var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+            var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+            using (var session = SessionFactory.OpenSession())
+            {
+                using (session.BeginTransaction())
+                {
+                    session.Save(person1);
+                    session.Save(person2);
+                    session.Flush();
+                    session.Clear();
+
+                    var persistentPersons = 
+                        (   from p 
+                            in session.Query<Person>()
+                            where p.LegalName.FirstName == "Mary" select p
+                        )
+                        .ToList();
+                    Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
                 }
             }
         }

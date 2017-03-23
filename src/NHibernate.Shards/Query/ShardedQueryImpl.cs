@@ -10,7 +10,7 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Query
 {
-	/// <summary>
+    /// <summary>
 	/// Concrete implementation of ShardedQuery provided by Hibernate Shards. This
 	/// implementation introduces limits to the HQL language; mostly around
 	/// limits and aggregation. Its approach is simply to execute the query on
@@ -42,7 +42,7 @@ namespace NHibernate.Shards.Query
 			return new ShardedQueryImpl(session, s => s.CreateQuery(hql));
 		}
 
-		public static ShardedQueryImpl GetNamedQuery(IShardedSessionImplementor session, string queryName)
+        public static ShardedQueryImpl GetNamedQuery(IShardedSessionImplementor session, string queryName)
 		{
 			return new ShardedQueryImpl(session, s => s.GetNamedQuery(queryName));
 		}
@@ -93,7 +93,7 @@ namespace NHibernate.Shards.Query
 		 * query on all shards
 		 * @throws HibernateException
 		 */
-		public IList List()
+		public virtual IList List()
 		{
 			return Enumerable<object>().ToList();
 		}

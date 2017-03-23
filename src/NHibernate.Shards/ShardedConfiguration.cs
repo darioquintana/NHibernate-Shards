@@ -14,7 +14,9 @@ using Environment = NHibernate.Cfg.Environment;
 
 namespace NHibernate.Shards
 {
-	/// <summary>
+    using NHibernate.Shards.Linq;
+
+    /// <summary>
 	/// Like regular Hibernate's Configuration, this class helps construct your
 	/// factories. Not extending Hibernate's Configuration because that is the one place
 	/// where the notion of a single database is specified (i.e. in the
@@ -43,7 +45,10 @@ namespace NHibernate.Shards
 
 		#region Ctors
 
-		public ShardedConfiguration(Configuration prototypeConfiguration, IEnumerable<IShardConfiguration> shardConfigs, IShardStrategyFactory shardStrategyFactory)
+		public ShardedConfiguration(
+            Configuration prototypeConfiguration, 
+            IEnumerable<IShardConfiguration> shardConfigs, 
+            IShardStrategyFactory shardStrategyFactory)
 			: this(prototypeConfiguration, shardConfigs, shardStrategyFactory, new Dictionary<short, short>())
 		{ }
 
@@ -59,6 +64,8 @@ namespace NHibernate.Shards
 			Preconditions.CheckNotNull(virtualShardToShardMap);
 
 			this.prototypeConfiguration = prototypeConfiguration;
+		    this.prototypeConfiguration.SetProperty(NHibernate.Cfg.Environment.QueryLinqProvider, typeof(ShardedQueryProvider).AssemblyQualifiedName);
+
 			this.shardConfigs = shardConfigs.ToList();
 			Preconditions.CheckArgument(this.shardConfigs.Count > 0);
 

@@ -22,8 +22,17 @@ using System.Globalization;
 
 namespace NHibernate.Shards.Session
 {
+    using NHibernate.AdoNet;
+    using NHibernate.Cache;
+    using NHibernate.Collection;
     using NHibernate.Criterion;
+    using NHibernate.Engine.Query.Sql;
+    using NHibernate.Event;
+    using NHibernate.Hql;
     using NHibernate.Impl;
+    using NHibernate.Loader.Custom;
+    using NHibernate.Persister.Entity;
+    using NHibernate.Transaction;
 
     /// <summary>
 	/// Concrete implementation of a ShardedSession, and also the central component of
@@ -62,6 +71,9 @@ namespace NHibernate.Shards.Session
 		private readonly IDictionary<IShard, ISession> establishedSessionsByShard = new Dictionary<IShard, ISession>();
 		// Actions that are to be applied to newly opened sessions.
 		private readonly IList<Action<ISession>> establishActions = new List<Action<ISession>>();
+
+        // Partial ISessionImplementor implementation to intercept queries
+	    private ISessionImplementor sessionImpl;
 
 		private bool closed;
 		private bool lockedShard;
@@ -1832,18 +1844,13 @@ namespace NHibernate.Shards.Session
 			return ShardedQueryImpl.CreateQuery(this, queryString);
 		}
 
-		public IQuery CreateQuery(IQueryExpression queryExpression)
-		{
-			throw new NotSupportedException();
-		}
-
-		/// <summary>
-		/// Create a new instance of <c>Query</c> for the given collection and filter string
-		/// </summary>
-		/// <param name="collection">A persistent collection</param>
-		/// <param name="queryString">A hibernate query</param>
-		/// <returns>A query</returns>
-		public IQuery CreateFilter(object collection, string queryString)
+        /// <summary>
+        /// Create a new instance of <c>Query</c> for the given collection and filter string
+        /// </summary>
+        /// <param name="collection">A persistent collection</param>
+        /// <param name="queryString">A hibernate query</param>
+        /// <returns>A query</returns>
+        public IQuery CreateFilter(object collection, string queryString)
 		{
 			var shard = GetShardForCollection(collection, shards);
 
@@ -2172,7 +2179,7 @@ namespace NHibernate.Shards.Session
 		/// </returns>
 		public ISessionImplementor GetSessionImplementation()
 		{
-			throw new NotSupportedException();
+		    return this.sessionImpl ?? (this.sessionImpl = new DelegatingSessionImpl(this));
 		}
 
 		public ISession GetSession(EntityMode entityMode)
@@ -2419,6 +2426,380 @@ namespace NHibernate.Shards.Session
 				base.OnCollectionUpdate(collection, key);
 			}
 		}
+
+	    private class DelegatingSessionImpl : ISessionImplementor
+	    {
+	        private readonly ShardedSessionImpl shardedSession;
+	        private readonly ISessionImplementor anySessionImplementor;
+
+
+            public DelegatingSessionImpl(ShardedSessionImpl shardedSession)
+	        {
+                this.shardedSession = shardedSession;
+	            this.anySessionImplementor = shardedSession.AnySession.GetSessionImplementation();
+	        }
+
+	        public long Timestamp
+	        {
+	            get {  throw new NotImplementedException(); }
+	        }
+
+            public ISessionFactoryImplementor Factory
+	        {
+	            get { return this.anySessionImplementor.Factory; }
+	        }
+
+            public IBatcher Batcher
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+            public IDictionary<string, IFilter> EnabledFilters
+            {
+                get { return this.anySessionImplementor.EnabledFilters; }
+            }
+
+            public IInterceptor Interceptor
+            {
+                get { return this.anySessionImplementor.Interceptor; }
+            }
+
+            public EventListeners Listeners
+            {
+                get { return this.anySessionImplementor.Listeners; }
+            }
+
+            public int DontFlushFromFind
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+            public ConnectionManager ConnectionManager
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+            public bool IsEventSource
+            {
+                get { return this.anySessionImplementor.IsEventSource; }
+            }
+
+            public IPersistenceContext PersistenceContext
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+	        public CacheMode CacheMode
+	        {
+	            get { return this.shardedSession.CacheMode; }
+                set { this.shardedSession.CacheMode = value; }
+	        }
+
+            public bool IsOpen
+            {
+                get { return this.anySessionImplementor.IsOpen; }
+            }
+
+            public bool IsConnected
+            {
+                get { return this.anySessionImplementor.IsConnected; }
+            }
+
+            public FlushMode FlushMode
+            {
+                get { return this.anySessionImplementor.FlushMode; }
+                set { this.shardedSession.FlushMode = value; }
+            }
+
+	        public string FetchProfile
+	        {
+                get { return this.anySessionImplementor.FetchProfile; }
+                set { throw new NotImplementedException(); }
+            }
+
+	        public IDbConnection Connection
+	        {
+	            get { return this.shardedSession.Connection; }
+	        }
+
+	        public bool IsClosed
+	        {
+	            get { return this.shardedSession.closed; }
+	        }
+
+	        public bool TransactionInProgress
+	        {
+                get { return this.anySessionImplementor.TransactionInProgress; }
+            }
+
+	        public EntityMode EntityMode
+	        {
+	            get { return this.anySessionImplementor.EntityMode; }
+	        }
+
+	        public FutureCriteriaBatch FutureCriteriaBatch
+	        {
+	            get { throw new NotImplementedException(); }
+	        }
+
+            public FutureQueryBatch FutureQueryBatch
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+	        public Guid SessionId { get; } = Guid.NewGuid();
+
+	        public ITransactionContext TransactionContext
+	        {
+                get { throw new NotImplementedException(); }
+                set { throw new NotImplementedException(); }
+            }
+
+            public void Initialize()
+	        {}
+
+	        public void InitializeCollection(IPersistentCollection collection, bool writing)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public object InternalLoad(string entityName, object id, bool eager, bool isNullable)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public object ImmediateLoad(string entityName, object id)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList List(string query, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList List(IQueryExpression queryExpression, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IQuery CreateQuery(IQueryExpression queryExpression)
+	        {
+	            var queryPlan = this.anySessionImplementor.Factory.QueryPlanCache.GetHQLQueryPlan(
+	                queryExpression, false, this.anySessionImplementor.EnabledFilters);
+                return new ShardedExpressionQueryImpl(this.shardedSession, queryPlan.QueryExpression);
+	        }
+
+	        public void List(string query, QueryParameters parameters, IList results)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void List(IQueryExpression queryExpression, QueryParameters queryParameters, IList results)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList<T> List<T>(string query, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList<T> List<T>(IQueryExpression queryExpression, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList<T> List<T>(CriteriaImpl criteria)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void List(CriteriaImpl criteria, IList results)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList List(CriteriaImpl criteria)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IEnumerable Enumerable(string query, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IEnumerable Enumerable(IQueryExpression query, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IEnumerable<T> Enumerable<T>(string query, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IEnumerable<T> Enumerable<T>(IQueryExpression query, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList ListFilter(object collection, string filter, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList<T> ListFilter<T>(object collection, string filter, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IEnumerable EnumerableFilter(object collection, string filter, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IEnumerable<T> EnumerableFilter<T>(object collection, string filter, QueryParameters parameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IEntityPersister GetEntityPersister(string entityName, object obj)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void AfterTransactionBegin(ITransaction tx)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void BeforeTransactionCompletion(ITransaction tx)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void AfterTransactionCompletion(bool successful, ITransaction tx)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public object GetContextEntityIdentifier(object obj)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public object Instantiate(string entityName, object id)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList List(NativeSQLQuerySpecification spec, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void List(NativeSQLQuerySpecification spec, QueryParameters queryParameters, IList results)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList<T> List<T>(NativeSQLQuerySpecification spec, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void ListCustomQuery(ICustomQuery customQuery, QueryParameters queryParameters, IList results)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IList<T> ListCustomQuery<T>(ICustomQuery customQuery, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public object GetFilterParameterValue(string filterParameterName)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IType GetFilterParameterType(string filterParameterName)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IQuery GetNamedSQLQuery(string name)
+	        {
+	            return this.anySessionImplementor.GetNamedSQLQuery(name);
+	        }
+
+	        public IQueryTranslator[] GetQueries(string query, bool scalar)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public IQueryTranslator[] GetQueries(IQueryExpression query, bool scalar)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public object GetEntityUsingInterceptor(EntityKey key)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public string BestGuessEntityName(object entity)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public string GuessEntityName(object entity)
+	        {
+                return this.shardedSession.GuessEntityName(entity);
+            }
+
+            public IQuery GetNamedQuery(string queryName)
+	        {
+                return this.anySessionImplementor.GetNamedQuery(queryName);
+            }
+
+            public void Flush()
+	        {
+	            this.shardedSession.Flush();
+	        }
+
+	        public int ExecuteNativeUpdate(NativeSQLQuerySpecification specification, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public int ExecuteUpdate(string query, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public int ExecuteUpdate(IQueryExpression query, QueryParameters queryParameters)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public void CloseSessionFromDistributedTransaction()
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public EntityKey GenerateEntityKey(object id, IEntityPersister persister)
+	        {
+	            throw new NotImplementedException();
+	        }
+
+	        public CacheKey GenerateCacheKey(object id, IType type, string entityOrRoleName)
+	        {
+	            throw new NotImplementedException();
+	        }
+	    }
 
 		#endregion
 	}

@@ -100,6 +100,7 @@
     <Compile Include="IShard.cs" />
     <Compile Include="IShardedTransaction.cs" />
     <Compile Include="IShardOperation.cs" />
+    <Compile Include="Linq\ShardedQueryProvider.cs" />
     <Compile Include="LoadBalance\BaseShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\IShardLoadBalancer.cs" />
     <Compile Include="LoadBalance\RandomShardLoadBalancer.cs" />
@@ -110,6 +111,7 @@
     <Compile Include="Query\IShardedMultiQuery.cs" />
     <Compile Include="Query\IShardedQuery.cs" />
     <Compile Include="Query\IShardedSQLQuery.cs" />
+    <Compile Include="Query\ShardedExpressionQueryImpl.cs" />
     <Compile Include="Query\ShardedMultiQueryImpl.cs" />
     <Compile Include="Query\ShardedQueryImpl.cs" />
     <Compile Include="Query\ShardedSQLQueryImpl.cs" />
