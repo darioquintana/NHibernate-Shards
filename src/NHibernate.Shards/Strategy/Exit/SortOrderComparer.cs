@@ -1,22 +1,19 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-	public class SortOrderComparer : IComparer<object>, IComparer
-	{
+    public class SortOrderComparer : IComparer<object>, IComparer
+    {
 		private readonly IList<SortOrder> orders;
 
 		public SortOrderComparer(IEnumerable<SortOrder> orders)
 		{
-			if (orders == null)
-			{
-				throw new ArgumentNullException("orders");
-			}
+		    Preconditions.CheckNotNull(orders);
 
 			this.orders = new List<SortOrder>(orders);
-
 			if (this.orders.Count <= 0)
 			{
 				throw new ArgumentException("One or more sort orders required.", "orders");
@@ -40,10 +37,10 @@ namespace NHibernate.Shards.Strategy.Exit
 				foreach (var order in this.orders)
 				{
 					IComparable xValue = x != null
-						? ListExitOperationUtils.GetPropertyValue(x, order.PropertyName)
+						? order.PropertyGetter(x) as IComparable
 						: null;
 					IComparable yValue = y != null
-						? ListExitOperationUtils.GetPropertyValue(y, order.PropertyName)
+						? order.PropertyGetter(y) as IComparable
 						: null;
 
 					int result;

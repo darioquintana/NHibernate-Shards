@@ -1,36 +1,43 @@
 ﻿using System;
+using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
 	public struct SortOrder : IEquatable<SortOrder>
 	{
-		private readonly string propertyName;
+		private readonly Func<object, object> propertyGetter;
 		private readonly bool isDescending;
 
-		public SortOrder(string propertyName, bool isDescending)
+		public SortOrder(Func<object, object> propertyGetter, bool isDescending)
 		{
-			if (string.IsNullOrEmpty(propertyName))
-			{
-				throw new ArgumentException("Property name must be specified.", "propertyName");
-			}
-
-			this.propertyName = propertyName;
+			Preconditions.CheckNotNull(propertyGetter);
+			this.propertyGetter= propertyGetter;
 			this.isDescending = isDescending;
 		}
 
 		public static SortOrder Ascending(string propertyName)
 		{
-			return new SortOrder(propertyName, false);
+			return new SortOrder(o => ListExitOperationUtils.GetPropertyValue(o, propertyName), false);
+		}
+
+		public static SortOrder Ascending(Func<object, object> propertyGetter)
+		{
+			return new SortOrder(propertyGetter, false);
 		}
 
 		public static SortOrder Descending(string propertyName)
 		{
-			return new SortOrder(propertyName, true);
+			return new SortOrder(o => ListExitOperationUtils.GetPropertyValue(o, propertyName), true);
 		}
 
-		public string PropertyName
+		public static SortOrder Descending(Func<object, object> propertyGetter)
 		{
-			get { return this.propertyName; }
+			return new SortOrder(propertyGetter, true);
+		}
+
+		public Func<object, object> PropertyGetter
+		{
+			get { return this.propertyGetter; }
 		}
 
 		public bool IsDescending
@@ -40,7 +47,7 @@ namespace NHibernate.Shards.Strategy.Exit
 
 		public bool Equals(SortOrder other)
 		{
-			return this.propertyName == other.propertyName
+			return this.propertyGetter.Method == other.propertyGetter.Method
 				&& this.isDescending == other.isDescending;
 		}
 
@@ -52,7 +59,7 @@ namespace NHibernate.Shards.Strategy.Exit
 
 		public override int GetHashCode()
 		{
-			return this.propertyName.GetHashCode();
+			return this.propertyGetter.Method.GetHashCode();
 		}
 	}
 }

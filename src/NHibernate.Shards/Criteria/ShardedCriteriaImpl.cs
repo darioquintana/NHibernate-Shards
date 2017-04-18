@@ -230,33 +230,38 @@ namespace NHibernate.Shards.Criteria
 			ApplyActionToShards(c => c.ClearOrders());
 		}
 
-		private static SortOrder ToSortOrder(Order order)
+		private SortOrder ToSortOrder(Order order)
 		{
 			var orderClause = order.ToString();
 			var spaceIndex = orderClause.LastIndexOf(' ');
 
-			var propertyName = orderClause.Substring(0, spaceIndex);
+			var propertyPath = orderClause.Substring(0, spaceIndex);
 			var orderDirection = orderClause.Substring(spaceIndex + 1);
 
 			bool isDescending;
-			switch (orderDirection)
+			if (orderClause.IndexOf("asc", spaceIndex + 1, 3, StringComparison.OrdinalIgnoreCase) >= 0)
 			{
-				case "asc":
-					isDescending = false;
-					break;
-				case "desc":
-					isDescending = true;
-					break;
-				default:
-					throw new ArgumentException(
-						string.Format(
-							CultureInfo.InvariantCulture,
-							"Order '{0}' specifies invalid order direction '{1}'.",
-							orderClause, orderDirection),
-						"order");
+				isDescending = false;
+			}
+			else if (orderClause.IndexOf("desc", spaceIndex + 1, 4, StringComparison.OrdinalIgnoreCase) >= 0)
+			{
+				isDescending = true;
+			}
+			else
+			{
+				throw new ArgumentException(
+					string.Format(
+						CultureInfo.InvariantCulture,
+						"Order '{0}' specifies invalid order direction '{1}'.",
+						orderClause, orderDirection),
+					"order");
 			}
 
-			return new SortOrder(propertyName, isDescending);
+			var rootEntityOrClassName = ((CriteriaImpl)this.SomeCriteria).EntityOrClassName;
+			var rootClassMetadata = this.session.AnyShard.SessionFactory.GetClassMetadata(rootEntityOrClassName);
+			return new SortOrder(
+				o => rootClassMetadata.GetPropertyValue(o, propertyPath, EntityMode.Poco), 
+				isDescending);
 		}
 
 		public ICriteria SetFetchMode(string associationPath, FetchMode fetchMode)

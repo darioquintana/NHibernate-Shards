@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
+using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-	using NHibernate.Shards.Util;
-
 	/// <summary>
 	/// A builder of <see cref="ListExitOperation"/> instances.
 	/// </summary>

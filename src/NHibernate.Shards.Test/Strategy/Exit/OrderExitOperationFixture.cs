@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using NHibernate.Criterion;
 using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Shards.Test.Mock;
 using NUnit.Framework;
