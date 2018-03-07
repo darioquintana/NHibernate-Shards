@@ -1,220 +1,32 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{9DEF9516-EB32-479D-99BF-FE8175956112}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NHibernate.Shards</RootNamespace>
-    <AssemblyName>NHibernate.Shards</AssemblyName>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <UpgradeBackupLocation>
-    </UpgradeBackupLocation>
-    <OldToolsVersion>3.5</OldToolsVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworks>net45</TargetFrameworks>
+    <PackageTags>NHibernate, ORM, ObjectRelationalMapping, Sharding, Partitioning</PackageTags>
+    <Authors>Gerke Geurts, Dario Quintana</Authors>
+    <Description>NHibernate Shards is a framework that adds support for horizontal partitioning to NHibernate Core.</Description>
+    <Company />
+    <PackageProjectUrl>https://github.com/darioquintana/NHibernate-Shards</PackageProjectUrl>
+    <VersionPrefix>4.2.0</VersionPrefix>
+    <VersionLabel></VersionLabel>
+    <VersionRevision>2000</VersionRevision>
+    <VersionSuffix Condition="'$(VersionLabel)' != ''">$(VersionLabel)$(VersionRevision)</VersionSuffix>
+    <FileVersion>$(VersionPrefix).$(VersionRevision)</FileVersion>
+    <AssemblyVersion>$([System.Text.RegularExpressions.Regex]::Match($(VersionPrefix), '(\d+)\.(\d+)')).0.0</AssemblyVersion>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>NHibernate.Shards.snk</AssemblyOriginatorKeyFile>
-    <PublishUrl>publish\</PublishUrl>
-    <Install>true</Install>
-    <InstallFrom>Disk</InstallFrom>
-    <UpdateEnabled>false</UpdateEnabled>
-    <UpdateMode>Foreground</UpdateMode>
-    <UpdateInterval>7</UpdateInterval>
-    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
-    <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>false</UpdateRequired>
-    <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <UseApplicationTrust>false</UseApplicationTrust>
-    <BootstrapperEnabled>true</BootstrapperEnabled>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
-    <TargetFrameworkProfile />
+    <IsPackable>True</IsPackable>
+    <IncludeSymbols>True</IncludeSymbols>
+    <IncludeSource>True</IncludeSource>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <NoWarn>1591</NoWarn>
-    <Prefer32Bit>false</Prefer32Bit>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net40|AnyCPU'">
+    <DocumentationFile>bin\Debug\net40\NHibernate.Shards.xml</DocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\NHibernate.Shards.XML</DocumentationFile>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <NoWarn>1591</NoWarn>
-    <Prefer32Bit>false</Prefer32Bit>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net40|AnyCPU'">
+    <DocumentationFile>bin\Release\net40\NHibernate.Shards.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Iesi.Collections, Version=4.0.0.0, Culture=neutral, PublicKeyToken=aa95f207798dfdb4, processorArchitecture=MSIL">
-      <HintPath>..\packages\Iesi.Collections.4.0.1.4000\lib\net40\Iesi.Collections.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="NHibernate, Version=4.1.0.4000, Culture=neutral, PublicKeyToken=aa95f207798dfdb4, processorArchitecture=MSIL">
-      <HintPath>..\packages\NHibernate.4.1.1.4000\lib\net40\NHibernate.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.ServiceModel">
-      <RequiredTargetFramework>3.0</RequiredTargetFramework>
-    </Reference>
+    <PackageReference Include="NHibernate" Version="4.1.1.4000" />
+    <PackageReference Include="System.ServiceModel.Primitives" Version="4.4.1" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="BaseHasShardIdList.cs" />
-    <Compile Include="Cfg\IShardConfiguration.cs" />
-    <Compile Include="Cfg\ShardConfiguration.cs" />
-    <Compile Include="Cfg\ShardedEnvironment.cs" />
-    <Compile Include="Criteria\IShardedCriteria.cs" />
-    <Compile Include="Criteria\IShardedMultiCriteria.cs" />
-    <Compile Include="Criteria\ShardedCriteriaImpl.cs" />
-    <Compile Include="Criteria\ShardedMultiCriteriaImpl.cs" />
-    <Compile Include="Criteria\ShardedQueryOver.cs" />
-    <Compile Include="CrossShardAssociationException.cs" />
-    <Compile Include="Engine\IShardedSessionFactoryImplementor.cs" />
-    <Compile Include="Engine\IShardedSessionImplementor.cs" />
-    <Compile Include="Engine\IShardMetadata.cs" />
-    <Compile Include="Engine\ShardedEntityKey.cs" />
-    <Compile Include="Id\IGeneratorRequiringControlSessionProvider.cs" />
-    <Compile Include="Id\IShardEncodingIdentifierGenerator.cs" />
-    <Compile Include="Id\ShardedTableHiLoGenerator.cs" />
-    <Compile Include="Id\ShardedUUIDGenerator.cs" />
-    <Compile Include="IHasShardIdList.cs" />
-    <Compile Include="IShard.cs" />
-    <Compile Include="IShardedTransaction.cs" />
-    <Compile Include="IShardOperation.cs" />
-    <Compile Include="Linq\ShardedQueryProvider.cs" />
-    <Compile Include="LoadBalance\BaseShardLoadBalancer.cs" />
-    <Compile Include="LoadBalance\IShardLoadBalancer.cs" />
-    <Compile Include="LoadBalance\RandomShardLoadBalancer.cs" />
-    <Compile Include="LoadBalance\RoundRobinShardLoadBalancer.cs" />
-    <Compile Include="Mapping\ByCode\ShardedGenerators.cs" />
-    <Compile Include="Mapping\ByCode\ShardedHighLowGeneratorDef.cs" />
-    <Compile Include="Mapping\ByCode\ShardedUUIDGeneratorDef.cs" />
-    <Compile Include="Query\IShardedMultiQuery.cs" />
-    <Compile Include="Query\IShardedQuery.cs" />
-    <Compile Include="Query\IShardedSQLQuery.cs" />
-    <Compile Include="Query\ShardedMultiQueryImpl.cs" />
-    <Compile Include="Query\ShardedQueryExpression.cs" />
-    <Compile Include="Query\ShardedQueryImpl.cs" />
-    <Compile Include="Query\ShardedSQLQueryImpl.cs" />
-    <Compile Include="Session\BaseStatefulInterceptorFactory.cs" />
-    <Compile Include="Session\IControlSessionProvider.cs" />
-    <Compile Include="Session\IRequiresSession.cs" />
-    <Compile Include="Session\IShardAware.cs" />
-    <Compile Include="Session\IShardedFilter.cs" />
-    <Compile Include="Session\IShardedSession.cs" />
-    <Compile Include="Session\IShardedSessionFactory.cs" />
-    <Compile Include="Session\IShardIdResolver.cs" />
-    <Compile Include="Session\IStatefulInterceptorFactory.cs" />
-    <Compile Include="Session\ShardAwareInterceptor.cs" />
-    <Compile Include="Session\ShardedFilterImpl.cs" />
-    <Compile Include="Session\ShardedSessionException.cs" />
-    <Compile Include="Session\ShardedSessionFactoryImpl.cs" />
-    <Compile Include="Session\ShardedSessionImpl.cs" />
-    <Compile Include="Session\ShardMetadataImpl.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ShardedConfiguration.cs" />
-    <Compile Include="ShardId.cs" />
-    <Compile Include="ShardImpl.cs" />
-    <Compile Include="Stat\ShardedSessionStatistics.cs" />
-    <Compile Include="Strategy\Access\IShardAccessStrategy.cs" />
-    <Compile Include="Strategy\Access\ParallelShardAccessStrategy.cs" />
-    <Compile Include="Strategy\Access\SequentialShardAccessStrategy.cs" />
-    <Compile Include="Strategy\Exit\AggregationFunc.cs" />
-    <Compile Include="Strategy\Exit\AggregationUtil.cs" />
-    <Compile Include="Strategy\Exit\ListExitStrategy.cs" />
-    <Compile Include="Strategy\Exit\ExecuteUpdateExitStrategy.cs" />
-    <Compile Include="Strategy\Exit\FirstNonNullResultExitStrategy.cs" />
-    <Compile Include="Strategy\Exit\IExitStrategy.cs" />
-    <Compile Include="Strategy\Exit\IListExitStrategy.cs" />
-    <Compile Include="Strategy\Exit\ListExitOperation.cs" />
-    <Compile Include="Strategy\Exit\ListExitOperationBuilder.cs" />
-    <Compile Include="Strategy\Exit\ListExitOperationUtils.cs" />
-    <Compile Include="Strategy\Exit\MultiExitStrategy.cs" />
-    <Compile Include="Strategy\Exit\SortOrder.cs" />
-    <Compile Include="Strategy\Exit\SortOrderComparer.cs" />
-    <Compile Include="Strategy\Exit\UniqueResultExitStrategy.cs" />
-    <Compile Include="Strategy\IShardStrategy.cs" />
-    <Compile Include="Strategy\IShardStrategyFactory.cs" />
-    <Compile Include="Strategy\Resolution\AllShardsShardResolutionStrategy.cs" />
-    <Compile Include="Strategy\Resolution\BaseShardResolutionStrategy.cs" />
-    <Compile Include="Strategy\Resolution\IShardResolutionStrategy.cs" />
-    <Compile Include="Strategy\Selection\IShardSelectionStrategy.cs" />
-    <Compile Include="Strategy\Selection\IShardResolutionStrategyData.cs" />
-    <Compile Include="Strategy\Selection\LoadBalancedShardSelectionStrategy.cs" />
-    <Compile Include="Strategy\Selection\RoundRobinShardSelectionStrategy.cs" />
-    <Compile Include="Strategy\Selection\ShardResolutionStrategyDataImpl.cs" />
-    <Compile Include="Strategy\ShardStrategyImpl.cs" />
-    <Compile Include="Tool\ShardedSchemaExport.cs" />
-    <Compile Include="Transaction\ShardedTransactionImpl.cs" />
-    <Compile Include="Util\InterceptorDecorator.cs" />
-    <Compile Include="Util\InterlockedUtil.cs" />
-    <Compile Include="Util\Preconditions.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="NHibernate.Shards.nuspec" />
-    <None Include="NHibernate.Shards.snk" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

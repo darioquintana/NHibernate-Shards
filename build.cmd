@@ -1,1 +1,3 @@
-tools\nant\bin\nant.exe -buildfile:default.build -targetframework:net-4.0 %*
+dotnet clean
+dotnet test src\NHibernate.Shards.Test -c Release
+dotnet pack src\NHibernate.Shards -c Release --include-source --include-symbols
