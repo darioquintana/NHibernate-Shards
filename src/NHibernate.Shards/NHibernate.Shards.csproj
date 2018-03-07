@@ -114,8 +114,8 @@
     <Compile Include="Query\IShardedMultiQuery.cs" />
     <Compile Include="Query\IShardedQuery.cs" />
     <Compile Include="Query\IShardedSQLQuery.cs" />
-    <Compile Include="Query\ShardedExpressionQueryImpl.cs" />
     <Compile Include="Query\ShardedMultiQueryImpl.cs" />
+    <Compile Include="Query\ShardedQueryExpression.cs" />
     <Compile Include="Query\ShardedQueryImpl.cs" />
     <Compile Include="Query\ShardedSQLQueryImpl.cs" />
     <Compile Include="Session\BaseStatefulInterceptorFactory.cs" />

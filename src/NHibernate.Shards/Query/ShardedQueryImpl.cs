@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using NHibernate.Hql;
+using NHibernate.Impl;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Shards.Util;
@@ -10,7 +12,7 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Query
 {
-    /// <summary>
+	/// <summary>
 	/// Concrete implementation of ShardedQuery provided by Hibernate Shards. This
 	/// implementation introduces limits to the HQL language; mostly around
 	/// limits and aggregation. Its approach is simply to execute the query on
@@ -26,6 +28,8 @@ namespace NHibernate.Shards.Query
 	{
 		private readonly IShardedSessionImplementor session;
 		private readonly Func<ISession, IQuery> queryFactory;
+	    private readonly IQueryExpression unshardedQueryExpression;
+		private ShardedQueryExpression queryExpression;
 
 		private readonly IDictionary<IShard, IQuery> establishedQueriesByShard = new Dictionary<IShard, IQuery>();
 		private readonly ICollection<Action<IQuery>> establishActions = new List<Action<IQuery>>();
@@ -39,12 +43,20 @@ namespace NHibernate.Shards.Query
 		/// <param name="hql">An HQL query string.</param>
 		public static ShardedQueryImpl CreateQuery(IShardedSessionImplementor session, string hql)
 		{
-			return new ShardedQueryImpl(session, s => s.CreateQuery(hql));
+			var anySessionImplementor = (AbstractSessionImpl)session.AnyShard.EstablishSession();
+			var unshardedQueryExpression = new StringQueryExpression(hql);
+			var unshardedQueryPlan = anySessionImplementor.Factory.QueryPlanCache.GetHQLQueryPlan(
+                unshardedQueryExpression, false, anySessionImplementor.EnabledFilters);
+			return new ShardedQueryImpl(session, unshardedQueryPlan.QueryExpression);
 		}
 
-        public static ShardedQueryImpl GetNamedQuery(IShardedSessionImplementor session, string queryName)
+		public static ShardedQueryImpl GetNamedQuery(IShardedSessionImplementor session, string queryName)
 		{
-			return new ShardedQueryImpl(session, s => s.GetNamedQuery(queryName));
+			var anySession = session.AnyShard.EstablishSession();
+			var query = anySession.GetNamedQuery(queryName);
+			return query is ISQLQuery
+				? new ShardedQueryImpl(session, s => s.GetNamedQuery(queryName))
+				: CreateQuery(session, query.QueryString);
 		}
 
 		/// <summary>
@@ -58,6 +70,41 @@ namespace NHibernate.Shards.Query
 			Preconditions.CheckNotNull(queryFactory);
 			this.session = session;
 			this.queryFactory = queryFactory;
+		}
+
+		/// <summary>
+		/// Creates new <see cref="ShardedQueryImpl"/> instance.
+		/// </summary>
+		/// <param name="session">The Sharded session on which this query is to be executed.</param>
+		/// <param name="unshardedQueryExpression">A shard-local <see cref="IQueryExpression"/> that represents 
+		/// a parsed HQL string or the HQL equivalent of a Linq expression.</param>
+		public ShardedQueryImpl(IShardedSessionImplementor session, IQueryExpression unshardedQueryExpression)
+		{
+			Preconditions.CheckNotNull(session);
+			Preconditions.CheckNotNull(unshardedQueryExpression);
+			this.session = session;
+			this.unshardedQueryExpression = unshardedQueryExpression;
+			this.queryFactory = s => ApplyLimits(s.GetSessionImplementation().CreateQuery(this.QueryExpression));
+		}
+
+		private IQuery ApplyLimits(IQuery query)
+		{
+			query.SetFirstResult(0);
+			if (this.listExitOperationBuilder.MaxResults != null)
+			{
+				query.SetMaxResults(this.listExitOperationBuilder.FirstResult + this.listExitOperationBuilder.MaxResults.Value);
+			}
+			return query;
+		}
+
+		public ShardedQueryExpression QueryExpression
+		{
+		    get
+		    {
+		        if (this.unshardedQueryExpression == null) return null;
+                return this.queryExpression 
+                    ?? (this.queryExpression = new ShardedQueryExpression(this.unshardedQueryExpression, this.listExitOperationBuilder));
+		    }
 		}
 
 		public bool IsReadOnly
@@ -95,7 +142,11 @@ namespace NHibernate.Shards.Query
 		 */
 		public virtual IList List()
 		{
-			return Enumerable<object>().ToList();
+			var result = this.queryExpression != null
+				? (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(this.queryExpression.Type))
+				: new List<object>();
+			List(result);
+			return result;
 		}
 
 		public void List(IList results)
@@ -559,7 +610,7 @@ namespace NHibernate.Shards.Query
 			}
 		}
 
-		private IQuery SomeQuery
+		internal IQuery SomeQuery
 		{
 			get
 			{
