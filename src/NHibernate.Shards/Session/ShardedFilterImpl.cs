@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NHibernate.Engine;
@@ -92,13 +91,13 @@ namespace NHibernate.Shards.Session
 			return this;
 		}
 
-		public IFilter SetParameterList(string name, object[] values)
+		public IFilter SetParameterList<T>(string name, ICollection<T> values)
 		{
 			ApplyActionToShards(f => f.SetParameterList(name, values));
 			return this;
 		}
 
-		public IFilter SetParameterList(string name, ICollection values)
+		public IFilter SetParameterList(string name, object[] values)
 		{
 			ApplyActionToShards(f => f.SetParameterList(name, values));
 			return this;

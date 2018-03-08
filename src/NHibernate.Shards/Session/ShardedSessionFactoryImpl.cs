@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Globalization;
 using System.Linq;
 using NHibernate.Cache;
@@ -26,6 +25,11 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Session
 {
+	using System.Data.Common;
+	using System.Threading;
+	using System.Threading.Tasks;
+	using Type = System.Type;
+
 	public class ShardedSessionFactoryImpl : IShardedSessionFactoryImplementor, IControlSessionProvider
 	{
 		#region Static fields
@@ -299,7 +303,7 @@ namespace NHibernate.Shards.Session
 		/// Not supported for sharded sessions.
 		/// </summary>
 		/// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
-		ISession ISessionFactory.OpenSession(IDbConnection conn)
+		ISession ISessionFactory.OpenSession(DbConnection conn)
 		{
 			throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
 		}
@@ -308,9 +312,19 @@ namespace NHibernate.Shards.Session
 		/// Not supported for sharded sessions.
 		/// </summary>
 		/// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
-		ISession ISessionFactory.OpenSession(IDbConnection conn, IInterceptor interceptor)
+		ISession ISessionFactory.OpenSession(DbConnection conn, IInterceptor interceptor)
 		{
 			throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
+		}
+
+		public ISessionBuilder WithOptions()
+		{
+			throw new NotImplementedException();
+		}
+
+		public IStatelessSessionBuilder WithStatelessOptions()
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -376,6 +390,23 @@ namespace NHibernate.Shards.Session
 			this.statistics.Clear();
 		}
 
+		public async Task CloseAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			var tasks = new Task[this.shardIdsBySessionFactory.Count];
+			var taskCount = 0;
+
+			foreach (var sessionFactory in this.shardIdsBySessionFactory.Keys)
+			{
+				tasks[taskCount++] = sessionFactory.CloseAsync(cancellationToken);
+			}
+			await Task.WhenAll(tasks);
+
+			this.shardIdsBySessionFactory.Clear();
+			this.classesWithoutTopLevelSaveSupport.Clear();
+			this.statistics.Clear();
+		}
+
+
 		/// <summary>
 		/// Evict all entries from the process-level cache.  This method occurs outside
 		/// of any transaction; it performs an immediate "hard" remove, so does not respect
@@ -387,6 +418,14 @@ namespace NHibernate.Shards.Session
 			foreach (var factory in SessionFactories)
 			{
 				factory.Evict(persistentClass);
+			}
+		}
+
+		public async Task EvictAsync(Type persistentClass, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictAsync(persistentClass, cancellationToken);
 			}
 		}
 
@@ -405,6 +444,14 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
+		public async Task EvictAsync(Type persistentClass, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictAsync(persistentClass, id, cancellationToken);
+			}
+		}
+
 		/// <summary> 
 		/// Evict all entries from the second-level cache. This method occurs outside
 		/// of any transaction; it performs an immediate "hard" remove, so does not respect
@@ -418,11 +465,27 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
+		public async Task EvictEntityAsync(string entityName, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictEntityAsync(entityName, cancellationToken);
+			}
+		}
+
 		public void EvictEntity(string entityName, object id)
 		{
 			foreach (var factory in SessionFactories)
 			{
 				factory.EvictEntity(entityName, id);
+			}
+		}
+
+		public async Task EvictEntityAsync(string entityName, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictEntityAsync(entityName, id, cancellationToken);
 			}
 		}
 
@@ -437,6 +500,14 @@ namespace NHibernate.Shards.Session
 			foreach (var factory in SessionFactories)
 			{
 				factory.EvictCollection(roleName);
+			}
+		}
+
+		public async Task EvictCollectionAsync(string roleName, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictCollectionAsync(roleName, cancellationToken);
 			}
 		}
 
@@ -455,6 +526,14 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
+		public async Task EvictCollectionAsync(string roleName, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictCollectionAsync(roleName, id, cancellationToken);
+			}
+		}
+
 		/// <summary>
 		/// Evict any query result sets cached in the default query cache region.
 		/// </summary>
@@ -463,6 +542,14 @@ namespace NHibernate.Shards.Session
 			foreach (var factory in SessionFactories)
 			{
 				factory.EvictQueries();
+			}
+		}
+
+		public async Task EvictQueriesAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictQueriesAsync(cancellationToken);
 			}
 		}
 
@@ -475,6 +562,14 @@ namespace NHibernate.Shards.Session
 			foreach (var factory in SessionFactories)
 			{
 				factory.EvictQueries(cacheRegion);
+			}
+		}
+
+		public async Task EvictQueriesAsync(string cacheRegion, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var factory in SessionFactories)
+			{
+				await factory.EvictQueriesAsync(cacheRegion, cancellationToken);
 			}
 		}
 
@@ -568,7 +663,7 @@ namespace NHibernate.Shards.Session
 		}
 
 		/// <summary> Get a new stateless session for the given ADO.NET connection.</summary>
-		public IStatelessSession OpenStatelessSession(IDbConnection connection)
+		public IStatelessSession OpenStatelessSession(DbConnection connection)
 		{
 			throw new NotSupportedException("Cannot open a stateless sharded session with a user provided connection");
 		}
@@ -741,7 +836,7 @@ namespace NHibernate.Shards.Session
 		}
 
 		ISession ISessionFactoryImplementor.OpenSession(
-			IDbConnection connection, 
+			DbConnection connection, 
 			bool flushBeforeCompletionEnabled, 
 			bool autoCloseSessionEnabled,
 			ConnectionReleaseMode connectionReleaseMode)

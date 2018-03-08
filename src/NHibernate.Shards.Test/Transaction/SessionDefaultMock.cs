@@ -2,7 +2,11 @@
 {
 	using System;
 	using System.Data;
+	using System.Data.Common;
+	using System.Linq;
 	using System.Linq.Expressions;
+	using System.Threading;
+	using System.Threading.Tasks;
 	using NHibernate.Engine;
 	using NHibernate.Stat;
 	using NHibernate.Type;
@@ -14,12 +18,251 @@
 			throw new NotSupportedException();
 		}
 
+		public Task FlushAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<bool> IsDirtyAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task EvictAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> LoadAsync(Type theType, object id, LockMode lockMode,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> LoadAsync(string entityName, object id, LockMode lockMode,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> LoadAsync(Type theType, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<T> LoadAsync<T>(object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<T> LoadAsync<T>(object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> LoadAsync(string entityName, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task LoadAsync(object obj, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task ReplicateAsync(object obj, ReplicationMode replicationMode,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task ReplicateAsync(string entityName, object obj, ReplicationMode replicationMode,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> SaveAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task SaveAsync(object obj, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> SaveAsync(string entityName, object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task SaveAsync(string entityName, object obj, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task SaveOrUpdateAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task SaveOrUpdateAsync(string entityName, object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task SaveOrUpdateAsync(string entityName, object obj, object id,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task UpdateAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task UpdateAsync(object obj, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task UpdateAsync(string entityName, object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task UpdateAsync(string entityName, object obj, object id,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> MergeAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> MergeAsync(string entityName, object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<T> MergeAsync<T>(T entity, CancellationToken cancellationToken = new CancellationToken()) where T : class
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<T> MergeAsync<T>(string entityName, T entity, CancellationToken cancellationToken = new CancellationToken()) where T : class
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task PersistAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task PersistAsync(string entityName, object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task DeleteAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task DeleteAsync(string entityName, object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<int> DeleteAsync(string query, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<int> DeleteAsync(string query, object value, IType type, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<int> DeleteAsync(string query, object[] values, IType[] types,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task LockAsync(object obj, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task LockAsync(string entityName, object obj, LockMode lockMode,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task RefreshAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task RefreshAsync(object obj, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<IQuery> CreateFilterAsync(object collection, string queryString,
+			CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> GetAsync(Type clazz, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> GetAsync(Type clazz, object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<object> GetAsync(string entityName, object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<T> GetAsync<T>(object id, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<T> GetAsync<T>(object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<string> GetEntityNameAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public ISharedSessionBuilder SessionWithOptions()
+		{
+			throw new NotSupportedException();
+		}
+
 		public virtual void Flush()
 		{
 			throw new NotSupportedException();
 		}
 
-		public virtual IDbConnection Disconnect()
+		public virtual DbConnection Disconnect()
 		{
 			throw new NotSupportedException();
 		}
@@ -29,12 +272,17 @@
 			throw new NotSupportedException();
 		}
 
+		public void Reconnect(DbConnection connection)
+		{
+			throw new NotSupportedException();
+		}
+
 		public virtual void Reconnect(IDbConnection connection)
 		{
 			throw new NotSupportedException();
 		}
 
-		public virtual IDbConnection Close()
+		public virtual DbConnection Close()
 		{
 			throw new NotSupportedException();
 		}
@@ -126,7 +374,7 @@
 
 		public void Save(string entityName, object obj, object id)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public virtual void SaveOrUpdate(object obj)
@@ -141,7 +389,7 @@
 
 		public void SaveOrUpdate(string entityName, object obj, object id)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public virtual void Update(object obj)
@@ -170,7 +418,7 @@
 		/// </remarks>
 		public void Update(string entityName, object obj, object id)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public virtual object Merge(object obj)
@@ -259,6 +507,11 @@
 		}
 
 		public virtual ITransaction BeginTransaction(IsolationLevel isolationLevel)
+		{
+			throw new NotSupportedException();
+		}
+
+		public void JoinTransaction()
 		{
 			throw new NotSupportedException();
 		}
@@ -398,6 +651,16 @@
 			throw new NotSupportedException();
 		}
 
+		public IQueryable<T> Query<T>()
+		{
+			throw new NotSupportedException();
+		}
+
+		public IQueryable<T> Query<T>(string entityName)
+		{
+			throw new NotSupportedException();
+		}
+
 		public virtual EntityMode ActiveEntityMode
 		{
 			get { throw new NotSupportedException(); }
@@ -420,7 +683,7 @@
 			get { throw new NotSupportedException(); }
 		}
 
-		public virtual IDbConnection Connection
+		public virtual DbConnection Connection
 		{
 			get { throw new NotSupportedException(); }
 		}

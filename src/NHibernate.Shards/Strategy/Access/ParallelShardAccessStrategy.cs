@@ -7,6 +7,8 @@ using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Strategy.Access
 {
+	using System.Threading.Tasks;
+
 	/// <summary>
 	/// Invokes the given operation on the given shards in parallel.
 	/// </summary>
@@ -28,6 +30,28 @@ namespace NHibernate.Shards.Strategy.Access
 		public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
 		{
 			return new ParallelOperation<T>(shards, operation, exitStrategy).Complete();
+		}
+
+		public Task<T> ApplyAsync<T>(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
+		{
+			return new ParallelAsyncOperation<T>(shards, operation, exitStrategy, cancellationToken).CompleteAsync();
+		}
+
+		private static TimeoutException CreateAndLogTimeoutException(string operationName)
+		{
+			string message = string.Format(
+				CultureInfo.InvariantCulture,
+				"Parallel '{0}' operation did not complete in '{1}' seconds.",
+				operationName, OperationTimeout);
+			Log.Error(message);
+			return new TimeoutException(message);
+		}
+
+		private static HibernateException WrapAndLogShardException(string operationName, Exception exception)
+		{
+			var message = string.Format("Failed parallel '{0}' operation.", operationName);
+			Log.Error(message, exception);
+			return new HibernateException(message, exception);
 		}
 
 		#endregion
@@ -70,13 +94,7 @@ namespace NHibernate.Shards.Strategy.Access
 						if (timeout <= TimeSpan.Zero || !Monitor.Wait(this, timeout))
 						{
 							_isCancelled = true;
-
-							string message = string.Format(
-								CultureInfo.InvariantCulture,
-								"Parallel '{0}' operation did not complete in '{1}' seconds.",
-								_operation.OperationName, OperationTimeout);
-							Log.Error(message);
-							throw new TimeoutException(message);
+							throw CreateAndLogTimeoutException(this._operation.OperationName);
 						}
 
 						now = DateTime.Now;
@@ -85,12 +103,10 @@ namespace NHibernate.Shards.Strategy.Access
 
 				if (_exception != null)
 				{
-					var message = string.Format("Failed parallel '{0}' operation.", _operation.OperationName);
-					Log.Error(message, _exception);
-					throw new HibernateException(message, _exception);
+					throw WrapAndLogShardException(_operation.OperationName, _exception);
 				}
 
-				Log.Debug(string.Format("Completed parallel '{0}' operation.", _operation.OperationName), _exception);
+				Log.Debug(string.Format("Completed parallel '{0}' operation.", _operation.OperationName));
 				return _exitStrategy.CompileResults();
 			}
 
@@ -144,6 +160,69 @@ namespace NHibernate.Shards.Strategy.Access
 					Log.DebugFormat("Failed parallel operation '{0}' on shard '{1:X}'.",
 						_operation.OperationName, s.ShardIds.First());
 				}
+			}
+		}
+
+		private class ParallelAsyncOperation<T>
+		{
+			private readonly IAsyncShardOperation<T> _operation;
+			private readonly IExitStrategy<T> _exitStrategy;
+			private readonly CancellationTokenSource _completedCts = new CancellationTokenSource();
+			private readonly Task<T> _task;
+
+			public ParallelAsyncOperation(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
+			{
+				_operation = operation;
+				_exitStrategy = exitStrategy;
+				_completedCts = new CancellationTokenSource();
+
+				var timeoutCts = new CancellationTokenSource(OperationTimeout);
+				var linkedCts = cancellationToken.CanBeCanceled
+					? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token, _completedCts.Token)
+					: CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _completedCts.Token);
+
+				_task = ExecuteForShardsAsync(shards, linkedCts.Token).ContinueWith(t =>
+				{
+					if (t.IsCanceled && !_completedCts.IsCancellationRequested)
+					{
+						if (timeoutCts.IsCancellationRequested) throw CreateAndLogTimeoutException(operation.OperationName);
+						linkedCts.Token.ThrowIfCancellationRequested();
+					}
+					if (t.Exception != null)
+					{
+						throw WrapAndLogShardException(operation.OperationName, t.Exception.GetBaseException());
+					}
+					return exitStrategy.CompileResults();
+				});
+			}
+
+			public Task<T> CompleteAsync()
+			{
+				return _task;
+			}
+
+			private Task ExecuteForShardsAsync(IEnumerable<IShard> shards, CancellationToken cancellationToken)
+			{
+				var shardTasks = new List<Task>();
+				foreach (var shard in shards)
+				{
+					if (cancellationToken.IsCancellationRequested) break;
+					shardTasks.Add(ExecuteForShardAsync(shard, cancellationToken));
+				}
+
+				return Task.WhenAll(shardTasks);
+			}
+
+			private Task ExecuteForShardAsync(IShard shard, CancellationToken cancellationToken)
+			{
+				var shardOperation = _operation.PrepareAsync(shard);
+				return shardOperation(cancellationToken).ContinueWith(t =>
+				{
+					if (!t.IsCanceled && _exitStrategy.AddResult(t.Result, shard))
+					{
+						_completedCts.Cancel();
+					}
+				});
 			}
 		}
 

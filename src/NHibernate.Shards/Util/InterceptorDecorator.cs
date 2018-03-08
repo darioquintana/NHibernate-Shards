@@ -4,7 +4,7 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Util
 {
-	public class InterceptorDecorator:IInterceptor
+	public class InterceptorDecorator: IInterceptor
 	{
 		private readonly IInterceptor delegateInterceptor;
 
@@ -68,9 +68,9 @@ namespace NHibernate.Shards.Util
 			return this.delegateInterceptor.FindDirty(entity, id, currentState, previousState, propertyNames, types);
 		}
 
-		public virtual object Instantiate(string entityName, EntityMode entityMode, object id)
+		public virtual object Instantiate(string entityName, object id)
 		{
-			return this.delegateInterceptor.Instantiate(entityName, entityMode, id);
+			return this.delegateInterceptor.Instantiate(entityName, id);
 		}
 
 		public virtual string GetEntityName(object entity)

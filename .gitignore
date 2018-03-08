@@ -27,3 +27,4 @@ TestResult*.xml
 [Rr]elease*/
 *resharper*
 _ReSharper*/
+/src/.vs/NHibernate.Shards/v15/Server/sqlite3

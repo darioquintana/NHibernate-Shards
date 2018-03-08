@@ -10,6 +10,9 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Test.Transaction
 {
+	using System.Threading;
+	using System.Threading.Tasks;
+
 	public class ShardedSessionImplementorDefaultMock: IShardedSessionImplementor
 	{
 		public virtual IShard AnyShard
@@ -63,6 +66,11 @@ namespace NHibernate.Shards.Test.Transaction
 		}
 
 		public virtual T Execute<T>(IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<T> ExecuteAsync<T>(IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

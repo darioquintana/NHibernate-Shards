@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net45</TargetFrameworks>
+    <TargetFrameworks>net461</TargetFrameworks>
     <PackageTags>NHibernate, ORM, ObjectRelationalMapping, Sharding, Partitioning</PackageTags>
     <Authors>Gerke Geurts, Dario Quintana</Authors>
     <Description>NHibernate Shards is a framework that adds support for horizontal partitioning to NHibernate Core.</Description>
@@ -26,7 +26,7 @@
     <DocumentationFile>bin\Release\net40\NHibernate.Shards.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NHibernate" Version="4.1.1.4000" />
+    <PackageReference Include="NHibernate" Version="5.0.3" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.4.1" />
   </ItemGroup>
 </Project>

@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NHibernate.Shards", "NHibernate.Shards\NHibernate.Shards.csproj", "{9DEF9516-EB32-479D-99BF-FE8175956112}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NHibernate.Shards", "NHibernate.Shards\NHibernate.Shards.csproj", "{9DEF9516-EB32-479D-99BF-FE8175956112}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NHibernate.Shards.Test", "NHibernate.Shards.Test\NHibernate.Shards.Test.csproj", "{186131D7-16AB-4E44-9279-C1B70B4178B7}"
 EndProject
@@ -12,7 +12,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{B56450B2-C4A7-4CA5-BD41-E27818362467}"
 	ProjectSection(SolutionItems) = preProject
 		..\build.cmd = ..\build.cmd
-		..\default.build = ..\default.build
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{82316398-E827-4293-B193-6DB337D27D2F}"
@@ -43,5 +42,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {86FFC94C-50FC-4865-823A-3D281110D401}
 	EndGlobalSection
 EndGlobal

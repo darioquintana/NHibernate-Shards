@@ -9,6 +9,9 @@ using NHibernate.Transform;
 
 namespace NHibernate.Shards.Criteria
 {
+	using System.Threading;
+	using System.Threading.Tasks;
+
 	public class ShardedMultiCriteriaImpl: IShardedMultiCriteria
 	{
 		#region Instance fields
@@ -53,10 +56,38 @@ namespace NHibernate.Shards.Criteria
 			throw new KeyNotFoundException();
 		}
 
+		public async Task<object> GetResultAsync(string key, CancellationToken cancellationToken = new CancellationToken())
+		{
+			if (this.criteriaResult == null)
+			{
+				this.criteriaResult = await ListAsync(cancellationToken);
+			}
+
+			for (int i = 0; i < this.entries.Count; i++)
+			{
+				if (this.entries[i].Key == key) return this.criteriaResult[i];
+			}
+
+			throw new KeyNotFoundException();
+		}
+
 		public IList List()
 		{
 			var exitStrategies = this.entries.Select(i => i.BuildListExitStrategy());
 			var result = this.session.Execute(new ListShardOperation(this), new MultiExitStrategy(exitStrategies));
+
+			var resultLists = new IList[this.entries.Count];
+			for (int i = 0; i < this.entries.Count; i++)
+			{
+				resultLists[i] = this.entries[i].BuildResultList((IEnumerable)result[i]);
+			}
+			return resultLists;
+		}
+
+		public async Task<IList> ListAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			var exitStrategies = this.entries.Select(i => i.BuildListExitStrategy());
+			var result = await this.session.ExecuteAsync(new ListShardOperation(this), new MultiExitStrategy(exitStrategies), cancellationToken);
 
 			var resultLists = new IList[this.entries.Count];
 			for (int i = 0; i < this.entries.Count; i++)
@@ -271,13 +302,18 @@ namespace NHibernate.Shards.Criteria
 			}
 		}
 
-		private class ListShardOperation : IShardOperation<IList>
+		private class ListShardOperation : IShardOperation<IList>, IAsyncShardOperation<IList>
 		{
 			private readonly IShardedMultiCriteria shardedMultiCriteria;
 
 			public ListShardOperation(IShardedMultiCriteria shardedMultiCriteria)
 			{
 				this.shardedMultiCriteria = shardedMultiCriteria;
+			}
+
+			public string OperationName
+			{
+				get { return "List()"; }
 			}
 
 			public Func<IList> Prepare(IShard shard)
@@ -287,9 +323,10 @@ namespace NHibernate.Shards.Criteria
 				return multiCriteria.List;
 			}
 
-			public string OperationName
+			public Func<CancellationToken, Task<IList>> PrepareAsync(IShard shard)
 			{
-				get { return "List()"; }
+				var multiCriteria = this.shardedMultiCriteria.EstablishFor(shard);
+				return multiCriteria.ListAsync;
 			}
 		}
 

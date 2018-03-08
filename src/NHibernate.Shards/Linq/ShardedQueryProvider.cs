@@ -7,7 +7,6 @@
 	using NHibernate.Engine;
 	using NHibernate.Impl;
 	using NHibernate.Linq;
-	using NHibernate.Shards.Query;
 	using NHibernate.Type;
 
 	public class ShardedQueryProvider : DefaultQueryProvider
@@ -15,16 +14,13 @@
 		public ShardedQueryProvider(ISessionImplementor session) : base(session)
 		{}
 
-		protected override NhLinqExpression PrepareQuery(Expression expression, out IQuery query, out NhLinqExpression nhQuery)
+		protected override NhLinqExpression PrepareQuery(Expression expression, out IQuery query)
 		{
 			// Detect non-sharded NHibernate session
-			if (this.Session is SessionImpl) return base.PrepareQuery(expression, out query, out nhQuery);
+			if (this.Session is SessionImpl) return base.PrepareQuery(expression, out query);
 
 			var linqExpression = new NhLinqExpression(expression, this.Session.Factory);
 			query = this.Session.CreateQuery(linqExpression);
-
-			var shardedQueryExpression = ((ShardedQueryImpl) query).QueryExpression;
-			nhQuery = (NhLinqExpression)shardedQueryExpression.UnshardedQueryExpression;
 
 			SetParameters(query, linqExpression.ParameterValuesByName);
 			SetResultTransformerAndAdditionalCriteria(query, linqExpression, linqExpression.ParameterValuesByName);

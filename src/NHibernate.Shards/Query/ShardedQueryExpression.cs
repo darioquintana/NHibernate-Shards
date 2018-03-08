@@ -170,7 +170,6 @@ namespace NHibernate.Shards.Query
 
 				case HqlSqlWalker.ORDER:
 					ExtractOrders(node);
-					// TODO: Extract sort order
 					return true;
 				case HqlSqlWalker.AVG:
 					// TODO: Replace AVG with SUM and COUNT 
@@ -233,7 +232,7 @@ namespace NHibernate.Shards.Query
 
 				this.listExitOperationBuilder.Orders.Add(
 					new SortOrder(
-						o => this.rootClassMetadata.GetPropertyValue(o, propertyPath, EntityMode.Poco), 
+						o => this.rootClassMetadata.GetPropertyValue(o, propertyPath), 
 						isDescending));
 			}
 		}

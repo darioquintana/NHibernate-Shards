@@ -5,6 +5,8 @@ using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Engine
 {
+	using System.Threading;
+	using System.Threading.Tasks;
 
 	/// <summary>
 	///  Defines the internal contract between the ShardedSession and other
@@ -71,5 +73,18 @@ namespace NHibernate.Shards.Engine
 		/// operation results from the shards.</param>
 		/// <returns>The aggregated operation result.</returns>
 		T Execute<T>(IShardOperation<T> operation, IExitStrategy<T> exitStrategy);
+
+		/// <summary>
+		/// Performs the specified asynchrnous operation on the shards that are within the scope of
+		/// this sharded session and aggregates the results from each shard into a single 
+		/// result.
+		/// </summary>
+		/// <typeparam name="T">Return value type.</typeparam>
+		/// <param name="operation">The asynchrnous operation to be performed on each shard.</param>
+		/// <param name="exitStrategy">Strategy for collection and aggregation of 
+		/// operation results from the shards.</param>
+		/// <param name="cancellationToken">A cancellation token for the asynchronous operation.</param>
+		/// <returns>The aggregated operation result.</returns>
+		Task<T> ExecuteAsync<T>(IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken);
 	}
 }

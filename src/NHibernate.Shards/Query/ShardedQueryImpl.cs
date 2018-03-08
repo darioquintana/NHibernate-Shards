@@ -12,6 +12,9 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Query
 {
+	using System.Threading;
+	using System.Threading.Tasks;
+
 	/// <summary>
 	/// Concrete implementation of ShardedQuery provided by Hibernate Shards. This
 	/// implementation introduces limits to the HQL language; mostly around
@@ -112,22 +115,24 @@ namespace NHibernate.Shards.Query
 			get { return this.SomeQuery.IsReadOnly; }
 		}
 
-		/**
-		 * This method currently wraps list().
-		 *
-		 * {@inheritDoc}
-		 *
-		 * @return an iterator over the results of the query
-		 * @throws HibernateException
-		 */
 		public IEnumerable Enumerable()
 		{
 			return Enumerable<object>();
 		}
 
+		public async Task<IEnumerable> EnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			return await EnumerableAsync<object>(cancellationToken);
+		}
+
 		public IEnumerable<T> Enumerable<T>()
 		{
 			return this.session.Execute(new ListShardOperation<T>(this), BuildListExitStrategy<T>());
+		}
+
+		public async Task<IEnumerable<T>> EnumerableAsync<T>(CancellationToken cancellationToken = new CancellationToken())
+		{
+			return await this.session.ExecuteAsync(new ListShardOperation<T>(this), BuildListExitStrategy<T>(), cancellationToken);
 		}
 
 		/**
@@ -142,12 +147,26 @@ namespace NHibernate.Shards.Query
 		 */
 		public virtual IList List()
 		{
-			var result = this.queryExpression != null
-				? (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(this.queryExpression.Type))
-				: new List<object>();
+			var result = CreateListResult();
 			List(result);
 			return result;
 		}
+
+		public async Task<IList> ListAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			var result = CreateListResult();
+			await ListAsync(result, cancellationToken);
+			return result;
+		}
+
+		private IList CreateListResult()
+		{
+			var result = this.queryExpression != null
+				? (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(this.queryExpression.Type))
+				: new List<object>();
+			return result;
+		}
+
 
 		public void List(IList results)
 		{
@@ -157,9 +176,22 @@ namespace NHibernate.Shards.Query
 			}
 		}
 
+		public async Task ListAsync(IList results, CancellationToken cancellationToken = new CancellationToken())
+		{
+			foreach (var item in await EnumerableAsync(cancellationToken))
+			{
+				results.Add(item);
+			}
+		}
+
 		public IList<T> List<T>()
 		{
 			return Enumerable<T>().ToList();
+		}
+
+		public async Task<IList<T>> ListAsync<T>(CancellationToken cancellationToken = new CancellationToken())
+		{
+			return (await EnumerableAsync<T>(cancellationToken)).ToList();
 		}
 
 		/**
@@ -177,14 +209,24 @@ namespace NHibernate.Shards.Query
 
 		}
 
+		public Task<object> UniqueResultAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			return UniqueResultAsync<object>(cancellationToken);
+		}
+
 		public T UniqueResult<T>()
 		{
 			return this.session.Execute(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>(null));
 		}
 
-		public IEnumerable<T> Future<T>()
+		public Task<T> UniqueResultAsync<T>(CancellationToken cancellationToken = new CancellationToken())
 		{
-			return this.session.Execute(new FutureShardOperation<T>(this), BuildListExitStrategy<T>());
+			return this.session.ExecuteAsync(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>(null), cancellationToken);
+		}
+
+		public IFutureEnumerable<T> Future<T>()
+		{
+			return new FutureShardOperation<T>(this);
 		}
 
 		public IFutureValue<T> FutureValue<T>()
@@ -195,6 +237,11 @@ namespace NHibernate.Shards.Query
 		public int ExecuteUpdate()
 		{
 			return this.session.Execute(new ExecuteUpdateShardOperation(this), new ExecuteUpdateExitStrategy());
+		}
+
+		public Task<int> ExecuteUpdateAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			return this.session.ExecuteAsync(new ExecuteUpdateShardOperation(this), new ExecuteUpdateExitStrategy(), cancellationToken);
 		}
 
 		public IQuery SetMaxResults(int maxResults)
@@ -403,6 +450,18 @@ namespace NHibernate.Shards.Query
 			return this;
 		}
 
+		public IQuery SetDateTimeNoMs(int position, DateTime val)
+		{
+			ApplyActionToShards(q => q.SetDateTimeNoMs(position, val));
+			return this;
+		}
+
+		public IQuery SetDateTimeNoMs(string name, DateTime val)
+		{
+			ApplyActionToShards(q => q.SetDateTimeNoMs(name, val));
+			return this;
+		}
+
 		public IQuery SetDecimal(int position, decimal val)
 		{
 			ApplyActionToShards(q => q.SetDecimal(position, val));
@@ -511,12 +570,14 @@ namespace NHibernate.Shards.Query
 			return this;
 		}
 
+		[Obsolete("Use method 'SetDateTime'")]
 		public IQuery SetTimestamp(int position, DateTime val)
 		{
 			ApplyActionToShards(q => q.SetTimestamp(position, val));
 			return this;
 		}
 
+		[Obsolete("Use method 'SetDateTime'")]
 		public IQuery SetTimestamp(string name, DateTime val)
 		{
 			ApplyActionToShards(q => q.SetTimestamp(name, val));
@@ -535,12 +596,14 @@ namespace NHibernate.Shards.Query
 			return this;
 		}
 
+		[Obsolete("Use method 'SetDateTime', which will use DateTime2 on dialects that support it.")]
 		public IQuery SetDateTime2(string name, DateTime val)
 		{
 			ApplyActionToShards(q => q.SetDateTime2(name, val));
 			return this;
 		}
 
+		[Obsolete("Use method 'SetDateTime', which will use DateTime2 on dialects that support it.")]
 		public IQuery SetDateTime2(int position, DateTime val)
 		{
 			ApplyActionToShards(q => q.SetDateTime2(position, val));
@@ -659,7 +722,7 @@ namespace NHibernate.Shards.Query
 			return new ListExitStrategy<T>(this.listExitOperationBuilder.BuildListOperation());
 		}
 
-		private class UniqueResultShardOperation<T> : IShardOperation<T>
+		private class UniqueResultShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>
 		{
 			private readonly IShardedQuery shardedQuery;
 
@@ -675,13 +738,20 @@ namespace NHibernate.Shards.Query
 				return query.UniqueResult<T>;
 			}
 
+			public Func<CancellationToken, Task<T>> PrepareAsync(IShard shard)
+			{
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var query = this.shardedQuery.EstablishFor(shard);
+				return query.UniqueResultAsync<T>;
+			}
+
 			public string OperationName
 			{
 				get { return "UniqueResult()"; }
 			}
 		}
 
-		private class ListShardOperation<T> : IShardOperation<IEnumerable<T>>
+		private class ListShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>
 		{
 			private readonly IShardedQuery shardedQuery;
 
@@ -697,20 +767,35 @@ namespace NHibernate.Shards.Query
 				return query.List<T>;
 			}
 
+			public Func<CancellationToken, Task<IEnumerable<T>>> PrepareAsync(IShard shard)
+			{
+				var query = this.shardedQuery.EstablishFor(shard);
+				return async ct => await query.ListAsync<T>(ct);
+			}
+
 			public string OperationName
 			{
 				get { return "List()"; }
 			}
 		}
 
-		private class FutureShardOperation<T> : IShardOperation<IEnumerable<T>>
+		private class FutureShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>, IFutureEnumerable<T>
 		{
-			private readonly IDictionary<IShard, IEnumerable<T>> futuresByShard;
+			private readonly IShardedSessionImplementor session;
+			private readonly IListExitStrategy<T> listExitStrategy;
+			private readonly IDictionary<IShard, IFutureEnumerable<T>> futuresByShard;
 
 			public FutureShardOperation(ShardedQueryImpl shardedQuery)
 			{
+				this.session = shardedQuery.session;
+				this.listExitStrategy = shardedQuery.BuildListExitStrategy<T>();
 				this.futuresByShard = shardedQuery.session.Shards
 					.ToDictionary(s => s, s => shardedQuery.EstablishFor(s).Future<T>());
+			}
+
+			public string OperationName
+			{
+				get { return "Future()"; }
 			}
 
 			public Func<IEnumerable<T>> Prepare(IShard shard)
@@ -718,13 +803,33 @@ namespace NHibernate.Shards.Query
 				return () => this.futuresByShard[shard];
 			}
 
-			public string OperationName
+			public Func<CancellationToken, Task<IEnumerable<T>>> PrepareAsync(IShard shard)
 			{
-				get { return "Future()"; }
+				return this.futuresByShard[shard].GetEnumerableAsync;
+			}
+
+			public Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
+			{
+				return this.session.ExecuteAsync(this, this.listExitStrategy, cancellationToken);
+			}
+
+			public IEnumerable<T> GetEnumerable()
+			{
+				return this.session.Execute(this, this.listExitStrategy);
+			}
+
+			public IEnumerator<T> GetEnumerator()
+			{
+				return GetEnumerable().GetEnumerator();
+			}
+
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return GetEnumerable().GetEnumerator();
 			}
 		}
 
-		private class FutureValueShardOperation<T> : IShardOperation<T>, IFutureValue<T>
+		private class FutureValueShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>, IFutureValue<T>
 		{
 			private readonly IShardedSessionImplementor session;
 			private readonly IDictionary<IShard, IFutureValue<T>> futuresByShard;
@@ -736,9 +841,19 @@ namespace NHibernate.Shards.Query
 					.ToDictionary(s => s, s => shardedQuery.EstablishFor(s).FutureValue<T>());
 			}
 
+			public string OperationName
+			{
+				get { return "FutureValue()"; }
+			}
+
 			public Func<T> Prepare(IShard shard)
 			{
 				return () => this.futuresByShard[shard].Value;
+			}
+
+			public Func<CancellationToken, Task<T>> PrepareAsync(IShard shard)
+			{
+				return this.futuresByShard[shard].GetValueAsync;
 			}
 
 			public T Value
@@ -746,13 +861,13 @@ namespace NHibernate.Shards.Query
 				get { return this.session.Execute(this, new UniqueResultExitStrategy<T>(null)); }
 			}
 
-			public string OperationName
+			public Task<T> GetValueAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-				get { return "FutureValue()"; }
+				return this.session.ExecuteAsync(this, new UniqueResultExitStrategy<T>(null), cancellationToken);
 			}
 		}
 
-		private class ExecuteUpdateShardOperation : IShardOperation<int>
+		private class ExecuteUpdateShardOperation : IShardOperation<int>, IAsyncShardOperation<int>
 		{
 			private readonly IShardedQuery shardedQuery;
 
@@ -766,6 +881,13 @@ namespace NHibernate.Shards.Query
 				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
 				var query = this.shardedQuery.EstablishFor(shard);
 				return query.ExecuteUpdate;
+			}
+
+			public Func<CancellationToken, Task<int>> PrepareAsync(IShard shard)
+			{
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var query = this.shardedQuery.EstablishFor(shard);
+				return query.ExecuteUpdateAsync;
 			}
 
 			public string OperationName

@@ -30,6 +30,10 @@ using NHibernate.Transaction;
 
 namespace NHibernate.Shards.Transaction
 {
+	using System.Data.Common;
+	using System.Threading;
+	using System.Threading.Tasks;
+
 	/// <summary>
 	/// NHibernate <see cref="ITransaction"/> implementation for a transaction that can span one or more
 	/// shards. If a transaction spans more than one shard, it is important to use a distributed 
@@ -148,6 +152,41 @@ namespace NHibernate.Shards.Transaction
 			}
 		}
 
+		public async Task CommitAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			CheckNotDisposed();
+			CheckBegun();
+
+			Log.Debug("Starting transaction commit");
+			NotifyLocalSynchsBeforeTransactionCompletion();
+
+			Exception exception;
+			try
+			{
+				await CommitShardTransactionsAsync(cancellationToken);
+
+				AfterTransactionCompletion(true);
+				committed = true;
+				Dispose();
+				return;
+			}
+			catch (Exception e)
+			{
+				exception = e;
+			}
+
+			try
+			{
+				await RollbackShardTransactionsAsync(cancellationToken);
+			}
+			finally
+			{
+				AfterTransactionCompletion(null);
+				commitFailed = true;
+			}
+			throw exception;
+		}
+
 		public void Rollback()
 		{
 			// To maintain compatibility with Hibernate tests
@@ -172,13 +211,37 @@ namespace NHibernate.Shards.Transaction
 			}
 		}
 
+		public async Task RollbackAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			// To maintain compatibility with Hibernate tests
+			if (commitFailed)
+			{
+				rolledBack = true;
+				return;
+			}
+
+			CheckNotDisposed();
+			CheckBegun();
+
+			try
+			{
+				await RollbackShardTransactionsAsync(cancellationToken);
+				rolledBack = true;
+				Dispose();
+			}
+			finally
+			{
+				AfterTransactionCompletion(false);
+			}
+		}
+
 		public void Enlist(ISession session)
 		{
 			if (!begun) return;
 			BeginShardTransaction(session);
 		}
 
-		public void Enlist(IDbCommand command)
+		public void Enlist(DbCommand command)
 		{
 			const string MESSAGE = "Can't enlist a commmand succesfully";
 
@@ -261,6 +324,39 @@ namespace NHibernate.Shards.Transaction
 			transactions.Clear();
 		}
 
+		private async Task CommitShardTransactionsAsync(CancellationToken cancellationToken)
+		{
+			if (transactions == null) return;
+
+			HibernateException firstCommitException = null;
+
+			foreach (ITransaction t in transactions)
+			{
+				try
+				{
+					if (t.IsActive) await t.CommitAsync(cancellationToken);
+				}
+				catch (HibernateException he)
+				{
+					Log.Warn("Exception committing underlying transaction", he);
+
+					// we're only going to rethrow the first commit exception we receive
+					if (firstCommitException == null)
+					{
+						firstCommitException = he;
+					}
+				}
+			}
+
+			if (firstCommitException != null)
+			{
+				throw new TransactionException("Commit failed", firstCommitException);
+			}
+
+			DisposeShardTransactions();
+			transactions.Clear();
+		}
+
 		private void RollbackShardTransactions()
 		{
 			if (transactions == null) return;
@@ -274,6 +370,44 @@ namespace NHibernate.Shards.Transaction
 					try
 					{
 						if (t.IsActive) t.Rollback();
+					}
+					catch (HibernateException he)
+					{
+						Log.Warn("Cannot rollback underlying transaction", he);
+
+						// we're only going to rethrow the first commit exception we receive
+						if (firstRollbackException == null)
+						{
+							firstRollbackException = he;
+						}
+					}
+				}
+
+				if (firstRollbackException != null)
+				{
+					throw new TransactionException("Rollback failed", firstRollbackException);
+				}
+			}
+			finally
+			{
+				DisposeShardTransactions();
+				transactions.Clear();
+			}
+		}
+
+		private async Task RollbackShardTransactionsAsync(CancellationToken cancellationToken)
+		{
+			if (transactions == null) return;
+
+			try
+			{
+				HibernateException firstRollbackException = null;
+
+				foreach (ITransaction t in transactions)
+				{
+					try
+					{
+						if (t.IsActive) await t.RollbackAsync(cancellationToken);
 					}
 					catch (HibernateException he)
 					{

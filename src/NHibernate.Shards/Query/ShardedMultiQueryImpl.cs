@@ -9,6 +9,9 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Query
 {
+	using System.Threading;
+	using System.Threading.Tasks;
+
 	public class ShardedMultiQueryImpl: IShardedMultiQuery
 	{
 		#region Instance fields
@@ -142,10 +145,38 @@ namespace NHibernate.Shards.Query
 			throw new KeyNotFoundException();
 		}
 
+		public async Task<object> GetResultAsync(string key, CancellationToken cancellationToken = new CancellationToken())
+		{
+			if (this.queryResult == null)
+			{
+				this.queryResult = await ListAsync(cancellationToken);
+			}
+
+			for (int i = 0; i < this.entries.Count; i++)
+			{
+				if (this.entries[i].Key == key) return this.queryResult[i];
+			}
+
+			throw new KeyNotFoundException();
+		}
+
 		public IList List()
 		{
 			var exitStrategies = this.entries.Select(i => i.BuildListExitStrategy());
 			var result = this.session.Execute(new ListShardOperation(this), new MultiExitStrategy(exitStrategies));
+
+			var resultLists = new IList[this.entries.Count];
+			for (int i = 0; i < this.entries.Count; i++)
+			{
+				resultLists[i] = this.entries[i].BuildResultList((IEnumerable)result[i]);
+			}
+			return resultLists;
+		}
+
+		public async Task<IList> ListAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			var exitStrategies = this.entries.Select(i => i.BuildListExitStrategy());
+			var result = await this.session.ExecuteAsync(new ListShardOperation(this), new MultiExitStrategy(exitStrategies), cancellationToken);
 
 			var resultLists = new IList[this.entries.Count];
 			for (int i = 0; i < this.entries.Count; i++)
@@ -200,6 +231,12 @@ namespace NHibernate.Shards.Query
 		public IMultiQuery SetDateTime(string name, DateTime val)
 		{
 			ApplyActionToShards(q => q.SetDateTime(name, val));
+			return this;
+		}
+
+		public IMultiQuery SetDateTimeNoMs(string name, DateTime val)
+		{
+			ApplyActionToShards(q => q.SetDateTimeNoMs(name, val));
 			return this;
 		}
 
@@ -263,6 +300,7 @@ namespace NHibernate.Shards.Query
 			return this;
 		}
 
+		[Obsolete("Use method 'SetDateTime', which will use DateTime2 on dialects that support it.")]
 		public IMultiQuery SetDateTime2(string name, DateTime val)
 		{
 			ApplyActionToShards(q => q.SetDateTime2(name, val));
@@ -341,6 +379,7 @@ namespace NHibernate.Shards.Query
 			return this;
 		}
 
+		[Obsolete("Use method 'SetDateTime'")]
 		public IMultiQuery SetTimestamp(string name, DateTime val)
 		{
 			ApplyActionToShards(q => q.SetTimestamp(name, val));
@@ -425,7 +464,7 @@ namespace NHibernate.Shards.Query
 			}
 		}
 
-		private class ListShardOperation : IShardOperation<IList>
+		private class ListShardOperation : IShardOperation<IList>, IAsyncShardOperation<IList>
 		{
 			private readonly IShardedMultiQuery shardedMultiQuery;
 
@@ -439,6 +478,12 @@ namespace NHibernate.Shards.Query
 				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
 				var multiQuery = this.shardedMultiQuery.EstablishFor(shard);
 				return multiQuery.List;
+			}
+
+			public Func<CancellationToken, Task<IList>> PrepareAsync(IShard shard)
+			{
+				var multiQuery = this.shardedMultiQuery.EstablishFor(shard);
+				return multiQuery.ListAsync;
 			}
 
 			public string OperationName

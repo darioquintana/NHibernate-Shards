@@ -2,11 +2,24 @@
 {
 	using System;
 	using System.Data;
+	using System.Data.Common;
+	using System.Threading;
+	using System.Threading.Tasks;
 	using NHibernate.Transaction;
 
 	public class ShardedTransactionDefaultMock: IShardedTransaction
 	{
 		public virtual void Dispose()
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task CommitAsync(CancellationToken cancellationToken = new CancellationToken())
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task RollbackAsync(CancellationToken cancellationToken = new CancellationToken())
 		{
 			throw new NotSupportedException();
 		}
@@ -31,12 +44,12 @@
 			throw new NotSupportedException();
 		}
 
-		public virtual void Enlist(ISession session)
+		public void Enlist(DbCommand command)
 		{
-			throw new NotSupportedException();
+			throw new NotImplementedException();
 		}
 
-		public virtual void Enlist(IDbCommand command)
+		public virtual void Enlist(ISession session)
 		{
 			throw new NotSupportedException();
 		}

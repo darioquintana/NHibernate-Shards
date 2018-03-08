@@ -3,6 +3,9 @@ using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Strategy.Access
 {
+	using System.Threading;
+	using System.Threading.Tasks;
+
 	public class SequentialShardAccessStrategy : IShardAccessStrategy
 	{
 		private readonly IInternalLogger log = LoggerProvider.LoggerFor(typeof(SequentialShardAccessStrategy));
@@ -11,7 +14,7 @@ namespace NHibernate.Shards.Strategy.Access
 
 		public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
 		{
-			foreach (IShard shard in GetNextOrderingOfShards(shards))
+			foreach (var shard in GetNextOrderingOfShards(shards))
 			{
 				var shardOperation = operation.Prepare(shard);
 				var result = shardOperation();
@@ -19,6 +22,22 @@ namespace NHibernate.Shards.Strategy.Access
 				{
 					log.DebugFormat("Short-circuiting operation {0} after execution against shard {1}",
 								  operation.OperationName, shard);
+					break;
+				}
+			}
+			return exitStrategy.CompileResults();
+		}
+
+		public async Task<T> ApplyAsync<T>(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
+		{
+			foreach (var shard in GetNextOrderingOfShards(shards))
+			{
+				var shardOperation = operation.PrepareAsync(shard);
+				var result = await shardOperation(cancellationToken);
+				if (result != null && exitStrategy.AddResult(result, shard))
+				{
+					log.DebugFormat("Short-circuiting operation {0} after execution against shard {1}",
+						operation.OperationName, shard);
 					break;
 				}
 			}
