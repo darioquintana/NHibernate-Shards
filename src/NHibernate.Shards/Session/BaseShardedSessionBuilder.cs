@@ -41,32 +41,32 @@ namespace NHibernate.Shards.Session
             return (TShardedBuilder)this;
         }
 
-        public TShardedBuilder Connection(DbConnection connection)
+        protected internal TShardedBuilder Connection(DbConnection connection)
         {
             throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
         }
 
         public TShardedBuilder ConnectionReleaseMode(ConnectionReleaseMode connectionReleaseMode)
         {
-            this.establishActions.Add(b => b.ConnectionReleaseMode(connectionReleaseMode));
+            ApplyActionToShards(b => b.ConnectionReleaseMode(connectionReleaseMode));
             return (TShardedBuilder)this;
         }
 
         public TShardedBuilder AutoClose(bool autoClose)
         {
-            this.establishActions.Add(b => b.AutoClose(autoClose));
+            ApplyActionToShards(b => b.AutoClose(autoClose));
             return (TShardedBuilder)this;
         }
 
         public TShardedBuilder AutoJoinTransaction(bool autoJoinTransaction)
         {
-            this.establishActions.Add(b => b.AutoJoinTransaction(autoJoinTransaction));
+            ApplyActionToShards(b => b.AutoJoinTransaction(autoJoinTransaction));
             return (TShardedBuilder)this;
         }
 
         public TShardedBuilder FlushMode(FlushMode flushMode)
         {
-            this.establishActions.Add(b => b.FlushMode(flushMode));
+            ApplyActionToShards(b => b.FlushMode(flushMode));
             return (TShardedBuilder)this;
         }
 
@@ -97,6 +97,11 @@ namespace NHibernate.Shards.Session
         #region Protected methods
 
         protected abstract TBuilder CreateBuilderFor(IShard shard);
+
+        protected void ApplyActionToShards(Action<TBuilder> action)
+        {
+            this.establishActions.Add(action);
+        }
 
         #endregion
     }

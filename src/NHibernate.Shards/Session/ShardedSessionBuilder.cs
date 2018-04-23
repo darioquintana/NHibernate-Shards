@@ -1,8 +1,6 @@
 namespace NHibernate.Shards.Session
 {
     using System.Data.Common;
-    using NHibernate.Engine;
-    using NHibernate.Shards.Engine;
     using NHibernate.Shards.Util;
 
     public class ShardedSessionBuilder : BaseShardedSessionBuilder<ShardedSessionBuilder, ISessionBuilder>, ISessionBuilder

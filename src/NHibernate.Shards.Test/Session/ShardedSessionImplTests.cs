@@ -26,13 +26,13 @@ namespace NHibernate.Shards.Test.Session
 	        var sessionBuilder = shardedSession.SessionWithOptions();
 	        Assert.That(sessionBuilder, Is.Not.Null, nameof(this.SessionFactory.WithOptions));
 
-	        Assert.That(sessionBuilder.AutoClose(true),
+	        Assert.That(sessionBuilder.AutoClose(),
 	            Is.SameAs(sessionBuilder), nameof(sessionBuilder.AutoClose));
-	        Assert.That(sessionBuilder.AutoJoinTransaction(true),
+	        Assert.That(sessionBuilder.AutoJoinTransaction(),
 	            Is.SameAs(sessionBuilder), nameof(sessionBuilder.AutoJoinTransaction));
-	        Assert.That(sessionBuilder.ConnectionReleaseMode(ConnectionReleaseMode.AfterTransaction),
+	        Assert.That(sessionBuilder.ConnectionReleaseMode(),
 	            Is.SameAs(sessionBuilder), nameof(sessionBuilder.ConnectionReleaseMode));
-	        Assert.That(sessionBuilder.FlushMode(FlushMode.Manual),
+	        Assert.That(sessionBuilder.FlushMode(),
 	            Is.SameAs(sessionBuilder), nameof(sessionBuilder.FlushMode));
 
 	        var sharedShardedSession = sessionBuilder.OpenSession();
