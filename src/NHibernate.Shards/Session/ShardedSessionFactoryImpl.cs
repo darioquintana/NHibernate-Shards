@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Cache;
 using NHibernate.Cfg;
 using NHibernate.Connection;
@@ -25,12 +28,7 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Session
 {
-	using System.Data.Common;
-	using System.Threading;
-	using System.Threading.Tasks;
-	using Type = System.Type;
-
-	public class ShardedSessionFactoryImpl : IShardedSessionFactoryImplementor, IControlSessionProvider
+    public class ShardedSessionFactoryImpl : IShardedSessionFactoryImplementor, IControlSessionProvider
 	{
 		#region Static fields
 
@@ -207,6 +205,21 @@ namespace NHibernate.Shards.Session
 
 		#region IShardedSessionFactoryImplementor Members
 
+	    public bool CheckAllAssociatedObjectsForDifferentShards
+	    {
+	        get { return this.checkAllAssociatedObjectsForDifferentShards; }
+	    }
+
+	    public bool IsClassWithTopLevelSaveSupport(System.Type type)
+	    {
+	        return this.classesWithoutTopLevelSaveSupport.Contains(type);
+	    }
+
+        public IShardStrategy ShardStrategy
+	    {
+	        get { return this.shardStrategy; }
+	    }
+
 		public ISessionFactoryImplementor ControlFactory
 		{
 			get { return this.controlSessionFactory; }
@@ -253,23 +266,20 @@ namespace NHibernate.Shards.Session
 		/// <param name="interceptor">a session-scoped interceptor</param>
 		/// <returns></returns>
 		/// Throws <see cref="HibernateException"/>
+		[Obsolete("Use WithOptions() instead")]
 		public IShardedSession OpenSession(IInterceptor interceptor)
 		{
-			return new ShardedSessionImpl(
-				this,
-				shardStrategy,
-				classesWithoutTopLevelSaveSupport,
-				interceptor,
-				checkAllAssociatedObjectsForDifferentShards);
+		    return WithOptions().Interceptor(interceptor).OpenSession();
 		}
 
-		/// <summary>
-		/// Create database connection and open a <c>ISession</c> on it, specifying an interceptor
-		/// Warning: this interceptor will be shared across all shards, so be very
-		/// careful about using a stateful implementation.
-		/// </summary>
-		/// <param name="interceptor">A session-scoped interceptor</param>
-		/// <returns>A session</returns>
+        /// <summary>
+        /// Create database connection and open a <c>ISession</c> on it, specifying an interceptor
+        /// Warning: this interceptor will be shared across all shards, so be very
+        /// careful about using a stateful implementation.
+        /// </summary>
+        /// <param name="interceptor">A session-scoped interceptor</param>
+        /// <returns>A session</returns>
+        [Obsolete("Use WithOptions() instead")]
 		ISession ISessionFactory.OpenSession(IInterceptor interceptor)
 		{
 			return OpenSession(interceptor);
@@ -282,44 +292,46 @@ namespace NHibernate.Shards.Session
 		/// Throws <see cref="HibernateException"/>
 		public IShardedSession OpenSession()
 		{
-			return new ShardedSessionImpl(
-				this,
-				shardStrategy,
-				classesWithoutTopLevelSaveSupport,
-				null,
-				checkAllAssociatedObjectsForDifferentShards);
+		    return new ShardedSessionImpl(this, null);
 		}
 
-		/// <summary>
-		/// Create a database connection and open a <c>ISession</c> on it
-		/// </summary>
-		/// <returns></returns>
-		ISession ISessionFactory.OpenSession()
+        /// <summary>
+        /// Create a database connection and open a <c>ISession</c> on it
+        /// </summary>
+        /// <returns></returns>
+        ISession ISessionFactory.OpenSession()
 		{
 			return OpenSession();
 		}
 
-		/// <summary>
-		/// Not supported for sharded sessions.
-		/// </summary>
-		/// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
+        /// <summary>
+        /// Not supported for sharded sessions.
+        /// </summary>
+        /// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
+        [Obsolete("Use WithOptions() instead")]
 		ISession ISessionFactory.OpenSession(DbConnection conn)
 		{
-			throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
+			return WithOptions().Connection(conn).OpenSession();
 		}
 
-		/// <summary>
-		/// Not supported for sharded sessions.
-		/// </summary>
-		/// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
+        /// <summary>
+        /// Not supported for sharded sessions.
+        /// </summary>
+        /// <exception cref="NotSupportedException">This operation is not supported for a sharded session.</exception>
+        [Obsolete("Use WithOptions() instead")]
 		ISession ISessionFactory.OpenSession(DbConnection conn, IInterceptor interceptor)
 		{
-			throw new NotSupportedException("Cannot open a sharded session with a user provided connection.");
+		    return WithOptions().Connection(conn).Interceptor(interceptor).OpenSession();
 		}
 
-		public ISessionBuilder WithOptions()
+	    public ShardedSessionBuilder WithOptions()
+	    {
+	        return new ShardedSessionBuilder(this);
+	    }
+
+        ISessionBuilder ISessionFactory.WithOptions()
 		{
-			throw new NotImplementedException();
+			return WithOptions();
 		}
 
 		public IStatelessSessionBuilder WithStatelessOptions()
@@ -421,7 +433,7 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-		public async Task EvictAsync(Type persistentClass, CancellationToken cancellationToken = new CancellationToken())
+		public async Task EvictAsync(System.Type persistentClass, CancellationToken cancellationToken = new CancellationToken())
 		{
 			foreach (var factory in SessionFactories)
 			{
@@ -444,7 +456,7 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-		public async Task EvictAsync(Type persistentClass, object id, CancellationToken cancellationToken = new CancellationToken())
+		public async Task EvictAsync(System.Type persistentClass, object id, CancellationToken cancellationToken = new CancellationToken())
 		{
 			foreach (var factory in SessionFactories)
 			{
@@ -957,6 +969,6 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-		#endregion
-	}
+        #endregion
+    }
 }

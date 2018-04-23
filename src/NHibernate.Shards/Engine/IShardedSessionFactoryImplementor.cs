@@ -2,17 +2,32 @@ using System.Collections.Generic;
 using NHibernate.Engine;
 using NHibernate.Shards.Id;
 using NHibernate.Shards.Session;
+using NHibernate.Shards.Strategy;
 
 namespace NHibernate.Shards.Engine
 {
-
-	/// <summary>
+    /// <summary>
 	/// Internal interface for implementors of ShardedSessionFactory
 	/// </summary>
 	public interface IShardedSessionFactoryImplementor : IShardedSessionFactory, ISessionFactoryImplementor
 	{
+        /// <summary>
+        /// Gets indicatation whether full cross-shard relationship checking is enabled (very slow). 
+        /// </summary>
+        bool CheckAllAssociatedObjectsForDifferentShards { get; }
+
+	    /// <summary>
+	    /// Indicates whether a class can be directly saved.
+	    /// </summary>
+	    bool IsClassWithTopLevelSaveSupport(System.Type type);
+
+        /// <summary>
+        /// Gets the sharding strategy.
+        /// </summary>
+        IShardStrategy ShardStrategy { get; }
+
 		/// <summary>
-		/// The session factory to be used for operations that cannot be distributed across multiple shards,
+		/// Gets the session factory to be used for operations that cannot be distributed across multiple shards,
 		/// such as the calculation of shard-wide unique sequence numbers and identifiers.
 		/// </summary>
 		/// <seealso cref="IShardEncodingIdentifierGenerator"/>
