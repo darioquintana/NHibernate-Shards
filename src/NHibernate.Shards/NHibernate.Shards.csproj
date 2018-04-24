@@ -20,7 +20,7 @@
     <IncludeSource>True</IncludeSource>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\NHibernate.Shards.xml</DocumentationFile>
     <NoWarn>1591;1701;1702;1705</NoWarn>
-    <Version>5.0.1</Version>
+    <Version>5.1.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
