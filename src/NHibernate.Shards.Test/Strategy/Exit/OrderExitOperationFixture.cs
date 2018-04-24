@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using NHibernate.Shards.Strategy.Exit;
-using NHibernate.Shards.Test.Mock;
 using NUnit.Framework;
 
 namespace NHibernate.Shards.Test.Strategy.Exit
@@ -10,7 +9,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 	using System.Linq;
 
 	[TestFixture]
-	public class OrderExitOperationFixture : TestCaseWithMock
+	public class OrderExitOperationFixture
 	{
 		private IList<object> data;
 		private IList<object> shuffledList;
@@ -59,7 +58,8 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 		}
 
 
-		protected override void OnSetUp()
+        [SetUp]
+		public void SetUp()
 		{
 			var names = new[] { "tomislav", "max", "maulik", "gut", "null", "bomb" };
 			data = Enumerable
