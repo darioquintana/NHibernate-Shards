@@ -25,7 +25,7 @@ namespace NHibernate.Shards
 	/// </summary>
 	public class ShardedConfiguration
 	{
-		private readonly static IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedConfiguration));
+	    private static readonly Logger Log = new Logger(typeof(ShardedConfiguration));
 
 		// the prototype config that we'll use when constructing the shard-specific
 		// configs
@@ -211,7 +211,7 @@ namespace NHibernate.Shards
 					if (property.Value is OneToOne)
 					{
 						var mappedClass = classMapping.MappedClass;
-						Log.InfoFormat("Type {0} does not support top-level saves.", mappedClass.Name);
+						Log.Info("Type {0} does not support top-level saves.", mappedClass.Name);
 						yield return mappedClass;
 						break;
 					}

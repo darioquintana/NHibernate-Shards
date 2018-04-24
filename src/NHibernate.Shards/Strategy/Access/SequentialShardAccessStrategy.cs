@@ -1,14 +1,14 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Shards.Strategy.Exit;
+using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Access
 {
-	using System.Threading;
-	using System.Threading.Tasks;
-
-	public class SequentialShardAccessStrategy : IShardAccessStrategy
+    public class SequentialShardAccessStrategy : IShardAccessStrategy
 	{
-		private readonly IInternalLogger log = LoggerProvider.LoggerFor(typeof(SequentialShardAccessStrategy));
+	    private static readonly Logger Log = new Logger(typeof(SequentialShardAccessStrategy));
 
 		#region IShardAccessStrategy Members
 
@@ -20,8 +20,7 @@ namespace NHibernate.Shards.Strategy.Access
 				var result = shardOperation();
 				if (result != null && exitStrategy.AddResult(result, shard))
 				{
-					log.DebugFormat("Short-circuiting operation {0} after execution against shard {1}",
-								  operation.OperationName, shard);
+					Log.Debug("Short-circuiting operation {0} after execution against shard {1}", operation.OperationName, shard);
 					break;
 				}
 			}
@@ -36,8 +35,7 @@ namespace NHibernate.Shards.Strategy.Access
 				var result = await shardOperation(cancellationToken);
 				if (result != null && exitStrategy.AddResult(result, shard))
 				{
-					log.DebugFormat("Short-circuiting operation {0} after execution against shard {1}",
-						operation.OperationName, shard);
+					Log.Debug("Short-circuiting operation {0} after execution against shard {1}", operation.OperationName, shard);
 					break;
 				}
 			}

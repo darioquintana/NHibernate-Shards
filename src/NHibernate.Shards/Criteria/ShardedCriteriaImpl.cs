@@ -3,7 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Criterion;
+using NHibernate.Impl;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Shards.Util;
@@ -12,20 +15,16 @@ using NHibernate.Transform;
 
 namespace NHibernate.Shards.Criteria
 {
-	using System.Threading;
-	using System.Threading.Tasks;
-	using NHibernate.Impl;
-
     /// <summary>
 	/// Concrete implementation of <see cref="IShardedCriteria"/> interface.
 	/// </summary>
 	public class ShardedCriteriaImpl : IShardedCriteria
 	{
-		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedCriteriaImpl));
+        private static readonly Logger Log = new Logger(typeof(ShardedCriteriaImpl));
 
-		#region Instance fields
+        #region Instance fields
 
-		private readonly IShardedSessionImplementor session;
+        private readonly IShardedSessionImplementor session;
 		private readonly Func<ISession, ICriteria> criteriaFactory;
 		private readonly ListExitOperationBuilder listExitOperationBuilder;
 

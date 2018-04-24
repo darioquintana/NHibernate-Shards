@@ -3,19 +3,19 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Shards.Strategy.Exit;
+using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Access
 {
-	using System.Threading.Tasks;
-
-	/// <summary>
+    /// <summary>
 	/// Invokes the given operation on the given shards in parallel.
 	/// </summary>
 	public class ParallelShardAccessStrategy : IShardAccessStrategy
 	{
 		private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(30);
-		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ParallelShardAccessStrategy));
+	    private static readonly Logger Log = new Logger(typeof(ParallelShardAccessStrategy));
 
 		#region IShardAccessStrategy Members
 
@@ -50,7 +50,7 @@ namespace NHibernate.Shards.Strategy.Access
 		private static HibernateException WrapAndLogShardException(string operationName, Exception exception)
 		{
 			var message = string.Format("Failed parallel '{0}' operation.", operationName);
-			Log.Error(message, exception);
+			Log.Error(exception, message);
 			return new HibernateException(message, exception);
 		}
 
@@ -157,7 +157,7 @@ namespace NHibernate.Shards.Strategy.Access
 
 						if (--_activeCount <= 0) Monitor.Pulse(this);
 					}
-					Log.DebugFormat("Failed parallel operation '{0}' on shard '{1:X}'.",
+					Log.Debug("Failed parallel operation '{0}' on shard '{1:X}'.",
 						_operation.OperationName, s.ShardIds.First());
 				}
 			}

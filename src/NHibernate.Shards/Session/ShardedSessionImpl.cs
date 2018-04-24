@@ -43,9 +43,9 @@ namespace NHibernate.Shards.Session
 	/// </summary>
 	public class ShardedSessionImpl : IShardedSession, IShardedSessionImplementor, IShardIdResolver
 	{
-		#region Static fields
+        #region Static fields
 
-		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedSessionImpl));
+	    private static readonly Logger Log = new Logger(typeof(ShardedSessionImpl));
 		private static readonly AsyncLocal<ShardId> currentSubgraphShardId = new AsyncLocal<ShardId>();
 
 		#endregion
@@ -2681,9 +2681,9 @@ namespace NHibernate.Shards.Session
 				}
 				catch (Exception e)
 				{
-					Log.Warn("Caught exception trying to close.", e);
-				}
-			}
+				    Log.Warn(e, "Caught exception trying to close.");
+                }
+            }
 		}
 
 		#endregion

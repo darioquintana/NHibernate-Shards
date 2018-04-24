@@ -35,15 +35,15 @@ namespace NHibernate.Shards.Session
 		// the id of the control shard
 		private const int CONTROL_SHARD_ID = 0;
 
-		// our lovely logger
-		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedSessionFactoryImpl));
+        // our lovely logger
+	    private static readonly Logger Log = new Logger(typeof(ShardedSessionFactoryImpl));
 
-		#endregion
+        #endregion
 
-		#region Instance fields
+        #region Instance fields
 
-		// All classes that cannot be directly saved
-		private readonly HashSet<System.Type> classesWithoutTopLevelSaveSupport;
+        // All classes that cannot be directly saved
+        private readonly HashSet<System.Type> classesWithoutTopLevelSaveSupport;
 
 		// map of SessionFactories used by this ShardedSessionFactory (might be a subset of all SessionFactories)
 		private readonly Dictionary<ISessionFactoryImplementor, ICollection<ShardId>> shardIdsBySessionFactory;
@@ -701,9 +701,9 @@ namespace NHibernate.Shards.Session
 				}
 				catch (Exception e)
 				{
-					Log.Warn("Caught exception trying to close.", e);
-				}
-			}
+                    Log.Warn(e, "Caught exception trying to close.");
+                }
+            }
 		}
 
 		IDictionary<string, ICache> ISessionFactoryImplementor.GetAllSecondLevelCacheRegions()

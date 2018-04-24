@@ -25,16 +25,17 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Shards.Engine;
+using NHibernate.Shards.Util;
 using NHibernate.Transaction;
 
 namespace NHibernate.Shards.Transaction
 {
-	using System.Data.Common;
-	using System.Threading;
-	using System.Threading.Tasks;
 
-	/// <summary>
+    /// <summary>
 	/// NHibernate <see cref="ITransaction"/> implementation for a transaction that can span one or more
 	/// shards. If a transaction spans more than one shard, it is important to use a distributed 
 	/// transaction manager across all shards. Otherwise consistent committing or rolling back of 
@@ -47,7 +48,7 @@ namespace NHibernate.Shards.Transaction
 	/// </remarks>
 	public class ShardedTransactionImpl : IShardedTransaction
 	{
-		private static readonly IInternalLogger Log = LoggerProvider.LoggerFor(typeof(ShardedTransactionImpl));
+	    private static readonly Logger Log = new Logger(typeof(ShardedTransactionImpl));
 
 		private IShardedSessionImplementor shardedSession;
 		private IList<ITransaction> transactions;
@@ -256,8 +257,8 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (Exception e)
 				{
-					Log.Warn(MESSAGE, e);
-					throw new TransactionException(MESSAGE, e);
+				    Log.Warn(e, MESSAGE);
+                    throw new TransactionException(MESSAGE, e);
 				}
 			}
 		}
@@ -286,8 +287,8 @@ namespace NHibernate.Shards.Transaction
 			catch (HibernateException e)
 			{
 				const string MESSAGE = "Cannot start underlying transaction";
-				Log.Warn(MESSAGE, e);
-				throw new TransactionException(MESSAGE, e);
+			    Log.Warn(e, MESSAGE);
+                throw new TransactionException(MESSAGE, e);
 			}
 		}
 
@@ -305,7 +306,7 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (HibernateException he)
 				{
-					Log.Warn("Exception committing underlying transaction", he);
+					Log.Warn(he, "Exception committing underlying transaction");
 
 					// we're only going to rethrow the first commit exception we receive
 					if (firstCommitException == null)
@@ -338,7 +339,7 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (HibernateException he)
 				{
-					Log.Warn("Exception committing underlying transaction", he);
+					Log.Warn(he, "Exception committing underlying transaction");
 
 					// we're only going to rethrow the first commit exception we receive
 					if (firstCommitException == null)
@@ -373,7 +374,7 @@ namespace NHibernate.Shards.Transaction
 					}
 					catch (HibernateException he)
 					{
-						Log.Warn("Cannot rollback underlying transaction", he);
+						Log.Warn(he, "Cannot rollback underlying transaction");
 
 						// we're only going to rethrow the first commit exception we receive
 						if (firstRollbackException == null)
@@ -411,7 +412,7 @@ namespace NHibernate.Shards.Transaction
 					}
 					catch (HibernateException he)
 					{
-						Log.Warn("Cannot rollback underlying transaction", he);
+						Log.Warn(he, "Cannot rollback underlying transaction");
 
 						// we're only going to rethrow the first commit exception we receive
 						if (firstRollbackException == null)
@@ -448,7 +449,7 @@ namespace NHibernate.Shards.Transaction
 				}
 				catch (Exception e)
 				{
-					Log.Warn(MESSAGE, e);
+					Log.Warn(e, MESSAGE);
 					firstException = e;
 				}
 			}
@@ -515,7 +516,7 @@ namespace NHibernate.Shards.Transaction
 					}
 					catch (Exception e)
 					{
-						Log.Error("exception calling user Synchronization", e);
+						Log.Error(e, "exception calling user Synchronization");
 					}
 				}
 			}
@@ -534,7 +535,7 @@ namespace NHibernate.Shards.Transaction
 					}
 					catch (Exception e)
 					{
-						Log.Error("exception calling user Synchronization", e);
+						Log.Error(e, "exception calling user Synchronization");
 					}
 				}
 			}

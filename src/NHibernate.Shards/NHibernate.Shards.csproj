@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net461</TargetFrameworks>
+    <TargetFrameworks>net461;netstandard2.0</TargetFrameworks>
     <PackageTags>NHibernate, ORM, ObjectRelationalMapping, Sharding, Partitioning</PackageTags>
     <Authors>Gerke Geurts, Dario Quintana</Authors>
     <Description>NHibernate Shards is a framework that adds support for horizontal partitioning to NHibernate Core.</Description>
@@ -20,9 +20,20 @@
     <IncludeSource>True</IncludeSource>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\NHibernate.Shards.xml</DocumentationFile>
     <NoWarn>1591;1701;1702;1705</NoWarn>
+    <Version>5.0.1</Version>
   </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="NHibernate" Version="5.0.3" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.4.1" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <PackageReference Include="NHibernate" Version="[5.0.3, 5.1)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="NHibernate" Version="[5.1.1, 6)" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <DefineConstants>NH51_PLUS;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
 </Project>
