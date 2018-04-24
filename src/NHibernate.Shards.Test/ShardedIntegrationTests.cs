@@ -4,7 +4,6 @@
 	using System.Collections.Generic;
 	using System.Linq;
 	using NHibernate.Criterion;
-	using NHibernate.Linq;
 	using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
 	using NUnit.Framework;

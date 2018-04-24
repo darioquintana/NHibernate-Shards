@@ -45,7 +45,7 @@ namespace NHibernate.Shards.Test
 			var currentAssembly = GetType().Assembly;
 			var protoConfig = new Configuration()
 				.SetDefaultAssembly(currentAssembly.FullName)
-				.SetProperty(Environment.ConnectionDriver, typeof(NHibernate.Driver.SQLite20Driver).FullName)
+				.SetProperty(Environment.ConnectionDriver, typeof(MilestoneTG.NHibernate.Driver.Sqlite.Microsoft.MicrosoftSqliteDriver).AssemblyQualifiedName)
 				.SetProperty(Environment.Dialect, typeof(NHibernate.Dialect.SQLiteDialect).FullName)
 				.SetProperty(Environment.QuerySubstitutions, "true=1;false=0")
 				.AddAssembly(currentAssembly);
@@ -134,7 +134,7 @@ namespace NHibernate.Shards.Test
 				yield return new ShardConfiguration
 					{
 						ShardId = shardId,
-						ConnectionString = string.Format("Data Source={0};Version=3", CreateDatabasePath())
+						ConnectionString = $"Data Source={CreateDatabasePath()};"
 					};
 			}
 		}
