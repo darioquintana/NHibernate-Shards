@@ -119,7 +119,31 @@
 			}
 		}
 
-		[Test]
+	    [Test]
+	    public void GetFutureResultsMoreThanOnceWithCriteria()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var persistentPersons = session.CreateCriteria<Person>()
+	                    .Add(Restrictions.Eq("LegalName.FirstName", "Mary"))
+	                    .Future<Person>();
+	                Assert.That(persistentPersons.ToList(), Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "First time");
+	                Assert.That(persistentPersons.ToList(), Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "Second time");
+	            }
+	        }
+	    }
+
+        [Test]
 		public void CanQueryWithQueryOver()
 		{
 			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
@@ -166,7 +190,31 @@
 			}
 		}
 
-		[Test]
+	    [Test]
+	    public void GetFutureResultsMoreThanOnceWithQueryOver()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var persistentPersons = session.QueryOver<Person>()
+	                    .Where(p => p.LegalName.FirstName == "Mary")
+	                    .Future<Person>();
+	                Assert.That(persistentPersons.ToList(), Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "First time");
+	                Assert.That(persistentPersons.ToList(), Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "Second time");
+	            }
+	        }
+	    }
+
+        [Test]
 		public void CanQueryWithLinq()
 		{
 			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
@@ -221,11 +269,11 @@
 			}
 		}
 
-		#endregion
+        #endregion
 
-		#region Domain model and mapping classes
+        #region Domain model and mapping classes
 
-		public class Person
+        public class Person
 		{
 			public int? Id { get; set; }
 			public Guid Guid { get; private set; }
@@ -270,6 +318,7 @@
 					m.Generator(Generators.Native);
 					m.Column("id");
 				});
+                EntityName("Person");
 
 				Property(x => x.Guid, p => p.Column("uid"));
 				Component(x => x.LegalName, c =>

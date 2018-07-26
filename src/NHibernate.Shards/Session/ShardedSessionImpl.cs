@@ -2178,7 +2178,7 @@ namespace NHibernate.Shards.Session
 		/// <returns>An ICriteria object</returns>
 		public ICriteria CreateCriteria(System.Type persistentClass)
 		{
-			return new ShardedCriteriaImpl(this, s => s.CreateCriteria(persistentClass));
+			return new ShardedCriteriaImpl(this, GuessEntityName(persistentClass), s => s.CreateCriteria(persistentClass));
 		}
 
 		/// <summary>
@@ -2189,17 +2189,17 @@ namespace NHibernate.Shards.Session
 		/// <returns>An ICriteria object</returns>
 		public ICriteria CreateCriteria(System.Type persistentClass, string alias)
 		{
-			return new ShardedCriteriaImpl(this, s => s.CreateCriteria(persistentClass, alias));
+			return new ShardedCriteriaImpl(this, GuessEntityName(persistentClass), s => s.CreateCriteria(persistentClass, alias));
 		}
 
 		public ICriteria CreateCriteria(string entityName)
 		{
-			return new ShardedCriteriaImpl(this, s => s.CreateCriteria(entityName));
+			return new ShardedCriteriaImpl(this, entityName, s => s.CreateCriteria(entityName));
 		}
 
 		public ICriteria CreateCriteria(string entityName, string alias)
 		{
-			return new ShardedCriteriaImpl(this, s => s.CreateCriteria(entityName, alias));
+			return new ShardedCriteriaImpl(this, entityName, s => s.CreateCriteria(entityName, alias));
 		}
 
 		public IQueryOver<T, T> QueryOver<T>() where T : class
@@ -2686,11 +2686,11 @@ namespace NHibernate.Shards.Session
             }
 		}
 
-		#endregion
+        #endregion
 
-		#region Private methods
+        #region Private methods
 
-		private string GuessEntityName(object entity)
+        private string GuessEntityName(object entity)
 		{
 			var proxy = entity as INHibernateProxy;
 			if (proxy != null)
@@ -2699,18 +2699,19 @@ namespace NHibernate.Shards.Session
 				entity = initializer.GetImplementation();
 			}
 
-            string entityName = interceptor != null
+            var entityName = interceptor != null
 				? interceptor.GetEntityName(entity)
 				: null;
-			if (entityName == null)
-			{
-				System.Type entityType = entity.GetType();
-				entityName = this.shardedSessionFactory.TryGetGuessEntityName(entityType) ?? entityType.FullName;
-			}
-			return entityName;
+		    return entityName ?? GuessEntityName(entity.GetType());
 		}
 
-		private bool TryResolveToSingleShard(ShardedEntityKey key, out IShard result)
+	    private string GuessEntityName(System.Type persistentClass)
+	    {
+	        return this.shardedSessionFactory.TryGetGuessEntityName(persistentClass)
+	               ?? persistentClass.AssemblyQualifiedName;
+	    }
+
+        private bool TryResolveToSingleShard(ShardedEntityKey key, out IShard result)
 		{
 			ShardId shardId;
 			if (TryResolveToSingleShardId(key, out shardId))

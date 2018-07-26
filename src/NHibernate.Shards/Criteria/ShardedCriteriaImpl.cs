@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NHibernate.Criterion;
-using NHibernate.Impl;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Shards.Util;
@@ -25,6 +24,7 @@ namespace NHibernate.Shards.Criteria
         #region Instance fields
 
         private readonly IShardedSessionImplementor session;
+	    private readonly string entityName;
 		private readonly Func<ISession, ICriteria> criteriaFactory;
 		private readonly ListExitOperationBuilder listExitOperationBuilder;
 
@@ -34,15 +34,17 @@ namespace NHibernate.Shards.Criteria
 		private readonly Dictionary<string, ICriteria> subcriteriaByAlias;
 		private readonly Dictionary<string, Subcriteria> subcriteriaByPath;
 
-		#endregion
+        #endregion
 
-		#region Constructor(s)
+        #region Constructor(s)
 
-		public ShardedCriteriaImpl(IShardedSessionImplementor session, Func<ISession, ICriteria> criteriaFactory)
+        public ShardedCriteriaImpl(IShardedSessionImplementor session, string entityName, Func<ISession, ICriteria> criteriaFactory)
 		{
 			Preconditions.CheckNotNull(session);
+		    Preconditions.CheckNotNull(entityName);
 			Preconditions.CheckNotNull(criteriaFactory);
 			this.session = session;
+		    this.entityName= entityName;
 			this.criteriaFactory = criteriaFactory;
 			this.listExitOperationBuilder = new ListExitOperationBuilder();
 			this.establishActions = new List<Action<ICriteria>>();
@@ -258,14 +260,13 @@ namespace NHibernate.Shards.Criteria
 					"order");
 			}
 
-			var rootEntityOrClassName = ((CriteriaImpl)this.SomeCriteria).EntityOrClassName;
-			var rootClassMetadata = this.session.AnyShard.SessionFactory.GetClassMetadata(rootEntityOrClassName);
-			return new SortOrder(
+		    var rootClassMetadata = this.session.AnyShard.SessionFactory.GetClassMetadata(this.entityName);
+		    return new SortOrder(
 				o => rootClassMetadata.GetPropertyValue(o, propertyPath), 
 				isDescending);
 		}
 
-		public ICriteria SetFetchMode(string associationPath, FetchMode fetchMode)
+	    public ICriteria SetFetchMode(string associationPath, FetchMode fetchMode)
 		{
 			ApplyActionToShards(c => c.SetFetchMode(associationPath, fetchMode));
 			return this;
@@ -630,6 +631,7 @@ namespace NHibernate.Shards.Criteria
 
 		private class FutureShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>, IFutureEnumerable<T>
 		{
+		    private IEnumerable<T> results;
 			private readonly IShardedSessionImplementor session;
 			private readonly IListExitStrategy<T> listExitStrategy;
 			private readonly IDictionary<IShard, IFutureEnumerable<T>> futuresByShard;
@@ -657,14 +659,14 @@ namespace NHibernate.Shards.Criteria
 				return this.futuresByShard[shard].GetEnumerableAsync;
 			}
 
-			public Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
+			public async Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-				return this.session.ExecuteAsync(this, this.listExitStrategy, cancellationToken);
+				return this.results ?? (this.results = await this.session.ExecuteAsync(this, this.listExitStrategy, cancellationToken).ConfigureAwait(false));
 			}
 
 			public IEnumerable<T> GetEnumerable()
 			{
-				return this.session.Execute(this, this.listExitStrategy);
+				return this.results ?? (this.results = this.session.Execute(this, this.listExitStrategy));
 			}
 
 			public IEnumerator<T> GetEnumerator()
