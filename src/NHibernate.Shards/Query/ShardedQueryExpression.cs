@@ -2,6 +2,7 @@ namespace NHibernate.Shards.Query
 {
 	using System;
 	using System.Collections.Generic;
+	using System.Globalization;
 	using NHibernate.Engine;
 	using NHibernate.Engine.Query;
 	using NHibernate.Hql.Ast.ANTLR;
@@ -15,7 +16,7 @@ namespace NHibernate.Shards.Query
 
 	public class ShardedQueryExpression : IQueryExpression
 	{
-		private readonly IQueryExpression unshardedQueryExpression;
+	    private readonly IQueryExpression unshardedQueryExpression;
 		private readonly ExitOperationBuilder exitOperationBuilder;
 		private readonly Dictionary<string, Tuple<object, IType>> parameterValuesByName;
 		private string key;
@@ -103,39 +104,44 @@ namespace NHibernate.Shards.Query
 
 		private IASTNode ToShardedHql(IASTNode unshardedHql)
 		{
-			var unfinishedCopies = new Stack<KeyValuePair<IASTNode, IEnumerator<IASTNode>>>();
-
-			unfinishedCopies.Push(GetUnfinishedCopy(unshardedHql));
+			var unfinishedCopies = new Stack<UnfinishedNodeCopy>();
+			unfinishedCopies.Push(new UnfinishedNodeCopy(unshardedHql, null));
 
 			while (true)
 			{
 				var unfinishedCopy = unfinishedCopies.Peek();
-				if (!unfinishedCopy.Value.MoveNext())
+				if (!unfinishedCopy.Children.MoveNext())
 				{
+                    unfinishedCopy.Complete();
 					unfinishedCopies.Pop();
-					if (unfinishedCopies.Count == 0) return unfinishedCopy.Key;
+					if (unfinishedCopies.Count == 0) return unfinishedCopy.Node;
 					continue;
 				}
 
-				var nextChild = unfinishedCopy.Value.Current;
-				if (CanCopy(nextChild))
+				var nextChild = unfinishedCopy.Children.Current;
+			    Action<IASTNode> copyTransformer;
+				if (CanCopy(nextChild, out copyTransformer))
 				{
 					if (nextChild.ChildCount == 0)
 					{
-						unfinishedCopy.Key.AddChild(nextChild.DupNode());
+					    var nextChildCopy = nextChild.DupNode();
+					    unfinishedCopy.Node.AddChild(nextChildCopy);
+					    if (copyTransformer != null) copyTransformer(nextChildCopy);
 					}
 					else
 					{
-						var unfinishedChildCopy = GetUnfinishedCopy(nextChild);
-						unfinishedCopy.Key.AddChild(unfinishedChildCopy.Key);
+						var unfinishedChildCopy = new UnfinishedNodeCopy(nextChild, copyTransformer);
+						unfinishedCopy.Node.AddChild(unfinishedChildCopy.Node);
 						unfinishedCopies.Push(unfinishedChildCopy);
 					}
 				}
 			}
 		}
 
-		private bool CanCopy(IASTNode node)
+		private bool CanCopy(IASTNode node, out Action<IASTNode> copyTransformer)
 		{
+		    copyTransformer = null;
+
 			IASTNode child;
 			switch (node.Type)
 			{
@@ -172,37 +178,94 @@ namespace NHibernate.Shards.Query
 				case HqlSqlWalker.ORDER:
 					ExtractOrders(node);
 					return true;
-                case HqlSqlWalker.AGGREGATE:
-                    if ("min".Equals(node.Text, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        this.exitOperationBuilder.Aggregation = AggregationUtil.Min;
-                    }
-                    else if ("max".Equals(node.Text, StringComparison.InvariantCultureIgnoreCase))
+
+			    case HqlSqlWalker.AGGREGATE:
+			        if ("avg".Equals(node.Text, StringComparison.OrdinalIgnoreCase))
 			        {
-			            this.exitOperationBuilder.Aggregation = AggregationUtil.Max;
+			            goto case HqlSqlWalker.AVG;
 			        }
-                    return true;
-                case HqlSqlWalker.AVG:
-					// TODO: Replace AVG with SUM and COUNT 
-					return true;
+                    if ("min".Equals(node.Text, StringComparison.OrdinalIgnoreCase))
+                    {
+                        goto case HqlSqlWalker.MIN;
+                    }
+                    else if ("max".Equals(node.Text, StringComparison.OrdinalIgnoreCase))
+			        {
+			            goto case HqlSqlWalker.MAX;
+			        }
+
+                    throw new NotSupportedException(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "HQL aggregate function '{0}' is currently not supported across shards.",
+                        node.Text));
+
+			    case HqlSqlWalker.AVG:
+			        ThrowIfAggregationInComplexSelectList(node);
+
+			        this.exitOperationBuilder.Aggregation = c => AggregationUtil.Average(c, GetFieldSelector(0), GetFieldSelector(1));
+			        copyTransformer = TransformUnshardedAverageNode;
+			        return true;
 				case HqlSqlWalker.COUNT:
-					// TODO: Determine aggregation operand type
-					this.exitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(long));
+				    ThrowIfAggregationInComplexSelectList(node);
+					this.exitOperationBuilder.Aggregation = c => AggregationUtil.SumInt64(c, o => o);
 					return true;
 			    case HqlSqlWalker.MIN:
-			        this.exitOperationBuilder.Aggregation = AggregationUtil.Min;
+			        ThrowIfAggregationInComplexSelectList(node);
+                    this.exitOperationBuilder.Aggregation = c => AggregationUtil.Min(c, o => o);
 			        return true;
 			    case HqlSqlWalker.MAX:
-			        this.exitOperationBuilder.Aggregation = AggregationUtil.Max;
+			        ThrowIfAggregationInComplexSelectList(node);
+			        this.exitOperationBuilder.Aggregation = c => AggregationUtil.Max(c, o => o);
 			        return true;
 				case HqlSqlWalker.SUM:
-					// TODO: Determine aggregation operand type
-					this.exitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(long));
+				    ThrowIfAggregationInComplexSelectList(node);
+					this.exitOperationBuilder.Aggregation = c => AggregationUtil.Sum(c, o => o);
 					return true;
 			}
 
 			return true;
 		}
+
+	    private void TransformUnshardedAverageNode(IASTNode average)
+	    {
+	        var star = average.DupNode();
+	        star.Type = HqlSqlWalker.ROW_STAR;
+	        star.Text = "*";
+
+	        var count = average.DupNode();
+	        count.Type = HqlSqlWalker.COUNT;
+	        count.Text = "count";
+            count.AddChild(star);
+
+	        average.Text = "sum";
+            average.AddSibling(count);
+	    }
+
+	    private Func<object, object> GetFieldSelector(int fieldIndex)
+	    {
+            return o =>
+            {
+                var array = o as object[];
+                return array != null && array.Length > fieldIndex
+                    ? array[fieldIndex]
+                    : null;
+            };
+	    }
+
+	    private static void ThrowIfAggregationInComplexSelectList(IASTNode node)
+	    {
+	        var parent = node.Parent;
+	        while (parent != null)
+	        {
+	            if (parent.Type == HqlSqlWalker.SELECT)
+	            {
+	                if (parent.ChildCount == 1) return;
+                    throw new NotSupportedException(
+                        "HQL aggregation function must be only expression in select list. Complex " +
+                        "select lists are not supported with aggregation functions across shards.");
+	            }
+	            parent = parent.Parent;
+	        }
+        }
 
 		private static bool TryGetParameterName(IASTNode node, out string result)
 		{
@@ -254,14 +317,31 @@ namespace NHibernate.Shards.Query
 			}
 		}
 
-		private static KeyValuePair<IASTNode, IEnumerator<IASTNode>> GetUnfinishedCopy(IASTNode node)
-		{
-			return new KeyValuePair<IASTNode, IEnumerator<IASTNode>>(node.DupNode(), GetChildren(node));
-		}
+	    private class UnfinishedNodeCopy
+	    {
+            public IASTNode Node { get; private set; }
+	        public IEnumerator<IASTNode> Children { get; private set; }
+            public Action<IASTNode> Transformer { get; private set; }
 
-		private static IEnumerator<IASTNode> GetChildren(IASTNode parent)
-		{
-			for (var i = 0; i < parent.ChildCount; i++) yield return parent.GetChild(i);
-		}
-	}
+	        public UnfinishedNodeCopy(IASTNode node, Action<IASTNode> transformer)
+	        {
+	            this.Node = node.DupNode();
+	            this.Children = GetChildren(node);
+	            this.Transformer = transformer;
+	        }
+
+	        public void Complete()
+	        {
+	            if (this.Transformer != null)
+	            {
+	                this.Transformer(this.Node);
+	            }
+	        }
+
+	        private static IEnumerator<IASTNode> GetChildren(IASTNode parent)
+	        {
+	            for (var i = 0; i < parent.ChildCount; i++) yield return parent.GetChild(i);
+	        }
+	    }
+    }
 }

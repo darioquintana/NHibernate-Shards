@@ -22,25 +22,25 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 		[Test]
 		public void TestMax()
 		{
-			VerifyAggregateListExitOperation(AggregationUtil.Max, data, new object[] { 5 }, "Max");
+			VerifyAggregateListExitOperation(c => c.Max(o => o), data, new object[] { 5 }, "Max");
 		}
 
 		[Test]
 		public void TestMin()
 		{
-			VerifyAggregateListExitOperation(AggregationUtil.Min, data, new object[] { 0 }, "Max");
+			VerifyAggregateListExitOperation(c => c.Min(o => o), data, new object[] { 0 }, "Max");
 		}
 
 		[Test]
 		public void TestSum()
 		{
-			VerifyAggregateListExitOperation(AggregationUtil.GetSumFunc(typeof(int)), data, new object[] { 11 }, "Sum");
+			VerifyAggregateListExitOperation(c => c.SumInt64(o => o), data, new object[] { 11 }, "Sum");
 		}
 
 		private static void VerifyAggregateListExitOperation<T>(AggregationFunc aggregation, IList<T> input, IList<T> expected, string description)
 		{
 			var listExitOperation = new ExitOperation(null, 0, false, aggregation, null);
-			var result = listExitOperation.Execute(input);
+			var result = listExitOperation.Execute(input).ToArray();
 			Assert.That(result, Is.EqualTo(expected), description);
 		}
 	}

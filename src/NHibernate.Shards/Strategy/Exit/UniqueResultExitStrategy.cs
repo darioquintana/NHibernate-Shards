@@ -61,9 +61,11 @@ namespace NHibernate.Shards.Strategy.Exit
 		    var aggregation = this.exitOperationFactory.CreateExitOperation().Aggregation;
 		    if (aggregation != null)
 		    {
-		        var aggregationResult = (T)aggregation(this.results);
+		        var aggregationResult = aggregation(this.results);
 		        this.results.Clear();
-		        this.results.Add(aggregationResult);
+		        this.results.Add(aggregationResult is T 
+		            ? (T)aggregationResult 
+		            : (T)Convert.ChangeType(aggregationResult, typeof(T)));
 		    }
 		    return this.Value;
 		}

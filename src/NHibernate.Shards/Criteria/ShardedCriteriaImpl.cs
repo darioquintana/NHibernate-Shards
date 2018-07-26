@@ -138,36 +138,36 @@ namespace NHibernate.Shards.Criteria
 					.Add(Projections.RowCount());
 				ApplyActionToShards(c => c.SetProjection(projectionList));
 				this.exitOperationBuilder.Aggregation =
-					c => AggregationUtil.Average(c, GetDoubleFieldSelector(0), GetInt32FieldSelector(1));
+					c => AggregationUtil.Average(c, GetFieldSelector(0), GetFieldSelector(1));
 				return this;
 			}
 
 			if (aggregationName.StartsWith("sum", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.exitOperationBuilder.Aggregation = ToSumFunc(projection);
-				return this;
+				this.exitOperationBuilder.Aggregation = c => AggregationUtil.Sum(c, GetFieldSelector(0));
+                return this;
 			}
 
 			if (aggregationName.StartsWith("count", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.exitOperationBuilder.Aggregation = ToSumFunc(projection);
+				this.exitOperationBuilder.Aggregation = c => AggregationUtil.SumInt64(c, GetFieldSelector(0));
 				return this;
 			}
 
 			if (aggregationName.StartsWith("min", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.exitOperationBuilder.Aggregation = AggregationUtil.Min;
+				this.exitOperationBuilder.Aggregation = c => AggregationUtil.Min(c, GetFieldSelector(0));
 				return this;
 			}
 
 			if (aggregationName.StartsWith("max", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.exitOperationBuilder.Aggregation = AggregationUtil.Max;
-				return this;
+				this.exitOperationBuilder.Aggregation = c => AggregationUtil.Max(c, GetFieldSelector(0));
+                return this;
 			}
 
 			var message = string.Format(
@@ -178,40 +178,23 @@ namespace NHibernate.Shards.Criteria
 			throw new NotSupportedException(message);
 		}
 
-		private static AggregationFunc ToSumFunc(IProjection projection)
+		private static Func<object, object> GetFieldSelector(int fieldIndex)
 		{
-			var aggregationResultClass = projection.GetTypes(null, null)[0].ReturnedClass;
-			return AggregationUtil.GetSumFunc(aggregationResultClass);
+		    return o => GetFieldAt(o, fieldIndex);
 		}
 
-		private static Func<object, double?> GetDoubleFieldSelector(int fieldIndex)
+		private static object GetFieldAt(object valueOrArray, int index)
 		{
-			return o =>
-			{
-				var value = GetFieldAt(o, fieldIndex);
-				return value != null
-					? Convert.ToDouble(value)
-					: default(double?);
-			};
-		}
-
-		private static Func<object, int?> GetInt32FieldSelector(int fieldIndex)
-		{
-			return o =>
-			{
-				var value = GetFieldAt(o, fieldIndex);
-				return value != null
-					? Convert.ToInt32(value)
-					: default(int?);
-			};
-		}
-
-		private static object GetFieldAt(object array, int index)
-		{
-			var values = array as object[];
-			return values == null || values.Length <= index
-				? null
-				: values[index];
+			var array = valueOrArray as object[];
+		    if (array == null)
+		    {
+		        if (index == 0) return valueOrArray;
+		    }
+            else if (array.Length <= index)
+		    {
+		        return array[index];
+		    }
+		    return null;
 		}
 
 		public ICriteria Add(ICriterion criterion)
@@ -628,7 +611,6 @@ namespace NHibernate.Shards.Criteria
 		{
 		    private IEnumerable<T> results;
 			private readonly ShardedCriteriaImpl shardedCriteria;
-			private readonly IListExitStrategy<T> listExitStrategy;
 			private readonly IDictionary<IShard, IFutureEnumerable<T>> futuresByShard;
 
 			public FutureShardOperation(ShardedCriteriaImpl shardedCriteria)

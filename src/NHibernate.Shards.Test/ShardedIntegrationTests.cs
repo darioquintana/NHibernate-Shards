@@ -264,7 +264,7 @@
 	                session.Flush();
 	                session.Clear();
 
-	                var rowCount = session.CreateQuery("select count(p) from Person p").UniqueResult<long>();
+	                var rowCount = session.CreateQuery("select count(*) from Person p").UniqueResult<long>();
 	                Assert.That(rowCount, Is.EqualTo(2), "RowCount");
 
 	                var rowCountInt64 = session.QueryOver<Person>().RowCountInt64();
@@ -291,6 +291,28 @@
 	                var minAge = session.CreateQuery("select min(p.DateOfBirth) from Person p")
 	                    .UniqueResult<object>();
 	                Assert.That(minAge, Is.EqualTo(person2.DateOfBirth));
+	            }
+	        }
+	    }
+
+	    [Test]
+	    public void CanCalulateAverageWithHql()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" }, DateOfBirth = new DateTime(1970, 1, 1) };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" }, DateOfBirth = new DateTime(1968, 12, 31) };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var minAge = session.CreateQuery("select avg(year(p.DateOfBirth)) from Person p")
+	                    .UniqueResult<object>();
+	                Assert.That(minAge, Is.EqualTo(1969));
 	            }
 	        }
 	    }
