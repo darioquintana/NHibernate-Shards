@@ -31,7 +31,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 
 		private static void VerifyMaxResultsOperation<T>(int maxResults, IList<T> input, IList<T> expected, string description)
 		{
-			var listExitOperation = new ListExitOperation(maxResults, 0, false, null, null);
+			var listExitOperation = new ExitOperation(maxResults, 0, false, null, null);
 			var result = listExitOperation.Execute(input).ToList();
 			Assert.That(result, Is.EqualTo(expected), description);
 		}

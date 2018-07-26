@@ -16,15 +16,15 @@ namespace NHibernate.Shards.Query
 	public class ShardedQueryExpression : IQueryExpression
 	{
 		private readonly IQueryExpression unshardedQueryExpression;
-		private readonly ListExitOperationBuilder listExitOperationBuilder;
+		private readonly ExitOperationBuilder exitOperationBuilder;
 		private readonly Dictionary<string, Tuple<object, IType>> parameterValuesByName;
 		private string key;
 
-		public ShardedQueryExpression(IQueryExpression unshardedQueryExpression, ListExitOperationBuilder listExitOperationBuilder)
+		public ShardedQueryExpression(IQueryExpression unshardedQueryExpression, ExitOperationBuilder exitOperationBuilder)
 	    {
 	        Preconditions.CheckNotNull(unshardedQueryExpression);
 	        this.unshardedQueryExpression = unshardedQueryExpression;
-		    this.listExitOperationBuilder = listExitOperationBuilder;
+		    this.exitOperationBuilder = exitOperationBuilder;
 
 		    var linqExpression = unshardedQueryExpression as NhLinqExpression;
 		    this.parameterValuesByName = linqExpression != null
@@ -70,8 +70,9 @@ namespace NHibernate.Shards.Query
 		{
 			var root = this.unshardedQueryExpression.Translate(sessionFactory, filter);
 
-			var hqlGenerator = new ShardedHqlGenerator(root, sessionFactory.GetClassMetadata(this.Type), 
-				this.parameterValuesByName, this.listExitOperationBuilder);
+		    var entityName = sessionFactory.TryGetGuessEntityName(this.Type) ?? this.Type.FullName;
+			var hqlGenerator = new ShardedHqlGenerator(root, sessionFactory.GetClassMetadata(entityName), 
+				this.parameterValuesByName, this.exitOperationBuilder);
 			return hqlGenerator.ShardedHql;
 		}
 	}
@@ -80,17 +81,17 @@ namespace NHibernate.Shards.Query
 	{
 		private readonly IClassMetadata rootClassMetadata;
 		private readonly IASTNode shardedQuery;
-		private readonly ListExitOperationBuilder listExitOperationBuilder;
+		private readonly ExitOperationBuilder exitOperationBuilder;
 		private readonly IDictionary<string, Tuple<object, IType>> namedParameters;
 
 		public ShardedHqlGenerator(
 			IASTNode unshardedHql, 
 			IClassMetadata rootClassMetadata,
 			IDictionary<string, Tuple<object, IType>> namedParameters,
-			ListExitOperationBuilder listExitOperationBuilder)
+			ExitOperationBuilder exitOperationBuilder)
 		{
-			this.rootClassMetadata = rootClassMetadata;
-			this.listExitOperationBuilder = listExitOperationBuilder;
+            this.rootClassMetadata = rootClassMetadata;
+			this.exitOperationBuilder = exitOperationBuilder;
 			this.namedParameters = namedParameters;
 			this.shardedQuery = ToShardedHql(unshardedHql);
 		}
@@ -145,11 +146,11 @@ namespace NHibernate.Shards.Query
 					int firstResult;
 					if (TryGetParameterName(child, out skipParameterName))
 					{
-						listExitOperationBuilder.FirstResult = (int)namedParameters[skipParameterName].Item1;
+						this.exitOperationBuilder.FirstResult = (int)namedParameters[skipParameterName].Item1;
 					}
 					else if (TryGetInt32(child, out firstResult))
 					{										  
-						this.listExitOperationBuilder.FirstResult = firstResult;
+						this.exitOperationBuilder.FirstResult = firstResult;
 					}
 					return false;
 
@@ -160,11 +161,11 @@ namespace NHibernate.Shards.Query
 					int maxResults;
 					if (TryGetParameterName(child, out takeParameterName))
 					{
-						listExitOperationBuilder.MaxResults = (int)namedParameters[takeParameterName].Item1;
+						this.exitOperationBuilder.MaxResults = (int)namedParameters[takeParameterName].Item1;
 					}
 					else if (TryGetInt32(child, out maxResults))
 					{
-						this.listExitOperationBuilder.MaxResults = maxResults;
+						this.exitOperationBuilder.MaxResults = maxResults;
 					}
 					return false;
 
@@ -176,11 +177,11 @@ namespace NHibernate.Shards.Query
 					return true;
 				case HqlSqlWalker.COUNT:
 					// TODO: Determine aggregation operand type
-					this.listExitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(int));
+					this.exitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(long));
 					return true;
 				case HqlSqlWalker.SUM:
 					// TODO: Determine aggregation operand type
-					this.listExitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(int));
+					this.exitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(long));
 					return true;
 			}
 
@@ -230,7 +231,7 @@ namespace NHibernate.Shards.Query
 					}
 				}
 
-				this.listExitOperationBuilder.Orders.Add(
+				this.exitOperationBuilder.Orders.Add(
 					new SortOrder(
 						o => this.rootClassMetadata.GetPropertyValue(o, propertyPath), 
 						isDescending));

@@ -6,14 +6,8 @@ namespace NHibernate.Shards.Criteria
 	/// Interface for a shard-aware <see cref="ICriteria"/> implementation.
 	/// <seealso cref="ICriteria"/> 
 	/// </summary>
-	public interface IShardedCriteria : ICriteria
+	public interface IShardedCriteria : ICriteria, IExitOperationFactory
 	{
-		/// <summary>
-		/// Builds an exit strategy for <see cref="ICriteria.List{T}()"/> operation.
-		/// </summary>
-		/// <returns>An exit strategy for <see cref="ICriteria.List{T}()"/> operation</returns>
-		IListExitStrategy<T> BuildListExitStrategy<T>();
-
 		/// <summary>
 		/// Returns an <see cref="ICriteria"/> instance that is associated with the
 		/// established session of a given shard.

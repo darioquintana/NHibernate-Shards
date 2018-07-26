@@ -26,7 +26,7 @@ namespace NHibernate.Shards.Criteria
         private readonly IShardedSessionImplementor session;
 	    private readonly string entityName;
 		private readonly Func<ISession, ICriteria> criteriaFactory;
-		private readonly ListExitOperationBuilder listExitOperationBuilder;
+		private readonly ExitOperationBuilder exitOperationBuilder;
 
 		private readonly Dictionary<IShard, ICriteria> establishedCriteriaByShard = new Dictionary<IShard, ICriteria>();
 		private readonly List<Action<ICriteria>> establishActions;
@@ -46,7 +46,7 @@ namespace NHibernate.Shards.Criteria
 			this.session = session;
 		    this.entityName= entityName;
 			this.criteriaFactory = criteriaFactory;
-			this.listExitOperationBuilder = new ListExitOperationBuilder();
+			this.exitOperationBuilder = new ExitOperationBuilder();
 			this.establishActions = new List<Action<ICriteria>>();
 			this.subcriteriaByAlias = new Dictionary<string, ICriteria> { { CriteriaSpecification.RootAlias, this } };
 			this.subcriteriaByPath = new Dictionary<string, Subcriteria>();
@@ -58,7 +58,7 @@ namespace NHibernate.Shards.Criteria
 			
 			this.session = other.session;
 			this.criteriaFactory = other.criteriaFactory;
-			this.listExitOperationBuilder = new ListExitOperationBuilder(other.listExitOperationBuilder);
+			this.exitOperationBuilder = new ExitOperationBuilder(other.exitOperationBuilder);
 			this.establishActions = new List<Action<ICriteria>>(other.establishActions);
 			this.subcriteriaByAlias = new Dictionary<string, ICriteria>(other.subcriteriaByAlias);
 			this.subcriteriaByPath = new Dictionary<string, Subcriteria>(other.subcriteriaByPath);
@@ -120,7 +120,7 @@ namespace NHibernate.Shards.Criteria
 			if (distinct != null)
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.listExitOperationBuilder.Distinct = true;
+				this.exitOperationBuilder.Distinct = true;
 				return this;
 			}
 
@@ -137,7 +137,7 @@ namespace NHibernate.Shards.Criteria
 					.Add(projection)
 					.Add(Projections.RowCount());
 				ApplyActionToShards(c => c.SetProjection(projectionList));
-				this.listExitOperationBuilder.Aggregation =
+				this.exitOperationBuilder.Aggregation =
 					c => AggregationUtil.Average(c, GetDoubleFieldSelector(0), GetInt32FieldSelector(1));
 				return this;
 			}
@@ -145,28 +145,28 @@ namespace NHibernate.Shards.Criteria
 			if (aggregationName.StartsWith("sum", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.listExitOperationBuilder.Aggregation = ToSumFunc(projection);
+				this.exitOperationBuilder.Aggregation = ToSumFunc(projection);
 				return this;
 			}
 
 			if (aggregationName.StartsWith("count", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.listExitOperationBuilder.Aggregation = ToSumFunc(projection);
+				this.exitOperationBuilder.Aggregation = ToSumFunc(projection);
 				return this;
 			}
 
 			if (aggregationName.StartsWith("min", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.listExitOperationBuilder.Aggregation = AggregationUtil.Min;
+				this.exitOperationBuilder.Aggregation = AggregationUtil.Min;
 				return this;
 			}
 
 			if (aggregationName.StartsWith("max", StringComparison.OrdinalIgnoreCase))
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
-				this.listExitOperationBuilder.Aggregation = AggregationUtil.Max;
+				this.exitOperationBuilder.Aggregation = AggregationUtil.Max;
 				return this;
 			}
 
@@ -222,14 +222,14 @@ namespace NHibernate.Shards.Criteria
 
 		public ICriteria AddOrder(Order order)
 		{
-			this.listExitOperationBuilder.Orders.Add(ToSortOrder(order));
+			this.exitOperationBuilder.Orders.Add(ToSortOrder(order));
 			ApplyActionToShards(c => c.AddOrder(order));
 			return this;
 		}
 
 		public void ClearOrders()
 		{
-			this.listExitOperationBuilder.Orders.Clear();
+			this.exitOperationBuilder.Orders.Clear();
 			ApplyActionToShards(c => c.ClearOrders());
 		}
 
@@ -355,24 +355,24 @@ namespace NHibernate.Shards.Criteria
 
 		public ICriteria SetMaxResults(int maxResults)
 		{
-			this.listExitOperationBuilder.MaxResults = maxResults;
+			this.exitOperationBuilder.MaxResults = maxResults;
 			ApplyLimitsToShards();
 			return this;
 		}
 
 		public ICriteria SetFirstResult(int firstResult)
 		{
-			this.listExitOperationBuilder.FirstResult = firstResult;
+			this.exitOperationBuilder.FirstResult = firstResult;
 			ApplyLimitsToShards();
 			return this;
 		}
 
 		private void ApplyLimitsToShards()
 		{
-			if (this.listExitOperationBuilder.MaxResults.HasValue)
+			if (this.exitOperationBuilder.MaxResults.HasValue)
 			{
-				var maxResults = this.listExitOperationBuilder.MaxResults.Value
-					+ this.listExitOperationBuilder.FirstResult;
+				var maxResults = this.exitOperationBuilder.MaxResults.Value
+					+ this.exitOperationBuilder.FirstResult;
 				ApplyActionToShards(c => c.SetMaxResults(maxResults));
 			}
 		}
@@ -422,25 +422,25 @@ namespace NHibernate.Shards.Criteria
 		public IList List()
 		{
 			return new List<object>(this.session.Execute(
-				new ListShardOperation<object>(this), BuildListExitStrategy<object>()));
+				new ListShardOperation<object>(this), new ListExitStrategy<object>(this)));
 		}
 
 		public async Task<IList> ListAsync(CancellationToken cancellationToken = new CancellationToken())
 		{
 			return new List<object>(await this.session.ExecuteAsync(
-				new ListShardOperation<object>(this), BuildListExitStrategy<object>(), cancellationToken));
+				new ListShardOperation<object>(this), new ListExitStrategy<object>(this), cancellationToken));
 		}
 
 		public IList<T> List<T>()
 		{
 			return new List<T>(this.session.Execute(
-				new ListShardOperation<T>(this), BuildListExitStrategy<T>()));
+				new ListShardOperation<T>(this), new ListExitStrategy<T>(this)));
 		}
 
 		public async Task<IList<T>> ListAsync<T>(CancellationToken cancellationToken = new CancellationToken())
 		{
 			return new List<T>(await this.session.ExecuteAsync(
-				new ListShardOperation<T>(this), BuildListExitStrategy<T>(), cancellationToken));
+				new ListShardOperation<T>(this), new ListExitStrategy<T>(this), cancellationToken));
 		}
 
 		public void List(IList results)
@@ -452,7 +452,7 @@ namespace NHibernate.Shards.Criteria
 			 * criteria collector to do post processing.
 			 */
 			var items = this.session.Execute(
-				new ListShardOperation<object>(this), BuildListExitStrategy<object>());
+				new ListShardOperation<object>(this), new ListExitStrategy<object>(this));
 			foreach (var item in items)
 			{
 				results.Add(item);
@@ -462,7 +462,7 @@ namespace NHibernate.Shards.Criteria
 		public async Task ListAsync(IList results, CancellationToken cancellationToken = new CancellationToken())
 		{
 			var items = await this.session.ExecuteAsync(
-				new ListShardOperation<object>(this), BuildListExitStrategy<object>(), cancellationToken);
+				new ListShardOperation<object>(this), new ListExitStrategy<object>(this), cancellationToken);
 			foreach (var item in items)
 			{
 				results.Add(item);
@@ -481,17 +481,12 @@ namespace NHibernate.Shards.Criteria
 
 		public T UniqueResult<T>()
 		{
-            return this.session.Execute(
-                new UniqueResultOperation<T>(this), 
-                new UniqueResultExitStrategy<T>(this.listExitOperationBuilder.Aggregation));
+            return this.session.Execute(new UniqueResultOperation<T>(this), new UniqueResultExitStrategy<T>(this));
 		}
 
 		public Task<T> UniqueResultAsync<T>(CancellationToken cancellationToken = new CancellationToken())
 		{
-			return this.session.ExecuteAsync(
-				new UniqueResultOperation<T>(this),
-				new UniqueResultExitStrategy<T>(this.listExitOperationBuilder.Aggregation),
-				cancellationToken);
+			return this.session.ExecuteAsync(new UniqueResultOperation<T>(this), new UniqueResultExitStrategy<T>(this), cancellationToken);
 		}
 
 		public IFutureEnumerable<T> Future<T>()
@@ -504,9 +499,9 @@ namespace NHibernate.Shards.Criteria
 			return new FutureValueShardOperation<T>(this);
 		}
 
-		public IListExitStrategy<T> BuildListExitStrategy<T>()
+		public ExitOperation CreateExitOperation()
 		{
-			return new ListExitStrategy<T>(listExitOperationBuilder.BuildListOperation());
+			return this.exitOperationBuilder.BuildListOperation();
 		}
 
 		public ICriteria GetCriteriaByPath(string path)
@@ -632,14 +627,13 @@ namespace NHibernate.Shards.Criteria
 		private class FutureShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>, IFutureEnumerable<T>
 		{
 		    private IEnumerable<T> results;
-			private readonly IShardedSessionImplementor session;
+			private readonly ShardedCriteriaImpl shardedCriteria;
 			private readonly IListExitStrategy<T> listExitStrategy;
 			private readonly IDictionary<IShard, IFutureEnumerable<T>> futuresByShard;
 
 			public FutureShardOperation(ShardedCriteriaImpl shardedCriteria)
 			{
-				this.session = shardedCriteria.session;
-				this.listExitStrategy = shardedCriteria.BuildListExitStrategy<T>();
+				this.shardedCriteria = shardedCriteria;
 				this.futuresByShard = shardedCriteria.session.Shards
 					.ToDictionary(s => s, s => shardedCriteria.EstablishFor(s).Future<T>());
 			}
@@ -659,17 +653,29 @@ namespace NHibernate.Shards.Criteria
 				return this.futuresByShard[shard].GetEnumerableAsync;
 			}
 
-			public async Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
-			{
-				return this.results ?? (this.results = await this.session.ExecuteAsync(this, this.listExitStrategy, cancellationToken).ConfigureAwait(false));
-			}
+		    public async Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
+		    {
+		        if (this.results == null)
+		        {
+		            var session = this.shardedCriteria.session;
+		            var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
+		            this.results = await session.ExecuteAsync(this, exitStrategy, cancellationToken).ConfigureAwait(false);
+		        }
+		        return this.results;
+		    }
 
-			public IEnumerable<T> GetEnumerable()
-			{
-				return this.results ?? (this.results = this.session.Execute(this, this.listExitStrategy));
-			}
+		    public IEnumerable<T> GetEnumerable()
+		    {
+		        if (this.results == null)
+		        {
+		            var session = this.shardedCriteria.session;
+		            var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
+		            this.results = session.Execute(this, exitStrategy);
+		        }
+		        return this.results;
+		    }
 
-			public IEnumerator<T> GetEnumerator()
+            public IEnumerator<T> GetEnumerator()
 			{
 				return GetEnumerable().GetEnumerator();
 			}
@@ -682,16 +688,14 @@ namespace NHibernate.Shards.Criteria
 
 		private class FutureValueShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>, IFutureValue<T>
 		{
-			private readonly IShardedSessionImplementor session;
+			private readonly ShardedCriteriaImpl shardedCriteria;
 			private readonly IDictionary<IShard, IFutureValue<T>> futuresByShard;
-		    private readonly IExitStrategy<T> exitStrategy;
 
 			public FutureValueShardOperation(ShardedCriteriaImpl shardedCriteria)
 			{
-				this.session = shardedCriteria.session;
+				this.shardedCriteria = shardedCriteria;
 				this.futuresByShard = shardedCriteria.session.Shards
 					.ToDictionary(s => s, s => shardedCriteria.EstablishFor(s).FutureValue<T>());
-			    this.exitStrategy = new UniqueResultExitStrategy<T>(shardedCriteria.listExitOperationBuilder.Aggregation);
 			}
 
 			public string OperationName
@@ -711,12 +715,17 @@ namespace NHibernate.Shards.Criteria
 
 			public T Value
 			{
-				get { return session.Execute(this, this.exitStrategy); }
+			    get
+			    {
+			        var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedCriteria);
+                    return this.shardedCriteria.session.Execute(this, exitStrategy);
+			    }
 			}
 
 			public Task<T> GetValueAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-				return this.session.ExecuteAsync(this, new UniqueResultExitStrategy<T>(null), cancellationToken);
+			    var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedCriteria);
+				return this.shardedCriteria.session.ExecuteAsync(this, exitStrategy, cancellationToken);
 			}
 		}
 

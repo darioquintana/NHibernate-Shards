@@ -3,7 +3,7 @@ using NHibernate.Properties;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-    public class ListExitOperationUtils
+    public class ExitOperationUtils
 	{
 		public static IComparable GetPropertyValue(object obj, string propertyName)
 		{

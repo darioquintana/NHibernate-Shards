@@ -9,7 +9,7 @@ namespace NHibernate.Shards.Strategy.Exit
 	/// Represents method object that performs postprocessing on results that have
 	/// been collected from shards.
 	/// </summary>
-	public class ListExitOperation
+	public class ExitOperation
 	{
 		/// <summary>
 		/// Maximum number of results requested by the client.
@@ -27,7 +27,7 @@ namespace NHibernate.Shards.Strategy.Exit
 		public bool Distinct { get; private set; }
 
 		/// <summary>
-		/// Optional aggregation function to be applied to the results. 
+		/// Optional aggregation function to be applied to the results collected from all shards. 
 		/// </summary>
 		public AggregationFunc Aggregation { get; private set; }
 
@@ -37,14 +37,14 @@ namespace NHibernate.Shards.Strategy.Exit
 		public IComparer<object> Order { get; private set; }
 
 		/// <summary>
-		/// Creates new <see cref="ListExitOperation"/> instance.
+		/// Creates new <see cref="ExitOperation"/> instance.
 		/// </summary>
 		/// <param name="maxResults">Maximum number of results requested by the client.</param>
 		/// <param name="firstResult">Index of the first result requested by the client.</param>
 		/// <param name="distinct">Indication whether client requests removal of duplicate results.</param>
 		/// <param name="aggregation">Optional aggregation function to be applied to the results. </param>
 		/// <param name="order">Optional sort order to be applied to the results.</param>
-		public ListExitOperation(
+		public ExitOperation(
 			int? maxResults, 
 			int firstResult, 
 			bool distinct, 

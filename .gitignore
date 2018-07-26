@@ -28,3 +28,4 @@ TestResult*.xml
 *resharper*
 _ReSharper*/
 /src/.vs/NHibernate.Shards/v15/Server/sqlite3
+/src/.vs/NHibernate.Shards/DesignTimeBuild

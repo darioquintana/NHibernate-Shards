@@ -1,10 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-	/// <summary>
+
+    /// <summary>
 	/// Threadsafe ExistStrategy that concatenates all the lists that are added.
 	/// </summary>
 	public class ListExitStrategy<T> : IListExitStrategy<T>
@@ -12,13 +14,12 @@ namespace NHibernate.Shards.Strategy.Exit
 		// List instance to which final results are added
 		private IEnumerable<T> result;
 
-		// maximum number of results requested by the client
-		private readonly ListExitOperation exitOperation;
+		private readonly IExitOperationFactory exitOperationFactory;
 
-		public ListExitStrategy(ListExitOperation exitOperation)
+		public ListExitStrategy(IExitOperationFactory exitOperationFactory)
 		{
-			Preconditions.CheckNotNull(exitOperation);
-			this.exitOperation = exitOperation;
+			Preconditions.CheckNotNull(exitOperationFactory);
+			this.exitOperationFactory = exitOperationFactory;
 		}
 
 		/// <summary>
@@ -40,6 +41,7 @@ namespace NHibernate.Shards.Strategy.Exit
 
 		public IEnumerable<T> CompileResults()
 		{
+		    var exitOperation = this.exitOperationFactory.CreateExitOperation();
 			return exitOperation.Execute(result ?? Enumerable.Empty<T>());
 		}
 	}

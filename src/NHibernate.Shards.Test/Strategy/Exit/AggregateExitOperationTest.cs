@@ -39,7 +39,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 
 		private static void VerifyAggregateListExitOperation<T>(AggregationFunc aggregation, IList<T> input, IList<T> expected, string description)
 		{
-			var listExitOperation = new ListExitOperation(null, 0, false, aggregation, null);
+			var listExitOperation = new ExitOperation(null, 0, false, aggregation, null);
 			var result = listExitOperation.Execute(input);
 			Assert.That(result, Is.EqualTo(expected), description);
 		}

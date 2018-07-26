@@ -72,7 +72,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 			AggregationFunc averageFunc = c => c.Average(
 				arr => (double?)((object[])arr)[0],
 				arr => (int?)((object[])arr)[1]);
-			var listExitOperation = new ListExitOperation(null, 0, false, averageFunc, null);
+			var listExitOperation = new ExitOperation(null, 0, false, averageFunc, null);
 			var result = listExitOperation.Execute(input);
 			Assert.That(result, Is.EqualTo(expected), description);
 		}

@@ -17,7 +17,7 @@ namespace NHibernate.Shards.Strategy.Exit
 
 		public static SortOrder Ascending(string propertyName)
 		{
-			return new SortOrder(o => ListExitOperationUtils.GetPropertyValue(o, propertyName), false);
+			return new SortOrder(o => ExitOperationUtils.GetPropertyValue(o, propertyName), false);
 		}
 
 		public static SortOrder Ascending(Func<object, object> propertyGetter)
@@ -27,7 +27,7 @@ namespace NHibernate.Shards.Strategy.Exit
 
 		public static SortOrder Descending(string propertyName)
 		{
-			return new SortOrder(o => ListExitOperationUtils.GetPropertyValue(o, propertyName), true);
+			return new SortOrder(o => ExitOperationUtils.GetPropertyValue(o, propertyName), true);
 		}
 
 		public static SortOrder Descending(Func<object, object> propertyGetter)

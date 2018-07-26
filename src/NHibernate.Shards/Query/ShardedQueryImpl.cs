@@ -37,7 +37,7 @@ namespace NHibernate.Shards.Query
 		private readonly IDictionary<IShard, IQuery> establishedQueriesByShard = new Dictionary<IShard, IQuery>();
 		private readonly ICollection<Action<IQuery>> establishActions = new List<Action<IQuery>>();
 
-		private readonly ListExitOperationBuilder listExitOperationBuilder = new ListExitOperationBuilder();
+		private readonly ExitOperationBuilder exitOperationBuilder = new ExitOperationBuilder();
 
 		/// <summary>
 		/// Creates new <see cref="ShardedQueryImpl"/> instance.
@@ -93,9 +93,9 @@ namespace NHibernate.Shards.Query
 		private IQuery ApplyLimits(IQuery query)
 		{
 			query.SetFirstResult(0);
-			if (this.listExitOperationBuilder.MaxResults != null)
+			if (this.exitOperationBuilder.MaxResults != null)
 			{
-				query.SetMaxResults(this.listExitOperationBuilder.FirstResult + this.listExitOperationBuilder.MaxResults.Value);
+				query.SetMaxResults(this.exitOperationBuilder.FirstResult + this.exitOperationBuilder.MaxResults.Value);
 			}
 			return query;
 		}
@@ -104,13 +104,15 @@ namespace NHibernate.Shards.Query
 		{
 		    get
 		    {
-		        if (this.unshardedQueryExpression == null) return null;
-                return this.queryExpression 
-                    ?? (this.queryExpression = new ShardedQueryExpression(this.unshardedQueryExpression, this.listExitOperationBuilder));
+		        if (this.queryExpression == null && this.unshardedQueryExpression != null)
+		        {
+		            this.queryExpression = new ShardedQueryExpression(this.unshardedQueryExpression, this.exitOperationBuilder);
+		        }
+		        return this.queryExpression;
 		    }
 		}
 
-		public bool IsReadOnly
+        public bool IsReadOnly
 		{
 			get { return this.SomeQuery.IsReadOnly; }
 		}
@@ -127,12 +129,12 @@ namespace NHibernate.Shards.Query
 
 		public IEnumerable<T> Enumerable<T>()
 		{
-			return this.session.Execute(new ListShardOperation<T>(this), BuildListExitStrategy<T>());
+			return this.session.Execute(new ListShardOperation<T>(this), new ListExitStrategy<T>(this));
 		}
 
 		public async Task<IEnumerable<T>> EnumerableAsync<T>(CancellationToken cancellationToken = new CancellationToken())
 		{
-			return await this.session.ExecuteAsync(new ListShardOperation<T>(this), BuildListExitStrategy<T>(), cancellationToken);
+			return await this.session.ExecuteAsync(new ListShardOperation<T>(this), new ListExitStrategy<T>(this), cancellationToken);
 		}
 
 		/**
@@ -216,12 +218,12 @@ namespace NHibernate.Shards.Query
 
 		public T UniqueResult<T>()
 		{
-			return this.session.Execute(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>(null));
+			return this.session.Execute(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>(this));
 		}
 
 		public Task<T> UniqueResultAsync<T>(CancellationToken cancellationToken = new CancellationToken())
 		{
-			return this.session.ExecuteAsync(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>(null), cancellationToken);
+			return this.session.ExecuteAsync(new UniqueResultShardOperation<T>(this), new UniqueResultExitStrategy<T>(this), cancellationToken);
 		}
 
 		public IFutureEnumerable<T> Future<T>()
@@ -246,13 +248,13 @@ namespace NHibernate.Shards.Query
 
 		public IQuery SetMaxResults(int maxResults)
 		{
-			this.listExitOperationBuilder.MaxResults = maxResults;
+			this.exitOperationBuilder.MaxResults = maxResults;
 			return this;
 		}
 
 		public IQuery SetFirstResult(int firstResult)
 		{
-			this.listExitOperationBuilder.FirstResult = firstResult;
+			this.exitOperationBuilder.FirstResult = firstResult;
 			return this;
 		}
 
@@ -717,12 +719,12 @@ namespace NHibernate.Shards.Query
 			return result;
 		}
 
-		public IListExitStrategy<T> BuildListExitStrategy<T>()
+		public ExitOperation CreateExitOperation()
 		{
-			return new ListExitStrategy<T>(this.listExitOperationBuilder.BuildListOperation());
+			return this.exitOperationBuilder.BuildListOperation();
 		}
 
-		private class UniqueResultShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>
+	    private class UniqueResultShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>
 		{
 			private readonly IShardedQuery shardedQuery;
 
@@ -781,14 +783,13 @@ namespace NHibernate.Shards.Query
 
 		private class FutureShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>, IFutureEnumerable<T>
 		{
-			private readonly IShardedSessionImplementor session;
-			private readonly IListExitStrategy<T> listExitStrategy;
+		    private IEnumerable<T> results;
+			private readonly ShardedQueryImpl shardedQuery;
 			private readonly IDictionary<IShard, IFutureEnumerable<T>> futuresByShard;
 
 			public FutureShardOperation(ShardedQueryImpl shardedQuery)
 			{
-				this.session = shardedQuery.session;
-				this.listExitStrategy = shardedQuery.BuildListExitStrategy<T>();
+				this.shardedQuery = shardedQuery;
 				this.futuresByShard = shardedQuery.session.Shards
 					.ToDictionary(s => s, s => shardedQuery.EstablishFor(s).Future<T>());
 			}
@@ -808,17 +809,27 @@ namespace NHibernate.Shards.Query
 				return this.futuresByShard[shard].GetEnumerableAsync;
 			}
 
-			public Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
+			public async Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-				return this.session.ExecuteAsync(this, this.listExitStrategy, cancellationToken);
+			    if (this.results == null)
+			    {
+                    var exitStrategy = new ListExitStrategy<T>(this.shardedQuery);
+			        this.results = await this.shardedQuery.session.ExecuteAsync(this, exitStrategy, cancellationToken).ConfigureAwait(false);
+			    }
+				return this.results;
 			}
 
 			public IEnumerable<T> GetEnumerable()
 			{
-				return this.session.Execute(this, this.listExitStrategy);
+			    if (this.results == null)
+			    {
+			        var exitStrategy = new ListExitStrategy<T>(this.shardedQuery);
+			        this.results = this.shardedQuery.session.Execute(this, exitStrategy);
+			    }
+			    return this.results;
 			}
 
-			public IEnumerator<T> GetEnumerator()
+            public IEnumerator<T> GetEnumerator()
 			{
 				return GetEnumerable().GetEnumerator();
 			}

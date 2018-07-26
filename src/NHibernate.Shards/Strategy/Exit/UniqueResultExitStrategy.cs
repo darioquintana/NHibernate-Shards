@@ -1,9 +1,9 @@
+using System;
 using System.Collections.Generic;
+using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-    using NHibernate.Shards.Util;
-
     internal interface IUniqueResult<T>
 	{
 		T Value { get; }
@@ -12,13 +12,14 @@ namespace NHibernate.Shards.Strategy.Exit
 
 	public class UniqueResultExitStrategy<T> : IExitStrategy<T>, IUniqueResult<T>
 	{
-	    private readonly AggregationFunc aggregation;
+	    private readonly IExitOperationFactory exitOperationFactory;
 	    private readonly List<T> results = new List<T>();
 		private IShard firstShard;
 
-	    public UniqueResultExitStrategy(AggregationFunc aggregation)
+	    public UniqueResultExitStrategy(IExitOperationFactory exitOperationFactory)
 	    {
-	        this.aggregation = aggregation;
+            Preconditions.CheckNotNull(exitOperationFactory);
+	        this.exitOperationFactory = exitOperationFactory;
 	    }
 
 		/// <summary>
@@ -57,9 +58,10 @@ namespace NHibernate.Shards.Strategy.Exit
 
 		public T CompileResults()
 		{
-		    if (this.aggregation != null)
+		    var aggregation = this.exitOperationFactory.CreateExitOperation().Aggregation;
+		    if (aggregation != null)
 		    {
-		        var aggregationResult = (T)this.aggregation(this.results);
+		        var aggregationResult = (T)aggregation(this.results);
 		        this.results.Clear();
 		        this.results.Add(aggregationResult);
 		    }

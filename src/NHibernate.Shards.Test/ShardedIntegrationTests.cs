@@ -214,6 +214,75 @@
 	        }
 	    }
 
+	    [Test]
+	    public void CanQueryWithHql()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var persistentPersons = session.CreateQuery("from Person p where p.LegalName.FirstName = 'Mary'")
+	                    .List();
+	                Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
+	            }
+	        }
+	    }
+
+	    [Test]
+	    public void CanCountRowsWithHql()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var rowCount = session.CreateQuery("select count(p) from Person p").UniqueResult<long>();
+	                Assert.That(rowCount, Is.EqualTo(2), "RowCount");
+
+	                var rowCountInt64 = session.QueryOver<Person>().RowCountInt64();
+	                Assert.That(rowCountInt64, Is.EqualTo(2), "RowCountInt64");
+	            }
+	        }
+	    }
+
+        [Test]
+	    public void GetFutureResultsMoreThanOnceWithHql()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var persistentPersons = session.CreateQuery("from Person p where p.LegalName.FirstName = 'Mary'")
+	                    .Future<Person>();
+	                Assert.That(persistentPersons.ToList(), Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "First time");
+	                Assert.That(persistentPersons.ToList(), Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "Second time");
+	            }
+	        }
+	    }
+
         [Test]
 		public void CanQueryWithLinq()
 		{

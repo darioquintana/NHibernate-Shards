@@ -288,7 +288,7 @@ namespace NHibernate.Shards.Criteria
 
 			public IListExitStrategy<object> BuildListExitStrategy()
 			{
-				return this.ShardedCriteria.BuildListExitStrategy<object>();
+				return new ListExitStrategy<object>(this.ShardedCriteria);
 			}
 
 			public IList BuildResultList(IEnumerable result)

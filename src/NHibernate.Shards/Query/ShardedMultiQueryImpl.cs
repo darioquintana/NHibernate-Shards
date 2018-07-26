@@ -450,7 +450,7 @@ namespace NHibernate.Shards.Query
 
 			public IListExitStrategy<object> BuildListExitStrategy()
 			{
-				return this.ShardedQuery.BuildListExitStrategy<object>();
+				return new ListExitStrategy<object>(this.ShardedQuery);
 			}
 
 			public IList BuildResultList(IEnumerable result)

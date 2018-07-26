@@ -39,7 +39,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 
 		private static void VerifyFirstResultOperation<T>(int firstResult, IList<T> input, IList<T> expected, string description)
 		{
-			var listExitOperation = new ListExitOperation(null, firstResult, false, null, null);
+			var listExitOperation = new ExitOperation(null, firstResult, false, null, null);
 			var result = listExitOperation.Execute(input).ToList();
 			Assert.That(result, Is.EqualTo(expected), description);
 		}

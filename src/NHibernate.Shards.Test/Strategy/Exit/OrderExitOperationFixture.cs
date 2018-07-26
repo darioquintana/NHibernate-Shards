@@ -100,7 +100,7 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 		private static void VerifyOrderedListExitOperation<T>(IEnumerable<SortOrder> orders, IList<T> input, IList<T> expected, string description)
 		{
 			var comparer = new SortOrderComparer(orders);
-			var listExitOperation = new ListExitOperation(null, 0, false, null, comparer);
+			var listExitOperation = new ExitOperation(null, 0, false, null, comparer);
 			var result = listExitOperation.Execute(input);
 			Assert.That(result, Is.EqualTo(expected) & Is.Ordered.Using((IComparer)comparer), description);
 		}

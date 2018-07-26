@@ -4,9 +4,9 @@ using NHibernate.Shards.Util;
 namespace NHibernate.Shards.Strategy.Exit
 {
 	/// <summary>
-	/// A builder of <see cref="ListExitOperation"/> instances.
+	/// A builder of <see cref="ExitOperation"/> instances.
 	/// </summary>
-	public class ListExitOperationBuilder
+	public class ExitOperationBuilder
 	{
 		private readonly List<SortOrder> orders = new List<SortOrder>();
 
@@ -34,16 +34,16 @@ namespace NHibernate.Shards.Strategy.Exit
 		public AggregationFunc Aggregation { get; set; }
 
 		/// <summary>
-		/// Creates empty <see cref="ListExitOperationBuilder"/> instance.
+		/// Creates empty <see cref="ExitOperationBuilder"/> instance.
 		/// </summary>
-		public ListExitOperationBuilder()
+		public ExitOperationBuilder()
 		{}
 
 		/// <summary>
-		/// Creates clone of another <see cref="ListExitOperationBuilder"/> instance.
+		/// Creates clone of another <see cref="ExitOperationBuilder"/> instance.
 		/// </summary>
 		/// <param name="other">The builder to clone.</param>
-		public ListExitOperationBuilder(ListExitOperationBuilder other)
+		public ExitOperationBuilder(ExitOperationBuilder other)
 		{
 			Preconditions.CheckNotNull(other);
 
@@ -63,19 +63,19 @@ namespace NHibernate.Shards.Strategy.Exit
 		}
 
 		/// <summary>
-		/// Creates new <see cref="ListExitOperation"/> with settings matching those 
+		/// Creates new <see cref="ExitOperation"/> with settings matching those 
 		/// that are currently defined on this builder instance.
 		/// </summary>
-		/// <returns>A new <see cref="ListExitOperation"/> with settings matching those 
+		/// <returns>A new <see cref="ExitOperation"/> with settings matching those 
 		/// that are currently defined on this builder instance.</returns>
-		public ListExitOperation BuildListOperation()
+		public ExitOperation BuildListOperation()
 		{
-			return new ListExitOperation(this.MaxResults, this.FirstResult, this.Distinct, this.Aggregation, BuildComparer());
+			return new ExitOperation(this.MaxResults, this.FirstResult, this.Distinct, this.Aggregation, BuildComparer());
 		}
 
-		public ListExitOperationBuilder Clone()
+		public ExitOperationBuilder Clone()
 		{
-			return new ListExitOperationBuilder(this);
+			return new ExitOperationBuilder(this);
 		}
 
 		private IComparer<object> BuildComparer()
