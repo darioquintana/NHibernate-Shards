@@ -5,9 +5,11 @@ using System.Linq;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-	public static class AggregationUtil
+    using System.Collections.Generic;
+
+    public static class AggregationUtil
 	{
-		public static AggregationFunc GetSumFunc(System.Type operandType)
+        public static AggregationFunc GetSumFunc(System.Type operandType)
 		{
 			switch (System.Type.GetTypeCode(operandType))
 			{

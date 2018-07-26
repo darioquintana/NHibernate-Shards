@@ -4,6 +4,7 @@
 	using System.Collections.Generic;
 	using System.Linq;
 	using NHibernate.Criterion;
+	using NHibernate.Linq;
 	using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
 	using NUnit.Framework;
@@ -24,7 +25,7 @@
 
 		#endregion
 
-		#region Tests
+		#region Tests - Persistence
 
 		[Test]
 		public void CanSaveEntityWithComponentList()
@@ -43,7 +44,11 @@
 			Assert.That(person.Id, Is.GreaterThan(0));
 		}
 
-		[Test]
+        #endregion
+
+        #region Tests - criteria queries
+
+        [Test]
 		public void CanQueryWithCriteria()
 		{
 			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
@@ -143,6 +148,10 @@
 	        }
 	    }
 
+        #endregion
+
+        #region Tests - QueryOver queries
+
         [Test]
 		public void CanQueryWithQueryOver()
 		{
@@ -214,7 +223,11 @@
 	        }
 	    }
 
-	    [Test]
+        #endregion
+
+        #region Tests - HQL queries
+
+        [Test]
 	    public void CanQueryWithHql()
 	    {
 	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
@@ -260,6 +273,28 @@
 	        }
 	    }
 
+	    [Test]
+	    public void CanCalulateMinWithHql()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" }, DateOfBirth = new DateTime(1970, 1, 1) };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" }, DateOfBirth = new DateTime(1968, 12, 31) };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var minAge = session.CreateQuery("select min(p.DateOfBirth) from Person p")
+	                    .UniqueResult<object>();
+	                Assert.That(minAge, Is.EqualTo(person2.DateOfBirth));
+	            }
+	        }
+	    }
+
         [Test]
 	    public void GetFutureResultsMoreThanOnceWithHql()
 	    {
@@ -282,6 +317,10 @@
 	            }
 	        }
 	    }
+
+        #endregion
+
+        #region Tests - Linq queries
 
         [Test]
 		public void CanQueryWithLinq()
@@ -347,6 +386,7 @@
 			public int? Id { get; set; }
 			public Guid Guid { get; private set; }
 			public PersonName LegalName { get; set; }
+		    public DateTime? DateOfBirth { get; set; }
 			public IList<PersonName> Aliases { get; protected set; }
 
 			public Person()
@@ -396,6 +436,7 @@
 					c.Property(x => x.LastName, p => p.Column("last_name"));
 					c.Lazy(false);
 				});
+                Property(x => x.DateOfBirth, p => p.Column("dob"));
 
 				List(x => x.Aliases, l =>
 				{

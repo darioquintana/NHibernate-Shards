@@ -172,13 +172,29 @@ namespace NHibernate.Shards.Query
 				case HqlSqlWalker.ORDER:
 					ExtractOrders(node);
 					return true;
-				case HqlSqlWalker.AVG:
+                case HqlSqlWalker.AGGREGATE:
+                    if ("min".Equals(node.Text, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        this.exitOperationBuilder.Aggregation = AggregationUtil.Min;
+                    }
+                    else if ("max".Equals(node.Text, StringComparison.InvariantCultureIgnoreCase))
+			        {
+			            this.exitOperationBuilder.Aggregation = AggregationUtil.Max;
+			        }
+                    return true;
+                case HqlSqlWalker.AVG:
 					// TODO: Replace AVG with SUM and COUNT 
 					return true;
 				case HqlSqlWalker.COUNT:
 					// TODO: Determine aggregation operand type
 					this.exitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(long));
 					return true;
+			    case HqlSqlWalker.MIN:
+			        this.exitOperationBuilder.Aggregation = AggregationUtil.Min;
+			        return true;
+			    case HqlSqlWalker.MAX:
+			        this.exitOperationBuilder.Aggregation = AggregationUtil.Max;
+			        return true;
 				case HqlSqlWalker.SUM:
 					// TODO: Determine aggregation operand type
 					this.exitOperationBuilder.Aggregation = AggregationUtil.GetSumFunc(typeof(long));
