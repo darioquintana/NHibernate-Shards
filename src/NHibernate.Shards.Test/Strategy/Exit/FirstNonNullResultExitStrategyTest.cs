@@ -34,7 +34,8 @@ namespace NHibernate.Shards.Test.Strategy.Exit
 		[Test]
 		public void TestNullShard()
 		{
-			UniqueResultExitStrategy<object> fnnres = new UniqueResultExitStrategy<object>(null);
+		    var exitOperationFactory = Substitute.For<IExitOperationFactory>();
+			UniqueResultExitStrategy<object> fnnres = new UniqueResultExitStrategy<object>(exitOperationFactory);
 			try
 			{
 				fnnres.AddResult(null, null);
