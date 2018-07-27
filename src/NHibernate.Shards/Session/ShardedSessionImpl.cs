@@ -595,75 +595,87 @@ namespace NHibernate.Shards.Session
 
 	    /// <inheritdoc />
 		public object Load(System.Type clazz, object id, LockMode lockMode)
-		{
-			return Load(new ShardedEntityKey(clazz, id), null);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+	        return Load(key, null);
+	    }
 
 	    /// <inheritdoc />
 		public Task<object> LoadAsync(System.Type theType, object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
-		{
-			return LoadAsync<object>(new ShardedEntityKey(theType, id), null, cancellationToken);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(theType), id);
+	        return LoadAsync<object>(key, null, cancellationToken);
+	    }
 
 	    /// <inheritdoc />
 		public object Load(string entityName, object id, LockMode lockMode)
-		{
-			return Load(new ShardedEntityKey(entityName, id), lockMode);
-		}
+	    {
+	        var key = new ShardedEntityKey(entityName, id);
+	        return Load(key, lockMode);
+	    }
 
 	    /// <inheritdoc />
 		public Task<object> LoadAsync(string entityName, object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
-		{
-			return LoadAsync<object>(new ShardedEntityKey(entityName, id), lockMode, cancellationToken);
-		}
+	    {
+	        var key = new ShardedEntityKey(entityName, id);
+	        return LoadAsync<object>(key, lockMode, cancellationToken);
+	    }
 
 	    /// <inheritdoc />
 		public object Load(System.Type clazz, object id)
-		{
-			return Load(new ShardedEntityKey(clazz, id), null);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+	        return Load(key, null);
+	    }
 
 	    /// <inheritdoc />
 		public Task<object> LoadAsync(System.Type theType, object id, CancellationToken cancellationToken = new CancellationToken())
-		{
-			return LoadAsync<object>(new ShardedEntityKey(theType, id), null, cancellationToken);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(theType), id);
+	        return LoadAsync<object>(key, null, cancellationToken);
+	    }
 
 	    /// <inheritdoc />
 		public T Load<T>(object id, LockMode lockMode)
-		{
-			return (T)Load(new ShardedEntityKey(typeof(T), id), lockMode);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+	        return (T)Load(key, lockMode);
+	    }
 
 	    /// <inheritdoc />
 		public Task<T> LoadAsync<T>(object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
-		{
-			return LoadAsync<T>(new ShardedEntityKey(typeof(T), id), lockMode, cancellationToken);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+	        return LoadAsync<T>(key, lockMode, cancellationToken);
+	    }
 
 	    /// <inheritdoc />
 		public T Load<T>(object id)
-		{
-			return (T)Load(new ShardedEntityKey(typeof(T), id), null);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+	        return (T)Load(key, null);
+	    }
 
 	    /// <inheritdoc />
 		public Task<T> LoadAsync<T>(object id, CancellationToken cancellationToken = new CancellationToken())
-		{
-			return LoadAsync<T>(new ShardedEntityKey(typeof(T), id), null, cancellationToken);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+	        return LoadAsync<T>(key, null, cancellationToken);
+	    }
 
 	    /// <inheritdoc />
 		public object Load(string entityName, object id)
-		{
-			return Load(new ShardedEntityKey(entityName, id), null);
-		}
+	    {
+	        var key = new ShardedEntityKey(entityName, id);
+	        return Load(key, null);
+	    }
 
 	    /// <inheritdoc />
 		public Task<object> LoadAsync(string entityName, object id, CancellationToken cancellationToken = new CancellationToken())
-		{
-			return LoadAsync<object>(new ShardedEntityKey(entityName, id), null, cancellationToken);
-		}
+	    {
+	        var key = new ShardedEntityKey(entityName, id);
+	        return LoadAsync<object>(key, null, cancellationToken);
+	    }
 
 		private object Load(ShardedEntityKey key, LockMode lockMode)
 		{
@@ -699,15 +711,17 @@ namespace NHibernate.Shards.Session
 
 	    /// <inheritdoc />
 		public void Load(object obj, object id)
-		{
-			Load(obj, new ShardedEntityKey(GuessEntityName(obj), id));
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(obj), id);
+	        Load(obj, key);
+	    }
 
 	    /// <inheritdoc />
 		public Task LoadAsync(object obj, object id, CancellationToken cancellationToken = new CancellationToken())
-		{
-			return LoadAsync(obj, new ShardedEntityKey(GuessEntityName(obj), id), cancellationToken);
-		}
+	    {
+	        var key = new ShardedEntityKey(GuessEntityName(obj), id);
+	        return LoadAsync(obj, key, cancellationToken);
+	    }
 
 		private void Load(object entity, ShardedEntityKey key)
 		{
@@ -2370,24 +2384,26 @@ namespace NHibernate.Shards.Session
 		/// <returns>a persistent instance or null</returns>
 		public object Get(System.Type clazz, object id)
 		{
-			return Get(new ShardedEntityKey(clazz, id), null).Value;
+		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+		    return Get(key, null).Value;
 		}
 
 		public async Task<object> GetAsync(System.Type clazz, object id, CancellationToken cancellationToken = new CancellationToken())
 		{
-			var uniqueResult = await GetAsync(new ShardedEntityKey(clazz, id), null, cancellationToken);
-			return uniqueResult.Value;
+		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			return (await GetAsync(key, null, cancellationToken)).Value;
 		}
 
 		public object Get(string entityName, object id)
 		{
-			return Get(new ShardedEntityKey(entityName, id), null).Value;
+		    var key = new ShardedEntityKey(entityName, id);
+		    return Get(key, null).Value;
 		}
 
 		public async Task<object> GetAsync(string entityName, object id, CancellationToken cancellationToken = new CancellationToken())
 		{
-			var uniqueResult = await GetAsync(new ShardedEntityKey(entityName, id), null, cancellationToken);
-			return uniqueResult.Value;
+		    var key = new ShardedEntityKey(entityName, id);
+			return (await GetAsync(key, null, cancellationToken)).Value;
 		}
 
 		/// <summary>
@@ -2401,13 +2417,14 @@ namespace NHibernate.Shards.Session
 		/// <returns>a persistent instance or null</returns>
 		public object Get(System.Type clazz, object id, LockMode lockMode)
 		{
-			return Get(new ShardedEntityKey(clazz, id), lockMode).Value;
+		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			return Get(key, lockMode).Value;
 		}
 
 		public async Task<object> GetAsync(System.Type clazz, object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
 		{
-			var uniqueResult = await GetAsync(new ShardedEntityKey(clazz, id), lockMode, cancellationToken);
-			return uniqueResult.Value;
+		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			return (await GetAsync(key, lockMode, cancellationToken)).Value;
 		}
 
 		/// <summary>
@@ -2415,13 +2432,14 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public T Get<T>(object id)
 		{
-			return (T)Get(new ShardedEntityKey(typeof(T), id), null).Value;
+		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+		    return (T)Get(key, null).Value;
 		}
 
 		public async Task<T> GetAsync<T>(object id, CancellationToken cancellationToken = new CancellationToken())
 		{
-			var uniqueResult = await GetAsync(new ShardedEntityKey(typeof(T), id), null, cancellationToken);
-			return (T)uniqueResult.Value;
+		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return (T)(await GetAsync(key, null, cancellationToken)).Value;
 		}
 
 		/// <summary>
@@ -2429,13 +2447,14 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public T Get<T>(object id, LockMode lockMode)
 		{
-			return (T)Get(new ShardedEntityKey(typeof(T), id), lockMode).Value;
+		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+		    return (T)Get(key, lockMode).Value;
 		}
 
 		public async Task<T> GetAsync<T>(object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
 		{
-			var uniqueResult = await GetAsync(new ShardedEntityKey(typeof(T), id), lockMode, cancellationToken);
-			return (T)uniqueResult.Value;
+		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return (T)(await GetAsync(key, lockMode, cancellationToken)).Value;
 		}
 
 		private IUniqueResult<object> Get(ShardedEntityKey key, LockMode mode)
@@ -2458,8 +2477,14 @@ namespace NHibernate.Shards.Session
 
 		private bool TryGet(ShardedEntityKey key, LockMode lockMode, out IUniqueResult<object> result)
 		{
-			result = key.IsNull ? null : Get(key, lockMode);
-			return result != null;
+		    if (key.IsNull)
+		    {
+		        result = null;
+		        return false;
+		    }
+
+			result = Get(key, lockMode);
+			return result.Value != null;
 		}
 
 		private Task<IUniqueResult<object>> TryGetAsync(ShardedEntityKey key, LockMode lockMode, CancellationToken cancellationToken)

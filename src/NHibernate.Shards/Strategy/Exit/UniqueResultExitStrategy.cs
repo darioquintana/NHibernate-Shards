@@ -18,7 +18,6 @@ namespace NHibernate.Shards.Strategy.Exit
 
 	    public UniqueResultExitStrategy(IExitOperationFactory exitOperationFactory)
 	    {
-            Preconditions.CheckNotNull(exitOperationFactory);
 	        this.exitOperationFactory = exitOperationFactory;
 	    }
 
@@ -58,7 +57,9 @@ namespace NHibernate.Shards.Strategy.Exit
 
 		public T CompileResults()
 		{
-		    var aggregation = this.exitOperationFactory.CreateExitOperation().Aggregation;
+		    var aggregation = this.exitOperationFactory != null
+		        ? this.exitOperationFactory.CreateExitOperation().Aggregation
+		        : null;
 		    if (aggregation != null)
 		    {
 		        var aggregationResult = aggregation(this.results);

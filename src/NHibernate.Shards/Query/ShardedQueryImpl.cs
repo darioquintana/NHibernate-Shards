@@ -842,12 +842,12 @@ namespace NHibernate.Shards.Query
 
 		private class FutureValueShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>, IFutureValue<T>
 		{
-			private readonly IShardedSessionImplementor session;
+			private readonly ShardedQueryImpl shardedQuery;
 			private readonly IDictionary<IShard, IFutureValue<T>> futuresByShard;
 
 			public FutureValueShardOperation(ShardedQueryImpl shardedQuery)
 			{
-				this.session = shardedQuery.session;
+				this.shardedQuery = shardedQuery;
 				this.futuresByShard = shardedQuery.session.Shards
 					.ToDictionary(s => s, s => shardedQuery.EstablishFor(s).FutureValue<T>());
 			}
@@ -869,12 +869,17 @@ namespace NHibernate.Shards.Query
 
 			public T Value
 			{
-				get { return this.session.Execute(this, new UniqueResultExitStrategy<T>(null)); }
+			    get
+			    {
+			        var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedQuery);
+                    return this.shardedQuery.session.Execute(this, exitStrategy);
+			    }
 			}
 
 			public Task<T> GetValueAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-				return this.session.ExecuteAsync(this, new UniqueResultExitStrategy<T>(null), cancellationToken);
+			    var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedQuery);
+				return this.shardedQuery.session.ExecuteAsync(this, exitStrategy, cancellationToken);
 			}
 		}
 

@@ -4,7 +4,6 @@
 	using System.Collections.Generic;
 	using System.Linq;
 	using NHibernate.Criterion;
-	using NHibernate.Linq;
 	using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
 	using NUnit.Framework;
@@ -43,6 +42,65 @@
 
 			Assert.That(person.Id, Is.GreaterThan(0));
 		}
+
+        #endregion
+
+        #region Tests - Get and load operations
+
+	    [Test]
+	    public void GetReturnsPersistentEntity()
+	    {
+	        var person = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+
+	        using (var session = SessionFactory.OpenSession())
+	        using (session.BeginTransaction())
+	        {
+	            session.Save(person);
+	            session.Flush();
+	            session.Clear();
+
+	            var persistentPerson = session.Get<Person>(person.Id);
+	            Assert.That(persistentPerson, Is.Not.Null & Is.EqualTo(person));
+	        }
+	    }
+
+	    [Test]
+	    public void CanReturnsNullForNonPersistentEntity()
+	    {
+	        using (var session = SessionFactory.OpenSession())
+	        using (session.BeginTransaction())
+	        {
+	            Assert.That(session.Get<Person>(1), Is.Null);
+	        }
+	    }
+
+	    [Test]
+	    public void LoadReturnsPersistentEntity()
+	    {
+	        var person = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+
+	        using (var session = SessionFactory.OpenSession())
+	        using (session.BeginTransaction())
+	        {
+	            session.Save(person);
+	            session.Flush();
+	            session.Clear();
+
+	            var persistentPerson = session.Load<Person>(person.Id);
+	            Assert.That(persistentPerson, Is.Not.Null & Is.EqualTo(person));
+	        }
+	    }
+
+	    [Test]
+	    public void LoadThrowsExceptionForNonPersistentEntity()
+	    {
+	        using (var session = SessionFactory.OpenSession())
+	        using (session.BeginTransaction())
+	        {
+	            Assert.Throws<ObjectNotFoundException>(() => session.Load<Person>(1));
+	        }
+	    }
+
 
         #endregion
 

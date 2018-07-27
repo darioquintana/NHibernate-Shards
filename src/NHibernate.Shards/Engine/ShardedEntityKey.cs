@@ -17,17 +17,6 @@
 		}
 
 		/// <summary>
-		/// Creates new <see cref="ShardedEntityKey"/> for given entity class and identifier.
-		/// </summary>
-		/// <param name="entityClass">The entity class.</param>
-		/// <param name="id">The entity identifier.</param>
-		/// <remarks>The <see cref="EntityName"/> is set to <see cref="System.Type.FullName"/>
-		/// of the entity class, in accordance with NHibernate conventions.</remarks>
-		public ShardedEntityKey(System.Type entityClass, object id)
-			: this(entityClass.FullName, id)
-		{ }
-
-		/// <summary>
 		/// The entity name.
 		/// </summary>
 		public string EntityName
