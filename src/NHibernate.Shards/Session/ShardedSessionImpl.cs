@@ -3071,7 +3071,7 @@ namespace NHibernate.Shards.Session
 			{
 				var queryPlan = this.anySessionImplementor.Factory.QueryPlanCache.GetHQLQueryPlan(
 					queryExpression, false, this.anySessionImplementor.EnabledFilters);
-				return new ShardedQueryImpl(this.shardedSession, queryPlan.QueryExpression);
+				return new ShardedQueryImpl(this.shardedSession, queryPlan);
 			}
 
 			public void List(string query, QueryParameters parameters, IList results)

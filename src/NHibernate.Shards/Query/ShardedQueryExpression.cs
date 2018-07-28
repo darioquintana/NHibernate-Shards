@@ -16,18 +16,18 @@ namespace NHibernate.Shards.Query
 
 	public class ShardedQueryExpression : IQueryExpression
 	{
-	    private readonly IQueryExpression unshardedQueryExpression;
+	    private readonly IQueryExpressionPlan unshardedQueryExpressionPlan;
 		private readonly ExitOperationBuilder exitOperationBuilder;
 		private readonly Dictionary<string, Tuple<object, IType>> parameterValuesByName;
 		private string key;
 
-		public ShardedQueryExpression(IQueryExpression unshardedQueryExpression, ExitOperationBuilder exitOperationBuilder)
+		public ShardedQueryExpression(IQueryExpressionPlan unshardedQueryExpressionPlan, ExitOperationBuilder exitOperationBuilder)
 	    {
-	        Preconditions.CheckNotNull(unshardedQueryExpression);
-	        this.unshardedQueryExpression = unshardedQueryExpression;
+	        Preconditions.CheckNotNull(unshardedQueryExpressionPlan);
+	        this.unshardedQueryExpressionPlan = unshardedQueryExpressionPlan;
 		    this.exitOperationBuilder = exitOperationBuilder;
 
-		    var linqExpression = unshardedQueryExpression as NhLinqExpression;
+		    var linqExpression = unshardedQueryExpressionPlan.QueryExpression as NhLinqExpression;
 		    this.parameterValuesByName = linqExpression != null
 			    ? new Dictionary<string, Tuple<object, IType>>(linqExpression.ParameterValuesByName)
 			    : new Dictionary<string, Tuple<object, IType>>();
@@ -35,17 +35,17 @@ namespace NHibernate.Shards.Query
 
 	    public string Key
 		{
-			get { return this.key ?? (this.key = "(Sharded)" + this.unshardedQueryExpression.Key); }
+			get { return this.key ?? (this.key = "(Sharded)" + this.UnshardedQueryExpression.Key); }
 		}
 
 		public System.Type Type
 		{
-			get { return this.unshardedQueryExpression.Type; }
+			get { return this.UnshardedQueryExpression.Type; }
 		}
 
 		public IList<NamedParameterDescriptor> ParameterDescriptors
 		{
-			get { return this.unshardedQueryExpression.ParameterDescriptors; }
+			get { return this.UnshardedQueryExpression.ParameterDescriptors; }
 		}
 
 		public IDictionary<string, Tuple<object, IType>> ParameterValuesByName
@@ -55,7 +55,7 @@ namespace NHibernate.Shards.Query
 
 		internal IQueryExpression UnshardedQueryExpression
 		{
-			get { return this.unshardedQueryExpression; }
+			get { return this.unshardedQueryExpressionPlan.QueryExpression; }
 		}
 
         /// <summary>
@@ -69,11 +69,23 @@ namespace NHibernate.Shards.Query
         /// <returns></returns>
 		public IASTNode Translate(ISessionFactoryImplementor sessionFactory, bool filter)
 		{
-			var root = this.unshardedQueryExpression.Translate(sessionFactory, filter);
+			var root = this.UnshardedQueryExpression.Translate(sessionFactory, filter);
 
-		    var entityName = sessionFactory.TryGetGuessEntityName(this.Type) ?? this.Type.FullName;
-			var hqlGenerator = new ShardedHqlGenerator(root, sessionFactory.GetClassMetadata(entityName), 
-				this.parameterValuesByName, this.exitOperationBuilder);
+		    var entityName = sessionFactory.TryGetGuessEntityName(this.Type);
+		    if (entityName == null)
+		    {
+		        var rootEntityType = this.unshardedQueryExpressionPlan.ReturnMetadata.ReturnTypes[0] as EntityType;
+		        if (rootEntityType != null)
+		        {
+		            entityName = rootEntityType.GetAssociatedEntityName(sessionFactory);
+
+		        }
+            }
+
+		    var rootClassMetadata = entityName != null
+		        ? sessionFactory.GetClassMetadata(entityName)
+		        : null;
+			var hqlGenerator = new ShardedHqlGenerator(root, rootClassMetadata, this.parameterValuesByName, this.exitOperationBuilder);
 			return hqlGenerator.ShardedHql;
 		}
 	}
@@ -291,6 +303,11 @@ namespace NHibernate.Shards.Query
 
 		private void ExtractOrders(IASTNode node)
 		{
+		    if (this.rootClassMetadata == null)
+		    {
+		        throw new NotSupportedException("Ordering of sharded scalar HQL queries is not supported");
+		    }
+
 			var child = node.GetFirstChild();
 			while (child != null)
 			{

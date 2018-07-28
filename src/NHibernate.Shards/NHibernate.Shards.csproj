@@ -20,7 +20,7 @@
     <IncludeSource>True</IncludeSource>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\NHibernate.Shards.xml</DocumentationFile>
     <NoWarn>1591;1701;1702;1705</NoWarn>
-    <Version>5.1.3</Version>
+    <Version>5.1.4</Version>
     <PackageReleaseNotes>Various bug fixes; HQL queries now support min, max and avg aggregation functions.</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net461|AnyCPU'">

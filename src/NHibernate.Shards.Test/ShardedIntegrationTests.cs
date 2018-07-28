@@ -375,6 +375,29 @@
 	        }
 	    }
 
+	    [Test]
+	    public void CanOrderWithHql()
+	    {
+	        var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" }, DateOfBirth = new DateTime(1970, 1, 1) };
+	        var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" }, DateOfBirth = new DateTime(1968, 12, 31) };
+
+	        using (var session = SessionFactory.OpenSession())
+	        {
+	            using (session.BeginTransaction())
+	            {
+	                session.Save(person1);
+	                session.Save(person2);
+	                session.Flush();
+	                session.Clear();
+
+	                var persistentPersons = session.CreateQuery("from Person p order by p.DateOfBirth")
+	                    .List<Person>();
+	                Assert.That(persistentPersons, Is.Ordered.Ascending.By(nameof(Person.DateOfBirth)));
+	            }
+	        }
+	    }
+
+
         [Test]
 	    public void GetFutureResultsMoreThanOnceWithHql()
 	    {

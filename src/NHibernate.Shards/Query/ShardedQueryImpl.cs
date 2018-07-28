@@ -14,8 +14,9 @@ namespace NHibernate.Shards.Query
 {
 	using System.Threading;
 	using System.Threading.Tasks;
+	using NHibernate.Engine.Query;
 
-	/// <summary>
+    /// <summary>
 	/// Concrete implementation of ShardedQuery provided by Hibernate Shards. This
 	/// implementation introduces limits to the HQL language; mostly around
 	/// limits and aggregation. Its approach is simply to execute the query on
@@ -31,7 +32,7 @@ namespace NHibernate.Shards.Query
 	{
 		private readonly IShardedSessionImplementor session;
 		private readonly Func<ISession, IQuery> queryFactory;
-	    private readonly IQueryExpression unshardedQueryExpression;
+	    private readonly IQueryExpressionPlan unshardedQueryExpressionPlan;
 		private ShardedQueryExpression queryExpression;
 
 		private readonly IDictionary<IShard, IQuery> establishedQueriesByShard = new Dictionary<IShard, IQuery>();
@@ -50,7 +51,7 @@ namespace NHibernate.Shards.Query
 			var unshardedQueryExpression = new StringQueryExpression(hql);
 			var unshardedQueryPlan = anySessionImplementor.Factory.QueryPlanCache.GetHQLQueryPlan(
                 unshardedQueryExpression, false, anySessionImplementor.EnabledFilters);
-			return new ShardedQueryImpl(session, unshardedQueryPlan.QueryExpression);
+			return new ShardedQueryImpl(session, unshardedQueryPlan);
 		}
 
 		public static ShardedQueryImpl GetNamedQuery(IShardedSessionImplementor session, string queryName)
@@ -79,14 +80,14 @@ namespace NHibernate.Shards.Query
 		/// Creates new <see cref="ShardedQueryImpl"/> instance.
 		/// </summary>
 		/// <param name="session">The Sharded session on which this query is to be executed.</param>
-		/// <param name="unshardedQueryExpression">A shard-local <see cref="IQueryExpression"/> that represents 
+		/// <param name="unshardedQueryExpressionPlan">A shard-local <see cref="IQueryExpressionPlan"/> that represents 
 		/// a parsed HQL string or the HQL equivalent of a Linq expression.</param>
-		public ShardedQueryImpl(IShardedSessionImplementor session, IQueryExpression unshardedQueryExpression)
+		public ShardedQueryImpl(IShardedSessionImplementor session, IQueryExpressionPlan unshardedQueryExpressionPlan)
 		{
 			Preconditions.CheckNotNull(session);
-			Preconditions.CheckNotNull(unshardedQueryExpression);
+			Preconditions.CheckNotNull(unshardedQueryExpressionPlan);
 			this.session = session;
-			this.unshardedQueryExpression = unshardedQueryExpression;
+			this.unshardedQueryExpressionPlan = unshardedQueryExpressionPlan;
 			this.queryFactory = s => ApplyLimits(s.GetSessionImplementation().CreateQuery(this.QueryExpression));
 		}
 
@@ -104,9 +105,9 @@ namespace NHibernate.Shards.Query
 		{
 		    get
 		    {
-		        if (this.queryExpression == null && this.unshardedQueryExpression != null)
+		        if (this.queryExpression == null && this.unshardedQueryExpressionPlan != null)
 		        {
-		            this.queryExpression = new ShardedQueryExpression(this.unshardedQueryExpression, this.exitOperationBuilder);
+		            this.queryExpression = new ShardedQueryExpression(this.unshardedQueryExpressionPlan, this.exitOperationBuilder);
 		        }
 		        return this.queryExpression;
 		    }
