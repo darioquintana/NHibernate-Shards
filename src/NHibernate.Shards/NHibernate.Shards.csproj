@@ -7,9 +7,9 @@
     <Description>NHibernate Shards is a framework that adds support for horizontal partitioning to NHibernate Core.</Description>
     <Company />
     <PackageProjectUrl>https://github.com/darioquintana/NHibernate-Shards</PackageProjectUrl>
-    <VersionPrefix>5.0.0</VersionPrefix>
+    <VersionPrefix>5.1.5</VersionPrefix>
     <VersionLabel></VersionLabel>
-    <VersionRevision>2000</VersionRevision>
+    <VersionRevision>4000</VersionRevision>
     <VersionSuffix Condition="'$(VersionLabel)' != ''">$(VersionLabel)$(VersionRevision)</VersionSuffix>
     <FileVersion>$(VersionPrefix).$(VersionRevision)</FileVersion>
     <AssemblyVersion>$([System.Text.RegularExpressions.Regex]::Match($(VersionPrefix), '(\d+)\.(\d+)')).0.0</AssemblyVersion>
@@ -20,7 +20,6 @@
     <IncludeSource>True</IncludeSource>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\NHibernate.Shards.xml</DocumentationFile>
     <NoWarn>1591;1701;1702;1705</NoWarn>
-    <Version>5.1.4</Version>
     <PackageReleaseNotes>Various bug fixes; HQL queries now support min, max and avg aggregation functions.</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net461|AnyCPU'">
