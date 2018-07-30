@@ -329,7 +329,9 @@ namespace NHibernate.Shards.Query
 
 				this.exitOperationBuilder.Orders.Add(
 					new SortOrder(
-						o => this.rootClassMetadata.GetPropertyValue(o, propertyPath), 
+						o => propertyPath == this.rootClassMetadata.IdentifierPropertyName
+						    ? this.rootClassMetadata.GetIdentifier(o)
+						    : this.rootClassMetadata.GetPropertyValue(o, propertyPath), 
 						isDescending));
 			}
 		}

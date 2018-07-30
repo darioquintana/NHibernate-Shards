@@ -7,7 +7,7 @@
     <Description>NHibernate Shards is a framework that adds support for horizontal partitioning to NHibernate Core.</Description>
     <Company />
     <PackageProjectUrl>https://github.com/darioquintana/NHibernate-Shards</PackageProjectUrl>
-    <VersionPrefix>5.1.5</VersionPrefix>
+    <VersionPrefix>5.1.6</VersionPrefix>
     <VersionLabel></VersionLabel>
     <VersionRevision>4000</VersionRevision>
     <VersionSuffix Condition="'$(VersionLabel)' != ''">$(VersionLabel)$(VersionRevision)</VersionSuffix>
