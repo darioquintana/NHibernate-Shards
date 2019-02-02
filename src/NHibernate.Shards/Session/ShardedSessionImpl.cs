@@ -36,6 +36,8 @@ using NHibernate.Util;
 namespace NHibernate.Shards.Session
 {
 	using System.Diagnostics.CodeAnalysis;
+	using NHibernate.Multi;
+	using NHibernate.Shards.Multi;
 
 	/// <summary>
 	/// Concrete implementation of a ShardedSession, and also the central component of
@@ -137,6 +139,8 @@ namespace NHibernate.Shards.Session
 
 		#endregion
 
+		#region Properties
+
 		public static ShardId CurrentSubgraphShardId
 		{
 			get { return currentSubgraphShardId.Value; }
@@ -160,6 +164,8 @@ namespace NHibernate.Shards.Session
 					?? this.shards[0].EstablishSession();
 			}
 		}
+
+		#endregion
 
 		#region IShardedSession Members
 
@@ -327,15 +333,18 @@ namespace NHibernate.Shards.Session
 					key.EntityName));
 		}
 
-		/// <summary>
-		/// Place the session into a state where every create operation takes place
-		/// on the same shard.  Once the shard is locked on a session it cannot
-		/// be unlocked.
-		/// </summary>
+		/// <inheritdoc />
 		public void LockShard()
 		{
 			lockedShard = true;
 		}
+
+		/// <inheritdoc />
+		public IShardedQueryBatch CreateQueryBatch()
+		{
+			return new ShardedQueryBatchImpl(this);
+		}
+
 
 		/// <summary>
 		/// Performs the specified operation on the shards that are spanned by this session
@@ -2308,6 +2317,7 @@ namespace NHibernate.Shards.Session
 		/// a list of all the results of all the queries.
 		/// Note that each query result is itself usually a list.
 		/// </returns>
+		[Obsolete]
 		public IMultiQuery CreateMultiQuery()
 		{
 			return new ShardedMultiQueryImpl(this);
@@ -2318,6 +2328,7 @@ namespace NHibernate.Shards.Session
 		/// of all the criteria.
 		/// </summary>
 		/// <returns></returns>
+		[Obsolete]
 		public IMultiCriteria CreateMultiCriteria()
 		{
 			return new ShardedMultiCriteriaImpl(this);
@@ -2971,11 +2982,13 @@ namespace NHibernate.Shards.Session
 				get { return this.anySessionImplementor.TransactionInProgress; }
 			}
 
+			[Obsolete]
 			public FutureCriteriaBatch FutureCriteriaBatch
 			{
 				get { throw new NotImplementedException(); }
 			}
 
+			[Obsolete]
 			public FutureQueryBatch FutureQueryBatch
 			{
 				get { throw new NotImplementedException(); }

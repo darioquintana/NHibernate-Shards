@@ -12,6 +12,7 @@ namespace NHibernate.Shards.Query
 	using System.Threading;
 	using System.Threading.Tasks;
 
+	[Obsolete]
 	public class ShardedMultiQueryImpl: IShardedMultiQuery
 	{
 		#region Instance fields

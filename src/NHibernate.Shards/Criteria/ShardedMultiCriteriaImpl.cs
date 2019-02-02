@@ -12,6 +12,7 @@ namespace NHibernate.Shards.Criteria
 	using System.Threading;
 	using System.Threading.Tasks;
 
+	[Obsolete]
 	public class ShardedMultiCriteriaImpl: IShardedMultiCriteria
 	{
 		#region Instance fields

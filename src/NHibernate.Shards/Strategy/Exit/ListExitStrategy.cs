@@ -7,7 +7,7 @@ namespace NHibernate.Shards.Strategy.Exit
 {
 
     /// <summary>
-	/// Threadsafe ExistStrategy that concatenates all the lists that are added.
+	/// Thread-safe ExitStrategy that concatenates all the lists that are added.
 	/// </summary>
 	public class ListExitStrategy<T> : IListExitStrategy<T>
 	{

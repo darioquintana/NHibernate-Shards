@@ -706,6 +706,7 @@ namespace NHibernate.Shards.Session
             }
 		}
 
+		[Obsolete]
 		IDictionary<string, ICache> ISessionFactoryImplementor.GetAllSecondLevelCacheRegions()
 		{
 			return ControlFactory.GetAllSecondLevelCacheRegions();
@@ -879,6 +880,7 @@ namespace NHibernate.Shards.Session
 		}
 
 		/// <summary> Get a named second-level cache region</summary>
+		[Obsolete]
 		public ICache GetSecondLevelCacheRegion(string regionName)
 		{
 			// assumption is that all session factories are configured the same way,

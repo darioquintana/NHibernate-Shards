@@ -8,9 +8,10 @@ namespace NHibernate.Shards.Strategy.Access
 
 	public interface IShardAccessStrategy
 	{
-		T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy);
+		void Apply(IEnumerable<IShard> shards, IShardOperation operation);
+		Task ApplyAsync(IEnumerable<IShard> shards, IAsyncShardOperation operation, CancellationToken cancellationToken);
 
-		Task<T> ApplyAsync<T>(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy,
-			CancellationToken cancellationToken);
+		T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy);
+		Task<T> ApplyAsync<T>(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken);
 	}
 }

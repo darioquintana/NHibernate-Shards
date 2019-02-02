@@ -65,7 +65,17 @@ namespace NHibernate.Shards.Test.Transaction
 			throw new NotSupportedException();
 		}
 
+		public virtual void Execute(IShardOperation operation)
+		{
+			throw new NotSupportedException();
+		}
+
 		public virtual T Execute<T>(IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task ExecuteAsync(IAsyncShardOperation operation, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
@@ -405,6 +415,7 @@ namespace NHibernate.Shards.Test.Transaction
 			throw new NotSupportedException();
 		}
 
+		[Obsolete]
 		public virtual IFilter GetEnabledFilter(string filterName)
 		{
 			throw new NotSupportedException();
@@ -415,6 +426,7 @@ namespace NHibernate.Shards.Test.Transaction
 			throw new NotSupportedException();
 		}
 
+		[Obsolete]
 		public virtual IMultiQuery CreateMultiQuery()
 		{
 			throw new NotSupportedException();
@@ -430,6 +442,7 @@ namespace NHibernate.Shards.Test.Transaction
 			throw new NotSupportedException();
 		}
 
+		[Obsolete]
 		public virtual IMultiCriteria CreateMultiCriteria()
 		{
 			throw new NotSupportedException();

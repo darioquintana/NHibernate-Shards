@@ -67,6 +67,14 @@ namespace NHibernate.Shards.Engine
 		/// this sharded session and aggregates the results from each shard into a single 
 		/// result.
 		/// </summary>
+		/// <param name="operation">The operation to be performed on each shard.</param>
+		void Execute(IShardOperation operation);
+
+		/// <summary>
+		/// Performs the specified operation on the shards that are within the scope of
+		/// this sharded session and aggregates the results from each shard into a single 
+		/// result.
+		/// </summary>
 		/// <typeparam name="T">Return value type.</typeparam>
 		/// <param name="operation">The operation to be performed on each shard.</param>
 		/// <param name="exitStrategy">Strategy for collection and aggregation of 
@@ -75,12 +83,22 @@ namespace NHibernate.Shards.Engine
 		T Execute<T>(IShardOperation<T> operation, IExitStrategy<T> exitStrategy);
 
 		/// <summary>
-		/// Performs the specified asynchrnous operation on the shards that are within the scope of
+		/// Performs the specified asynchronous operation on the shards that are within the scope of
+		/// this sharded session and aggregates the results from each shard into a single 
+		/// result.
+		/// </summary>
+		/// <param name="operation">The asynchronous operation to be performed on each shard.</param>
+		/// <param name="cancellationToken">A cancellation token for the asynchronous operation.</param>
+		/// <returns>The aggregated operation result.</returns>
+		Task ExecuteAsync(IAsyncShardOperation operation, CancellationToken cancellationToken);
+
+		/// <summary>
+		/// Performs the specified asynchronous operation on the shards that are within the scope of
 		/// this sharded session and aggregates the results from each shard into a single 
 		/// result.
 		/// </summary>
 		/// <typeparam name="T">Return value type.</typeparam>
-		/// <param name="operation">The asynchrnous operation to be performed on each shard.</param>
+		/// <param name="operation">The asynchronous operation to be performed on each shard.</param>
 		/// <param name="exitStrategy">Strategy for collection and aggregation of 
 		/// operation results from the shards.</param>
 		/// <param name="cancellationToken">A cancellation token for the asynchronous operation.</param>

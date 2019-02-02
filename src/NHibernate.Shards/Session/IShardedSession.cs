@@ -1,5 +1,8 @@
 namespace NHibernate.Shards.Session
 {
+	using NHibernate.Multi;
+	using NHibernate.Shards.Multi;
+
 	/// <summary>
 	/// The main runtime inteface between .Net application and NHibernate Shards.
 	/// ShardedSession represents a logical transaction that might be spanning
@@ -35,5 +38,11 @@ namespace NHibernate.Shards.Session
 		/// be unlocked.
 		/// </summary>
 		void LockShard();
+
+		/// <summary>
+		/// Creates shared query batch.
+		/// </summary>
+		/// <returns>The newly created query batch.</returns>
+		IShardedQueryBatch CreateQueryBatch();
 	}
 }

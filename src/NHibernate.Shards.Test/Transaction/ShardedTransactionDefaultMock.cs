@@ -54,6 +54,7 @@
 			throw new NotSupportedException();
 		}
 
+		[Obsolete]
 		public virtual void RegisterSynchronization(ISynchronization synchronization)
 		{
 			throw new NotSupportedException();

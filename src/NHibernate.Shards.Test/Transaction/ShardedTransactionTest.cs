@@ -275,6 +275,7 @@ namespace NHibernate.Shards.Test.Transaction
 				get { return true; }
 			}
 
+			[Obsolete]
 			public override void RegisterSynchronization(ISynchronization synchronization)
 			{ }
 		}

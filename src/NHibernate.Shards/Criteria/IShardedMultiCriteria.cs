@@ -1,5 +1,8 @@
 ﻿namespace NHibernate.Shards.Criteria
 {
+	using System;
+
+	[Obsolete]
 	public interface IShardedMultiCriteria: IMultiCriteria
 	{
 		/// <summary>

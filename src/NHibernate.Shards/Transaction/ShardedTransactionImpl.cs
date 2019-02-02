@@ -52,7 +52,7 @@ namespace NHibernate.Shards.Transaction
 
 		private IShardedSessionImplementor shardedSession;
 		private IList<ITransaction> transactions;
-		private IList<ISynchronization> synchronizations;
+		private IList<ITransactionCompletionSynchronization> synchronizations;
 		private IsolationLevel currentIsolationLevel;
 		private bool begun;
 		private bool commitFailed;
@@ -153,20 +153,20 @@ namespace NHibernate.Shards.Transaction
 			}
 		}
 
-		public async Task CommitAsync(CancellationToken cancellationToken = new CancellationToken())
+		public async Task CommitAsync(CancellationToken cancellationToken = default(CancellationToken))
 		{
 			CheckNotDisposed();
 			CheckBegun();
 
 			Log.Debug("Starting transaction commit");
-			NotifyLocalSynchsBeforeTransactionCompletion();
+			await NotifyLocalSynchsBeforeTransactionCompletionAsync(cancellationToken);
 
 			Exception exception;
 			try
 			{
 				await CommitShardTransactionsAsync(cancellationToken);
 
-				AfterTransactionCompletion(true);
+				await AfterTransactionCompletionAsync(true, cancellationToken);
 				committed = true;
 				Dispose();
 				return;
@@ -182,7 +182,7 @@ namespace NHibernate.Shards.Transaction
 			}
 			finally
 			{
-				AfterTransactionCompletion(null);
+				await AfterTransactionCompletionAsync(null, cancellationToken);
 				commitFailed = true;
 			}
 			throw exception;
@@ -232,7 +232,7 @@ namespace NHibernate.Shards.Transaction
 			}
 			finally
 			{
-				AfterTransactionCompletion(false);
+				await AfterTransactionCompletionAsync(false, cancellationToken);
 			}
 		}
 
@@ -263,12 +263,19 @@ namespace NHibernate.Shards.Transaction
 			}
 		}
 
+		[Obsolete]
 		public void RegisterSynchronization(ISynchronization sync)
+		{
+			throw new NotSupportedException();
+		}
+
+		[Obsolete]
+		public void RegisterSynchronization(ITransactionCompletionSynchronization sync)
 		{
 			if (sync == null) throw new ArgumentNullException("sync");
 			if (synchronizations == null)
 			{
-				synchronizations = new List<ISynchronization>();
+				synchronizations = new List<ITransactionCompletionSynchronization>();
 			}
 			synchronizations.Add(sync);
 		}
@@ -503,16 +510,47 @@ namespace NHibernate.Shards.Transaction
 			NotifyLocalSynchsAfterTransactionCompletion(success);
 		}
 
+		private Task AfterTransactionCompletionAsync(bool? success, CancellationToken cancellationToken)
+		{
+			if (this.shardedSession != null)
+			{
+				shardedSession.AfterTransactionCompletion(this, success);
+				this.shardedSession = null;
+			}
+
+			begun = false;
+			return NotifyLocalSynchsAfterTransactionCompletionAsync(success, cancellationToken);
+		}
+
 		private void NotifyLocalSynchsBeforeTransactionCompletion()
 		{
 			if (synchronizations != null)
 			{
 				for (int i = 0; i < synchronizations.Count; i++)
 				{
-					ISynchronization sync = synchronizations[i];
+					var sync = synchronizations[i];
 					try
 					{
-						sync.BeforeCompletion();
+						sync.ExecuteBeforeTransactionCompletion();
+					}
+					catch (Exception e)
+					{
+						Log.Error(e, "exception calling user Synchronization");
+					}
+				}
+			}
+		}
+
+		private async Task NotifyLocalSynchsBeforeTransactionCompletionAsync(CancellationToken cancellationToken)
+		{
+			if (synchronizations != null)
+			{
+				for (int i = 0; i < synchronizations.Count; i++)
+				{
+					var sync = synchronizations[i];
+					try
+					{
+						await sync.ExecuteBeforeTransactionCompletionAsync(cancellationToken);
 					}
 					catch (Exception e)
 					{
@@ -528,10 +566,29 @@ namespace NHibernate.Shards.Transaction
 			{
 				for (int i = 0; i < synchronizations.Count; i++)
 				{
-					ISynchronization sync = synchronizations[i];
+					var sync = synchronizations[i];
 					try
 					{
-						sync.AfterCompletion(success ?? false);
+						sync.ExecuteAfterTransactionCompletion(success ?? false);
+					}
+					catch (Exception e)
+					{
+						Log.Error(e, "exception calling user Synchronization");
+					}
+				}
+			}
+		}
+
+		private async Task NotifyLocalSynchsAfterTransactionCompletionAsync(bool? success, CancellationToken cancellationToken)
+		{
+			if (synchronizations != null)
+			{
+				for (int i = 0; i < synchronizations.Count; i++)
+				{
+					var sync = synchronizations[i];
+					try
+					{
+						await sync.ExecuteAfterTransactionCompletionAsync(success ?? false, cancellationToken);
 					}
 					catch (Exception e)
 					{

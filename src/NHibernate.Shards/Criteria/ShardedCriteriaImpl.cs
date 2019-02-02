@@ -249,6 +249,7 @@ namespace NHibernate.Shards.Criteria
 				isDescending);
 		}
 
+		[Obsolete("Use Fetch instead")]
 	    public ICriteria SetFetchMode(string associationPath, FetchMode fetchMode)
 		{
 			ApplyActionToShards(c => c.SetFetchMode(associationPath, fetchMode));
@@ -819,6 +820,7 @@ namespace NHibernate.Shards.Criteria
 				return this;
 			}
 
+			[Obsolete("Use Fetch instead")]
 			public ICriteria SetFetchMode(string associationPath, FetchMode fetchMode)
 			{
 				root.SetFetchMode(associationPath, fetchMode);

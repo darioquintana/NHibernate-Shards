@@ -6,6 +6,7 @@
 	using NHibernate.Criterion;
 	using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
+	using NHibernate.Multi;
 	using NUnit.Framework;
 
 	[TestFixture]
@@ -501,11 +502,38 @@
 			}
 		}
 
-        #endregion
+		#endregion
 
-        #region Domain model and mapping classes
+		#region Tests - MultiQuery
 
-        public class Person
+		[Test]
+		public void CanBatchQueryWithHql()
+		{
+			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+			var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
+
+			using (var session = SessionFactory.OpenSession())
+			{
+				using (session.BeginTransaction())
+				{
+					session.Save(person1);
+					session.Save(person2);
+					session.Flush();
+					session.Clear();
+
+					var queries = session.CreateQueryBatch()
+						.Add<Person>(session.CreateQuery("from Person p where p.LegalName.FirstName = 'Mary'"));
+					var persistentPersons = queries.GetResult<Person>(0);
+					Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
+				}
+			}
+		}
+
+		#endregion
+
+		#region Domain model and mapping classes
+
+		public class Person
 		{
 			public int? Id { get; set; }
 			public Guid Guid { get; private set; }

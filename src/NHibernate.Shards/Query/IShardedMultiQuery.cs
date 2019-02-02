@@ -1,5 +1,8 @@
 ﻿namespace NHibernate.Shards.Query
 {
+	using System;
+
+	[Obsolete]
 	public interface IShardedMultiQuery: IMultiQuery
 	{
 		/// <summary>

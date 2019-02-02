@@ -12,6 +12,15 @@ namespace NHibernate.Shards.Strategy.Access
 
 		#region IShardAccessStrategy Members
 
+		public void Apply(IEnumerable<IShard> shards, IShardOperation operation)
+		{
+			foreach (var shard in GetNextOrderingOfShards(shards))
+			{
+				var shardOperation = operation.Prepare(shard);
+				shardOperation();
+			}
+		}
+
 		public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
 		{
 			foreach (var shard in GetNextOrderingOfShards(shards))
@@ -25,6 +34,15 @@ namespace NHibernate.Shards.Strategy.Access
 				}
 			}
 			return exitStrategy.CompileResults();
+		}
+
+		public async Task ApplyAsync(IEnumerable<IShard> shards, IAsyncShardOperation operation, CancellationToken cancellationToken)
+		{
+			foreach (var shard in GetNextOrderingOfShards(shards))
+			{
+				var shardOperation = operation.PrepareAsync(shard);
+				await shardOperation(cancellationToken);
+			}
 		}
 
 		public async Task<T> ApplyAsync<T>(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
@@ -48,7 +66,7 @@ namespace NHibernate.Shards.Strategy.Access
 		/// Override this method if you want to control the order in which the
 		/// shards are operated on (this comes in handy when paired with exit
 		/// strategies that allow early exit because it allows you to evenly
-		/// distribute load).  Deafult implementation is to just iterate in the
+		/// distribute load).  Default implementation is to just iterate in the
 		/// same order every time.
 		/// </summary>
 		/// <param name="shards">The shards we might want to reorder</param>

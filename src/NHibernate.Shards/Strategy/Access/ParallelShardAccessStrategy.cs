@@ -9,29 +9,35 @@ using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Access
 {
-    /// <summary>
+	/// <summary>
 	/// Invokes the given operation on the given shards in parallel.
 	/// </summary>
 	public class ParallelShardAccessStrategy : IShardAccessStrategy
 	{
-		private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(30);
+		private static readonly TimeSpan OperationTimeoutInSeconds = TimeSpan.FromSeconds(30);
 	    private static readonly Logger Log = new Logger(typeof(ParallelShardAccessStrategy));
 
 		#region IShardAccessStrategy Members
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="shards"></param>
-		/// <param name="operation"></param>
-		/// <param name="exitStrategy"></param>
-		/// <returns></returns>
+		/// <inheritdoc />
+		public void Apply(IEnumerable<IShard> shards, IShardOperation operation)
+		{
+			new ParallelOperation(shards, operation).Complete();
+		}
+
+		/// <inheritdoc />
 		public T Apply<T>(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
 		{
 			return new ParallelOperation<T>(shards, operation, exitStrategy).Complete();
 		}
 
+		/// <inheritdoc />
+		public Task ApplyAsync(IEnumerable<IShard> shards, IAsyncShardOperation operation, CancellationToken cancellationToken)
+		{
+			return new ParallelAsyncOperation(shards, operation, cancellationToken).CompleteAsync();
+		}
+
+		/// <inheritdoc />
 		public Task<T> ApplyAsync<T>(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
 		{
 			return new ParallelAsyncOperation<T>(shards, operation, exitStrategy, cancellationToken).CompleteAsync();
@@ -39,17 +45,14 @@ namespace NHibernate.Shards.Strategy.Access
 
 		private static TimeoutException CreateAndLogTimeoutException(string operationName)
 		{
-			string message = string.Format(
-				CultureInfo.InvariantCulture,
-				"Parallel '{0}' operation did not complete in '{1}' seconds.",
-				operationName, OperationTimeout);
+			string message = $"Parallel '{operationName}' operation did not complete in '{OperationTimeoutInSeconds}' seconds.";
 			Log.Error(message);
 			return new TimeoutException(message);
 		}
 
 		private static HibernateException WrapAndLogShardException(string operationName, Exception exception)
 		{
-			var message = string.Format("Failed parallel '{0}' operation.", operationName);
+			var message = $"Failed parallel '{operationName}' operation.";
 			Log.Error(exception, message);
 			return new HibernateException(message, exception);
 		}
@@ -58,26 +61,122 @@ namespace NHibernate.Shards.Strategy.Access
 
 		#region Inner classes
 
-		private class ParallelOperation<T>
+		private class ParallelOperation
 		{
-			private readonly IShardOperation<T> _operation;
-			private readonly IExitStrategy<T> _exitStrategy;
+			private readonly IShardOperation operation;
 
-			private Exception _exception;
-			private bool _isCancelled;
-			private int _activeCount;
+			private Exception exception;
+			private bool isCancelled;
+			private int activeCount;
 
-			public ParallelOperation(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
+			public ParallelOperation(IEnumerable<IShard> shards, IShardOperation operation)
 			{
-				_operation = operation;
-				_exitStrategy = exitStrategy;
+				this.operation = operation;
 
 				lock (this)
 				{
 					foreach (var shard in shards)
 					{
 						ThreadPool.QueueUserWorkItem(ExecuteForShard, shard);
-						_activeCount++;
+						this.activeCount++;
+					}
+				}
+			}
+
+			public void Complete()
+			{
+				lock (this)
+				{
+					DateTime now = DateTime.Now;
+					DateTime deadline = now.Add(OperationTimeoutInSeconds);
+					while (this.activeCount > 0)
+					{
+						var timeout = deadline - now;
+						if (timeout <= TimeSpan.Zero || !Monitor.Wait(this, timeout))
+						{
+							this.isCancelled = true;
+							throw CreateAndLogTimeoutException(this.operation.OperationName);
+						}
+
+						now = DateTime.Now;
+					}
+				}
+
+				if (this.exception != null)
+				{
+					throw WrapAndLogShardException(this.operation.OperationName, this.exception);
+				}
+
+				Log.Debug($"Completed parallel '{this.operation.OperationName}' operation.");
+			}
+
+			private void ExecuteForShard(object state)
+			{
+				var s = (IShard)state;
+				try
+				{
+					System.Action shardOperation;
+
+					// Perform thread-safe preparation of the operation for a single shard.
+					lock (this)
+					{
+						// Prevent execution if parallel operation has already been cancelled.
+						if (this.isCancelled)
+						{
+							if (--this.activeCount <= 0) Monitor.Pulse(this);
+							return;
+						}
+
+						shardOperation = this.operation.Prepare(s);
+					}
+
+					// Perform operation execution on multiple shards in parallel.
+					shardOperation();
+
+					// Perform thread-safe aggregation of operation results.
+					lock (this)
+					{
+						if (--this.activeCount <= 0) Monitor.Pulse(this);
+					}
+				}
+				catch (Exception e)
+				{
+					lock (this)
+					{
+						if (!this.isCancelled)
+						{
+							this.exception = e;
+							this.isCancelled = true;
+						}
+
+						if (--this.activeCount <= 0) Monitor.Pulse(this);
+					}
+					Log.Debug("Failed parallel operation '{0}' on shard '{1:X}'.",
+						this.operation.OperationName, s.ShardIds.First());
+				}
+			}
+		}
+
+		private class ParallelOperation<T>
+		{
+			private readonly IShardOperation<T> operation;
+			private readonly IExitStrategy<T> exitStrategy;
+
+			private Exception exception;
+			private bool isCancelled;
+			private int activeCount;
+
+			public ParallelOperation(IEnumerable<IShard> shards, IShardOperation<T> operation, IExitStrategy<T> exitStrategy)
+			{
+				this.operation = operation;
+				this.exitStrategy = exitStrategy;
+
+				lock (this)
+				{
+					foreach (var shard in shards)
+					{
+						ThreadPool.QueueUserWorkItem(ExecuteForShard, shard);
+						this.activeCount++;
 					}
 				}
 			}
@@ -87,27 +186,27 @@ namespace NHibernate.Shards.Strategy.Access
 				lock (this)
 				{
 					DateTime now = DateTime.Now;
-					DateTime deadline = now.Add(OperationTimeout);
-					while (_activeCount > 0)
+					DateTime deadline = now.Add(OperationTimeoutInSeconds);
+					while (this.activeCount > 0)
 					{
 						var timeout = deadline - now;
 						if (timeout <= TimeSpan.Zero || !Monitor.Wait(this, timeout))
 						{
-							_isCancelled = true;
-							throw CreateAndLogTimeoutException(this._operation.OperationName);
+							this.isCancelled = true;
+							throw CreateAndLogTimeoutException(this.operation.OperationName);
 						}
 
 						now = DateTime.Now;
 					}
 				}
 
-				if (_exception != null)
+				if (this.exception != null)
 				{
-					throw WrapAndLogShardException(_operation.OperationName, _exception);
+					throw WrapAndLogShardException(this.operation.OperationName, this.exception);
 				}
 
-				Log.Debug(string.Format("Completed parallel '{0}' operation.", _operation.OperationName));
-				return _exitStrategy.CompileResults();
+				Log.Debug($"Completed parallel '{this.operation.OperationName}' operation.");
+				return this.exitStrategy.CompileResults();
 			}
 
 			private void ExecuteForShard(object state)
@@ -121,13 +220,13 @@ namespace NHibernate.Shards.Strategy.Access
 					lock (this)
 					{
 						// Prevent execution if parallel operation has already been cancelled.
-						if (_isCancelled)
+						if (this.isCancelled)
 						{
-							if (--_activeCount <= 0) Monitor.Pulse(this);
+							if (--this.activeCount <= 0) Monitor.Pulse(this);
 							return;
 						}
 
-						shardOperation = _operation.Prepare(s);
+						shardOperation = this.operation.Prepare(s);
 					}
 
 					// Perform operation execution on multiple shards in parallel.
@@ -137,53 +236,49 @@ namespace NHibernate.Shards.Strategy.Access
 					lock (this)
 					{
 						// Only add result if operation still has not been cancelled and result is not null.
-						if (!_isCancelled && !Equals(result, null))
+						if (!this.isCancelled && !Equals(result, null))
 						{
-							_isCancelled = _exitStrategy.AddResult(result, s);
+							this.isCancelled = this.exitStrategy.AddResult(result, s);
 						}
 
-						if (--_activeCount <= 0) Monitor.Pulse(this);
+						if (--this.activeCount <= 0) Monitor.Pulse(this);
 					}
 				}
 				catch (Exception e)
 				{
 					lock (this)
 					{
-						if (!_isCancelled)
+						if (!this.isCancelled)
 						{
-							_exception = e;
-							_isCancelled = true;
+							this.exception = e;
+							this.isCancelled = true;
 						}
 
-						if (--_activeCount <= 0) Monitor.Pulse(this);
+						if (--this.activeCount <= 0) Monitor.Pulse(this);
 					}
 					Log.Debug("Failed parallel operation '{0}' on shard '{1:X}'.",
-						_operation.OperationName, s.ShardIds.First());
+						this.operation.OperationName, s.ShardIds.First());
 				}
 			}
 		}
 
-		private class ParallelAsyncOperation<T>
+		private class ParallelAsyncOperation
 		{
-			private readonly IAsyncShardOperation<T> _operation;
-			private readonly IExitStrategy<T> _exitStrategy;
-			private readonly CancellationTokenSource _completedCts = new CancellationTokenSource();
-			private readonly Task<T> _task;
+			private readonly IAsyncShardOperation operation;
+			private readonly Task task;
 
-			public ParallelAsyncOperation(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
+			public ParallelAsyncOperation(IEnumerable<IShard> shards, IAsyncShardOperation operation, CancellationToken cancellationToken)
 			{
-				_operation = operation;
-				_exitStrategy = exitStrategy;
-				_completedCts = new CancellationTokenSource();
+				this.operation = operation;
 
-				var timeoutCts = new CancellationTokenSource(OperationTimeout);
+				var timeoutCts = new CancellationTokenSource(OperationTimeoutInSeconds);
 				var linkedCts = cancellationToken.CanBeCanceled
-					? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token, _completedCts.Token)
-					: CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _completedCts.Token);
+					? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token)
+					: CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token);
 
-				_task = ExecuteForShardsAsync(shards, linkedCts.Token).ContinueWith(t =>
+				this.task = ExecuteForShardsAsync(shards, linkedCts.Token).ContinueWith(t =>
 				{
-					if (t.IsCanceled && !_completedCts.IsCancellationRequested)
+					if (t.IsCanceled)
 					{
 						if (timeoutCts.IsCancellationRequested) throw CreateAndLogTimeoutException(operation.OperationName);
 						linkedCts.Token.ThrowIfCancellationRequested();
@@ -192,13 +287,12 @@ namespace NHibernate.Shards.Strategy.Access
 					{
 						throw WrapAndLogShardException(operation.OperationName, t.Exception.GetBaseException());
 					}
-					return exitStrategy.CompileResults();
 				});
 			}
 
-			public Task<T> CompleteAsync()
+			public Task CompleteAsync()
 			{
-				return _task;
+				return this.task;
 			}
 
 			private Task ExecuteForShardsAsync(IEnumerable<IShard> shards, CancellationToken cancellationToken)
@@ -215,14 +309,73 @@ namespace NHibernate.Shards.Strategy.Access
 
 			private Task ExecuteForShardAsync(IShard shard, CancellationToken cancellationToken)
 			{
-				var shardOperation = _operation.PrepareAsync(shard);
-				return shardOperation(cancellationToken).ContinueWith(t =>
+				var shardOperation = this.operation.PrepareAsync(shard);
+				return shardOperation(cancellationToken);
+			}
+		}
+
+		private class ParallelAsyncOperation<T>
+		{
+			private readonly IAsyncShardOperation<T> operation;
+			private readonly IExitStrategy<T> exitStrategy;
+			private readonly Task<T> task;
+
+			/// <summary>
+			/// Signals that exit strategy did shortcut evaluation of shard results 
+			/// </summary>
+			private readonly CancellationTokenSource completedCts = new CancellationTokenSource();
+
+			public ParallelAsyncOperation(IEnumerable<IShard> shards, IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
+			{
+				this.operation = operation;
+				this.exitStrategy = exitStrategy;
+
+				var timeoutCts = new CancellationTokenSource(OperationTimeoutInSeconds);
+				var linkedCts = cancellationToken.CanBeCanceled
+					? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token, this.completedCts.Token)
+					: CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, this.completedCts.Token);
+
+				this.task = ExecuteForShardsAsync(shards, linkedCts.Token).ContinueWith(t =>
 				{
-					if (!t.IsCanceled && _exitStrategy.AddResult(t.Result, shard))
+					if (t.IsCanceled && !this.completedCts.IsCancellationRequested)
 					{
-						_completedCts.Cancel();
+						if (timeoutCts.IsCancellationRequested) throw CreateAndLogTimeoutException(operation.OperationName);
+						linkedCts.Token.ThrowIfCancellationRequested();
 					}
+					if (t.Exception != null)
+					{
+						throw WrapAndLogShardException(operation.OperationName, t.Exception.GetBaseException());
+					}
+					return exitStrategy.CompileResults();
 				});
+			}
+
+			public Task<T> CompleteAsync()
+			{
+				return this.task;
+			}
+
+			private Task ExecuteForShardsAsync(IEnumerable<IShard> shards, CancellationToken cancellationToken)
+			{
+				var shardTasks = new List<Task>();
+				foreach (var shard in shards)
+				{
+					if (cancellationToken.IsCancellationRequested) break;
+					shardTasks.Add(ExecuteForShardAsync(shard, cancellationToken));
+				}
+
+				return Task.WhenAll(shardTasks);
+			}
+
+			private Task ExecuteForShardAsync(IShard shard, CancellationToken cancellationToken)
+			{
+				var shardOperation = this.operation.PrepareAsync(shard);
+				return shardOperation(cancellationToken)
+					.ContinueWith(t =>
+						{
+							if (this.exitStrategy.AddResult(t.Result, shard)) this.completedCts.Cancel();
+						}, 
+						TaskContinuationOptions.NotOnCanceled | TaskContinuationOptions.ExecuteSynchronously);
 			}
 		}
 

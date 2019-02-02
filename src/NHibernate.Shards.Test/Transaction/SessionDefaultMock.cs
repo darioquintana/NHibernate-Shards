@@ -626,6 +626,7 @@
 			throw new NotSupportedException();
 		}
 
+		[Obsolete]
 		public virtual IMultiQuery CreateMultiQuery()
 		{
 			throw new NotSupportedException();
@@ -641,6 +642,7 @@
 			throw new NotSupportedException();
 		}
 
+		[Obsolete]
 		public virtual IMultiCriteria CreateMultiCriteria()
 		{
 			throw new NotSupportedException();
