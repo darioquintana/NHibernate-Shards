@@ -35,6 +35,8 @@ using NHibernate.Util;
 
 namespace NHibernate.Shards.Session
 {
+	using System.Diagnostics.CodeAnalysis;
+
 	/// <summary>
 	/// Concrete implementation of a ShardedSession, and also the central component of
 	/// Hibernate Shards' internal implementation. This class exposes two interfaces;
@@ -43,9 +45,9 @@ namespace NHibernate.Shards.Session
 	/// </summary>
 	public class ShardedSessionImpl : IShardedSession, IShardedSessionImplementor, IShardIdResolver
 	{
-        #region Static fields
+		#region Static fields
 
-	    private static readonly Logger Log = new Logger(typeof(ShardedSessionImpl));
+		private static readonly Logger Log = new Logger(typeof(ShardedSessionImpl));
 		private static readonly AsyncLocal<ShardId> currentSubgraphShardId = new AsyncLocal<ShardId>();
 
 		#endregion
@@ -53,7 +55,7 @@ namespace NHibernate.Shards.Session
 		#region Instance fields
 
 		private readonly IShardedSessionFactoryImplementor shardedSessionFactory;
-	    private readonly IShardedSessionBuilderImplementor shardedSessionBuilder;
+		private readonly IShardedSessionBuilderImplementor shardedSessionBuilder;
 		private readonly IInterceptor interceptor;
 
 		private readonly IDictionary<ShardId, IShard> shardsById = new Dictionary<ShardId, IShard>();
@@ -104,10 +106,10 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(shardedSessionFactory);
 
 			this.shardedSessionFactory = shardedSessionFactory;
-		    this.shardedSessionBuilder = shardedSessionBuilder;
-		    this.interceptor = shardedSessionBuilder != null
-		        ? BuildSessionInterceptor(this, shardedSessionBuilder.SessionInterceptor, shardedSessionFactory.CheckAllAssociatedObjectsForDifferentShards)
-		        : null;
+			this.shardedSessionBuilder = shardedSessionBuilder;
+			this.interceptor = shardedSessionBuilder != null
+				? BuildSessionInterceptor(this, shardedSessionBuilder.SessionInterceptor, shardedSessionFactory.CheckAllAssociatedObjectsForDifferentShards)
+				: null;
 
 			foreach (var shardMetadata in shardedSessionFactory.GetShardMetadata())
 			{
@@ -120,22 +122,22 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-	    internal ShardedSessionImpl(
-	        ShardedSessionImpl rootSession,
-	        IShardedSessionBuilderImplementor shardedSessionBuilder)
-	    {
-	        Preconditions.CheckNotNull(rootSession);
+		internal ShardedSessionImpl(
+			ShardedSessionImpl rootSession,
+			IShardedSessionBuilderImplementor shardedSessionBuilder)
+		{
+			Preconditions.CheckNotNull(rootSession);
 
-	        this.shardedSessionFactory = rootSession.shardedSessionFactory;
-	        this.shardedSessionBuilder = shardedSessionBuilder;
-	        this.interceptor = rootSession.interceptor;
-	        this.shards = rootSession.shards;
-	        this.shardsById = rootSession.shardsById;
-	    }
+			this.shardedSessionFactory = rootSession.shardedSessionFactory;
+			this.shardedSessionBuilder = shardedSessionBuilder;
+			this.interceptor = rootSession.interceptor;
+			this.shards = rootSession.shards;
+			this.shardsById = rootSession.shardsById;
+		}
 
-        #endregion
+		#endregion
 
-        public static ShardId CurrentSubgraphShardId
+		public static ShardId CurrentSubgraphShardId
 		{
 			get { return currentSubgraphShardId.Value; }
 			set { currentSubgraphShardId.Value = value; }
@@ -201,12 +203,11 @@ namespace NHibernate.Shards.Session
 		/// </returns>
 		public ISession EstablishFor(IShard shard)
 		{
-			ISession result;
-			if (!this.establishedSessionsByShard.TryGetValue(shard, out result))
+			if (!this.establishedSessionsByShard.TryGetValue(shard, out var result))
 			{
 				result = this.shardedSessionBuilder != null 
-				    ? this.shardedSessionBuilder.OpenSessionFor(shard, this.interceptor)
-				    : shard.SessionFactory.OpenSession();
+					? this.shardedSessionBuilder.OpenSessionFor(shard, this.interceptor)
+					: shard.SessionFactory.OpenSession();
 
 				foreach (var action in establishActions)
 				{
@@ -215,10 +216,7 @@ namespace NHibernate.Shards.Session
 
 				lock (this.transactionLock)
 				{
-					if (this.transaction != null)
-					{
-						this.transaction.Enlist(result);
-					}
+					this.transaction?.Enlist(result);
 				}
 
 				establishedSessionsByShard.Add(shard, result);
@@ -228,8 +226,7 @@ namespace NHibernate.Shards.Session
 
 		private static IInterceptor BuildSessionInterceptor(ShardedSessionImpl shardedSession, IInterceptor interceptor, bool checkAllAssociatedObjectsForDifferentShards)
 		{
-			var interceptorFactory = interceptor as IStatefulInterceptorFactory;
-			var defaultInterceptor = interceptorFactory != null
+			var defaultInterceptor = interceptor is IStatefulInterceptorFactory interceptorFactory
 				? interceptorFactory.NewInstance()
 				: interceptor;
 
@@ -289,8 +286,7 @@ namespace NHibernate.Shards.Session
 		/// </returns>
 		public ShardId GetShardIdForObject(string entityName, object obj)
 		{
-			ShardId shardId;
-			return TryGetShardIdForAttachedObject(entityName, obj, out shardId)
+			return TryGetShardIdForAttachedObject(entityName, obj, out var shardId)
 				? shardId
 				: null;
 		}
@@ -345,6 +341,28 @@ namespace NHibernate.Shards.Session
 		/// Performs the specified operation on the shards that are spanned by this session
 		/// and aggregates the results from each shard into a single result.
 		/// </summary>
+		/// <param name="operation">The operation to be performed on each shard.</param>
+		public void Execute(IShardOperation operation)
+		{
+			this.shardedSessionFactory.ShardStrategy.ShardAccessStrategy.Apply(this.shards, operation);
+		}
+
+		/// <summary>
+		/// Performs the specified asynchronous operation on the shards that are spanned by this session
+		/// and aggregates the results from each shard into a single result.
+		/// </summary>
+		/// <param name="operation">The asynchronous operation to be performed on each shard.</param>
+		/// <param name="cancellationToken">Cancellation token for this operation.</param>
+		/// <returns>The aggregated operation result.</returns>
+		public Task ExecuteAsync(IAsyncShardOperation operation, CancellationToken cancellationToken)
+		{
+			return this.shardedSessionFactory.ShardStrategy.ShardAccessStrategy.ApplyAsync(this.shards, operation, cancellationToken);
+		}
+
+		/// <summary>
+		/// Performs the specified operation on the shards that are spanned by this session
+		/// and aggregates the results from each shard into a single result.
+		/// </summary>
 		/// <typeparam name="T">Return value type.</typeparam>
 		/// <param name="operation">The operation to be performed on each shard.</param>
 		/// <param name="exitStrategy">Strategy for collection and aggregation of
@@ -355,33 +373,33 @@ namespace NHibernate.Shards.Session
 			return this.shardedSessionFactory.ShardStrategy.ShardAccessStrategy.Apply(this.shards, operation, exitStrategy);
 		}
 
-        /// <summary>
-        /// Performs the specified asynchronous operation on the shards that are spanned by this session
-        /// and aggregates the results from each shard into a single result.
-        /// </summary>
-        /// <typeparam name="T">Return value type.</typeparam>
-        /// <param name="operation">The asynchronous operation to be performed on each shard.</param>
-        /// <param name="exitStrategy">Strategy for collection and aggregation of
-        /// <param name="cancellationToken">Cancellation token for this operation.</param>
-        /// operation results from the shards.</param>
-        /// <returns>The aggregated operation result.</returns>
-        public Task<T> ExecuteAsync<T>(IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
+		/// <summary>
+		/// Performs the specified asynchronous operation on the shards that are spanned by this session
+		/// and aggregates the results from each shard into a single result.
+		/// </summary>
+		/// <typeparam name="T">Return value type.</typeparam>
+		/// <param name="operation">The asynchronous operation to be performed on each shard.</param>
+		/// <param name="exitStrategy">Strategy for collection and aggregation of
+		/// operation results from the shards.</param>
+		/// <param name="cancellationToken">Cancellation token for this operation.</param>
+		/// <returns>The aggregated operation result.</returns>
+		public Task<T> ExecuteAsync<T>(IAsyncShardOperation<T> operation, IExitStrategy<T> exitStrategy, CancellationToken cancellationToken)
 		{
 			return this.shardedSessionFactory.ShardStrategy.ShardAccessStrategy.ApplyAsync(this.shards, operation, exitStrategy, cancellationToken);
 		}
 
-	    ShardedSharedSessionBuilder SessionWithOptions()
-	    {
-	        return new ShardedSharedSessionBuilder(this);
-	    }
-
-        ISharedSessionBuilder ISession.SessionWithOptions()
+		ShardedSharedSessionBuilder SessionWithOptions()
 		{
-		    return SessionWithOptions();
+			return new ShardedSharedSessionBuilder(this);
 		}
 
-	    /// <inheritdoc />
-        public void Flush()
+		ISharedSessionBuilder ISession.SessionWithOptions()
+		{
+			return SessionWithOptions();
+		}
+
+		/// <inheritdoc />
+		public void Flush()
 		{
 			foreach (var session in this.establishedSessionsByShard.Values)
 			{
@@ -389,8 +407,8 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-	    /// <inheritdoc />
-	    public async Task FlushAsync(CancellationToken cancellationToken = new CancellationToken())
+		/// <inheritdoc />
+		public async Task FlushAsync(CancellationToken cancellationToken = new CancellationToken())
 		{
 			foreach (var session in this.establishedSessionsByShard.Values)
 			{
@@ -398,33 +416,33 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public FlushMode FlushMode
 		{
 			get { return AnySession.FlushMode; }
 			set { ApplyActionToShards(s => s.FlushMode = value); }
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public CacheMode CacheMode
 		{
 			get { return AnySession.CacheMode; }
 			set { ApplyActionToShards(s => s.CacheMode = value); }
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public ISessionFactory SessionFactory
 		{
 			get { return shardedSessionFactory; }
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public DbConnection Connection
 		{
 			get { throw new InvalidOperationException("On Shards this is deprecated"); }
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public DbConnection Disconnect()
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -436,7 +454,7 @@ namespace NHibernate.Shards.Session
 			return null;
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public void Reconnect()
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -445,13 +463,13 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public void Reconnect(DbConnection connection)
 		{
 			throw new NotSupportedException("Cannot reconnect a sharded session");
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public DbConnection Close()
 		{
 			Exception firstException = null;
@@ -483,7 +501,7 @@ namespace NHibernate.Shards.Session
 			return null;
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public void CancelQuery()
 		{
 			// cancel across all shards
@@ -509,7 +527,7 @@ namespace NHibernate.Shards.Session
 			get { return establishedSessionsByShard.Values.Any(s => s.IsConnected); }
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public bool IsDirty()
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -519,7 +537,7 @@ namespace NHibernate.Shards.Session
 			return false;
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public async Task<bool> IsDirtyAsync(CancellationToken cancellationToken = new CancellationToken())
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -529,26 +547,26 @@ namespace NHibernate.Shards.Session
 			return false;
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public bool DefaultReadOnly
 		{
 			get { return this.AnySession.DefaultReadOnly; }
 			set { ApplyActionToShards(s => { s.DefaultReadOnly = value; }); }
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public bool IsReadOnly(object entityOrProxy)
 		{
 			return GetSessionForAttachedObject(entityOrProxy).IsReadOnly(entityOrProxy);
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public void SetReadOnly(object entityOrProxy, bool readOnly)
 		{
 			GetSessionForAttachedObject(entityOrProxy).SetReadOnly(entityOrProxy, readOnly);
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public object GetIdentifier(object obj)
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -562,7 +580,7 @@ namespace NHibernate.Shards.Session
 			throw new TransientObjectException("Instance is transient or associated with a different Session");
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public bool Contains(object obj)
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -572,7 +590,7 @@ namespace NHibernate.Shards.Session
 			return false;
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public void Evict(object obj)
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -581,7 +599,7 @@ namespace NHibernate.Shards.Session
 			}
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public async Task EvictAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -591,112 +609,110 @@ namespace NHibernate.Shards.Session
 		}
 
 
-        #region Load
+		#region Load
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public object Load(System.Type clazz, object id, LockMode lockMode)
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(clazz), id);
-	        return Load(key, null);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			return Load(key, null);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public Task<object> LoadAsync(System.Type theType, object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(theType), id);
-	        return LoadAsync<object>(key, null, cancellationToken);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(theType), id);
+			return LoadAsync<object>(key, null, cancellationToken);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public object Load(string entityName, object id, LockMode lockMode)
-	    {
-	        var key = new ShardedEntityKey(entityName, id);
-	        return Load(key, lockMode);
-	    }
+		{
+			var key = new ShardedEntityKey(entityName, id);
+			return Load(key, lockMode);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public Task<object> LoadAsync(string entityName, object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
-	    {
-	        var key = new ShardedEntityKey(entityName, id);
-	        return LoadAsync<object>(key, lockMode, cancellationToken);
-	    }
+		{
+			var key = new ShardedEntityKey(entityName, id);
+			return LoadAsync<object>(key, lockMode, cancellationToken);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public object Load(System.Type clazz, object id)
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(clazz), id);
-	        return Load(key, null);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			return Load(key, null);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public Task<object> LoadAsync(System.Type theType, object id, CancellationToken cancellationToken = new CancellationToken())
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(theType), id);
-	        return LoadAsync<object>(key, null, cancellationToken);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(theType), id);
+			return LoadAsync<object>(key, null, cancellationToken);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public T Load<T>(object id, LockMode lockMode)
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
-	        return (T)Load(key, lockMode);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return (T)Load(key, lockMode);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public Task<T> LoadAsync<T>(object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
-	        return LoadAsync<T>(key, lockMode, cancellationToken);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return LoadAsync<T>(key, lockMode, cancellationToken);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public T Load<T>(object id)
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
-	        return (T)Load(key, null);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return (T)Load(key, null);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public Task<T> LoadAsync<T>(object id, CancellationToken cancellationToken = new CancellationToken())
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
-	        return LoadAsync<T>(key, null, cancellationToken);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return LoadAsync<T>(key, null, cancellationToken);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public object Load(string entityName, object id)
-	    {
-	        var key = new ShardedEntityKey(entityName, id);
-	        return Load(key, null);
-	    }
+		{
+			var key = new ShardedEntityKey(entityName, id);
+			return Load(key, null);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public Task<object> LoadAsync(string entityName, object id, CancellationToken cancellationToken = new CancellationToken())
-	    {
-	        var key = new ShardedEntityKey(entityName, id);
-	        return LoadAsync<object>(key, null, cancellationToken);
-	    }
+		{
+			var key = new ShardedEntityKey(entityName, id);
+			return LoadAsync<object>(key, null, cancellationToken);
+		}
 
 		private object Load(ShardedEntityKey key, LockMode lockMode)
 		{
-			IShard shard;
-			if (TryResolveToSingleShard(key, out shard))
+			if (TryResolveToSingleShard(key, out var shard))
 			{
 				return shard.EstablishSession().Load(key.EntityName, key.Id, lockMode);
 			}
 
-			IUniqueResult<object> persistent;
-			if (!TryGet(key, lockMode, out persistent))
+			if (!TryGet(key, lockMode, out var persistent))
 			{
 				this.shardedSessionFactory.EntityNotFoundDelegate.HandleEntityNotFound(key.EntityName, key.Id);
 			}
 			return persistent.Value;
 		}
 
+		[SuppressMessage("ReSharper", "PossibleNullReferenceException")]
 		private async Task<T> LoadAsync<T>(ShardedEntityKey key, LockMode lockMode, CancellationToken cancellationToken)
 		{
-			IShard shard;
-			if (TryResolveToSingleShard(key, out shard))
+			if (TryResolveToSingleShard(key, out var shard))
 			{
 				return (T)await shard.EstablishSession().LoadAsync(key.EntityName, key.Id, lockMode, cancellationToken);
 			}
@@ -709,31 +725,29 @@ namespace NHibernate.Shards.Session
 			return (T)persistent.Value;
 		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public void Load(object obj, object id)
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(obj), id);
-	        Load(obj, key);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(obj), id);
+			Load(obj, key);
+		}
 
-	    /// <inheritdoc />
+		/// <inheritdoc />
 		public Task LoadAsync(object obj, object id, CancellationToken cancellationToken = new CancellationToken())
-	    {
-	        var key = new ShardedEntityKey(GuessEntityName(obj), id);
-	        return LoadAsync(obj, key, cancellationToken);
-	    }
+		{
+			var key = new ShardedEntityKey(GuessEntityName(obj), id);
+			return LoadAsync(obj, key, cancellationToken);
+		}
 
 		private void Load(object entity, ShardedEntityKey key)
 		{
-			IShard shard;
-			if (TryResolveToSingleShard(key, out shard))
+			if (TryResolveToSingleShard(key, out var shard))
 			{
 				shard.EstablishSession().Load(entity, key);
 				return;
 			}
 
-			IUniqueResult<object> persistent;
-			if (TryGet(key, null, out persistent))
+			if (TryGet(key, null, out var persistent))
 			{
 				Evict(persistent.Value);
 				persistent.Shard.EstablishSession().Load(entity, key);
@@ -744,8 +758,7 @@ namespace NHibernate.Shards.Session
 
 		private async Task LoadAsync(object entity, ShardedEntityKey key, CancellationToken cancellationToken)
 		{
-			IShard shard;
-			if (TryResolveToSingleShard(key, out shard))
+			if (TryResolveToSingleShard(key, out var shard))
 			{
 				await shard.EstablishSession().LoadAsync(entity, key, cancellationToken);
 			}
@@ -800,8 +813,7 @@ namespace NHibernate.Shards.Session
 
 		private void Replicate(object entity, ShardedEntityKey key, ReplicationMode replicationMode)
 		{
-			ShardId shardId;
-			if (TryResolveToSingleShardId(key, out shardId))
+			if (TryResolveToSingleShardId(key, out var shardId))
 			{
 				// Attached object
 				CurrentSubgraphShardId = shardId;
@@ -809,8 +821,7 @@ namespace NHibernate.Shards.Session
 				return;
 			}
 
-			IUniqueResult<object> persistent;
-			if (TryGet(key, null, out persistent))
+			if (TryGet(key, null, out var persistent))
 			{
 				// Detached object
 				Evict(persistent.Value);
@@ -826,8 +837,7 @@ namespace NHibernate.Shards.Session
 
 		private async Task ReplicateAsync(object entity, ShardedEntityKey key, ReplicationMode replicationMode, CancellationToken cancellationToken)
 		{
-			ShardId shardId;
-			if (TryResolveToSingleShardId(key, out shardId))
+			if (TryResolveToSingleShardId(key, out var shardId))
 			{
 				// Attached object
 				CurrentSubgraphShardId = shardId;
@@ -900,8 +910,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			ShardId shardId;
-			if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
+			if (!TryGetShardIdForAttachedObject(entityName, obj, out var shardId))
 			{
 				// Transient object
 				shardId = SelectShardIdForNewEntity(entityName, obj);
@@ -910,7 +919,7 @@ namespace NHibernate.Shards.Session
 
 			// Attached object
 			CurrentSubgraphShardId = shardId;
-			Log.Debug(String.Format("Saving object of type '{0}' to shard {1}", entityName, shardId));
+			Log.Debug($"Saving object of type '{entityName}' to shard {shardId}");
 			return this.shardsById[shardId].EstablishSession().Save(entityName, obj);
 		}
 
@@ -919,8 +928,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			ShardId shardId;
-			if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
+			if (!TryGetShardIdForAttachedObject(entityName, obj, out var shardId))
 			{
 				// Transient object
 				shardId = SelectShardIdForNewEntity(entityName, obj);
@@ -929,7 +937,7 @@ namespace NHibernate.Shards.Session
 
 			// Attached object
 			CurrentSubgraphShardId = shardId;
-			Log.Debug(String.Format("Saving object of type '{0}' to shard {1}", entityName, shardId));
+			Log.Debug($"Saving object of type '{entityName}' to shard {shardId}");
 			return this.shardsById[shardId].EstablishSession().SaveAsync(entityName, obj, cancellationToken);
 		}
 
@@ -959,8 +967,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			ShardId shardId;
-			if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
+			if (!TryGetShardIdForAttachedObject(entityName, obj, out var shardId))
 			{
 				// Transient object
 				shardId = SelectShardIdForNewEntity(entityName, obj);
@@ -969,7 +976,7 @@ namespace NHibernate.Shards.Session
 
 			// Attached object
 			CurrentSubgraphShardId = shardId;
-			Log.Debug(String.Format("Saving object of type '{0}' to shard {1}", entityName, shardId));
+			Log.Debug($"Saving object of type '{entityName}' to shard {shardId}");
 			this.shardsById[shardId].EstablishSession().Save(obj, id);
 		}
 
@@ -978,8 +985,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			ShardId shardId;
-			if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
+			if (!TryGetShardIdForAttachedObject(entityName, obj, out var shardId))
 			{
 				// Transient object
 				shardId = SelectShardIdForNewEntity(entityName, obj);
@@ -988,7 +994,7 @@ namespace NHibernate.Shards.Session
 
 			// Attached object
 			CurrentSubgraphShardId = shardId;
-			Log.Debug(String.Format("Saving object of type '{0}' to shard {1}", entityName, shardId));
+			Log.Debug($"Saving object of type '{entityName}' to shard {shardId}");
 			return this.shardsById[shardId].EstablishSession().SaveAsync(obj, id, cancellationToken);
 		}
 
@@ -1009,17 +1015,16 @@ namespace NHibernate.Shards.Session
 			 * If we can't find any references we'll leave it up to the shard selection
 			 * strategy.
 			 */
-			ShardId shardId;
-			if (!TryGetShardIdOfAssociatedObject(entityName, entity, out shardId))
+			if (!TryGetShardIdOfAssociatedObject(entityName, entity, out var shardId))
 			{
-				CheckForUnsupportedToplevelSave(entity.GetType());
+				CheckForUnsupportedTopLevelSave(entity.GetType());
 				shardId = this.shardedSessionFactory.ShardStrategy.ShardSelectionStrategy.SelectShardIdForNewObject(entity);
 			}
 
 			// lock has been requested but shard has not yet been selected - lock it in
 			if (lockedShard) lockedShardId = shardId;
 
-			Log.Debug(string.Format("Selected shard '{0}' for object of type '{1}'", shardId.Id, entityName));
+			Log.Debug($"Selected shard '{shardId.Id}' for object of type '{entityName}'");
 			return shardId;
 		}
 
@@ -1031,11 +1036,11 @@ namespace NHibernate.Shards.Session
 		 * This is to prevent clients from accidentally splitting their object graphs
 		 * across multiple shards.
 		 */
-		private void CheckForUnsupportedToplevelSave(System.Type entityClass)
+		private void CheckForUnsupportedTopLevelSave(System.Type entityClass)
 		{
 			if (this.shardedSessionFactory.IsClassWithTopLevelSaveSupport(entityClass))
 			{
-				string msg = string.Format("Attempt to save object of type {0} as top-level object", entityClass.Name);
+				string msg = $"Attempt to save object of type {entityClass.Name} as top-level object";
 				Log.Error(msg);
 				throw new HibernateException(msg);
 			}
@@ -1091,8 +1096,7 @@ namespace NHibernate.Shards.Session
 					 * let's hold off until the end on the chance that we can fail
 					 * quickly.
 					 */
-					var collection = pair.Value as ICollection;
-					if (collection != null)
+					if (pair.Value is ICollection collection)
 					{
 						if (collectionAssociations == null)
 						{
@@ -1132,9 +1136,7 @@ namespace NHibernate.Shards.Session
 		{
 			if (!associatedShardId.Value.Equals(shardId))
 			{
-				string message = string.Format(
-					"Object of entity type '{0}' is on shard '{1}' but an associated object of type '{2}' is on shard '{3}'.",
-					entityName, shardId, associatedShardId.Key, associatedShardId.Value);
+				var message = $"Object of entity type '{entityName}' is on shard '{shardId}' but an associated object of type '{associatedShardId.Key}' is on shard '{associatedShardId.Value}'.";
 				Log.Error(message);
 				throw new CrossShardAssociationException(message);
 			}
@@ -1148,8 +1150,7 @@ namespace NHibernate.Shards.Session
 
 		}
 
-		private static IEnumerable<KeyValuePair<IAssociationType, object>> GetEntityAssociations(
-			IType[] propertyTypes, object[] propertyValues)
+		private static IEnumerable<KeyValuePair<IAssociationType, object>> GetEntityAssociations(IType[] propertyTypes, object[] propertyValues)
 		{
 			// we assume types and current state are the same length
 			Preconditions.CheckState(propertyTypes.Length == propertyValues.Length);
@@ -1207,8 +1208,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				shard.EstablishSession().SaveOrUpdate(entityName, obj);
@@ -1230,8 +1230,7 @@ namespace NHibernate.Shards.Session
 				 * The only safe way to handle this is to try and lookup the object, and if
 				 * it exists, do a merge, and if it doesn't, do a save.
 				 */
-				IUniqueResult<object> persistent;
-				if (TryGet(key, null, out persistent))
+				if (TryGet(key, null, out var persistent))
 				{
 					persistent.Shard.EstablishSession().Merge(entityName, obj);
 					return;
@@ -1246,8 +1245,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				await shard.EstablishSession().SaveOrUpdateAsync(entityName, obj, cancellationToken);
@@ -1285,8 +1283,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				shard.EstablishSession().SaveOrUpdate(entityName, obj);
@@ -1308,8 +1305,7 @@ namespace NHibernate.Shards.Session
 				 * The only safe way to handle this is to try and lookup the object, and if
 				 * it exists, do a merge, and if it doesn't, do a save.
 				 */
-				IUniqueResult<object> persistent;
-				if (TryGet(key, null, out persistent))
+				if (TryGet(key, null, out var persistent))
 				{
 					persistent.Shard.EstablishSession().Merge(entityName, obj);
 					return;
@@ -1324,8 +1320,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				await shard.EstablishSession().SaveOrUpdateAsync(entityName, obj, cancellationToken);
@@ -1397,8 +1392,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				shard.EstablishSession().Update(entityName, obj);
@@ -1420,8 +1414,7 @@ namespace NHibernate.Shards.Session
 				 * The only safe way to perform the update is to load the object and then
 				 * do a merge.
 				 */
-				IUniqueResult<object> persistent;
-				if (TryGet(key, null, out persistent))
+				if (TryGet(key, null, out var persistent))
 				{
 					persistent.Shard.EstablishSession().Merge(entityName, obj);
 					return;
@@ -1443,8 +1436,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				await shard.EstablishSession().UpdateAsync(entityName, obj, cancellationToken);
@@ -1520,8 +1512,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				shard.EstablishSession().Update(obj, id);
@@ -1542,8 +1533,7 @@ namespace NHibernate.Shards.Session
 				* The only safe way to perform the update is to load the object and then
 				* do a merge.
 				*/
-				IUniqueResult<object> persistent;
-				if (TryGet(key, null, out persistent))
+				if (TryGet(key, null, out var persistent))
 				{
 					persistent.Shard.EstablishSession().Merge(entityName, obj);
 					return;
@@ -1565,8 +1555,7 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				await shard.EstablishSession().UpdateAsync(obj, id, cancellationToken);
@@ -1648,15 +1637,13 @@ namespace NHibernate.Shards.Session
 		{
 			var key = ExtractKey(entityName, obj);
 
-			ShardId shardId;
-			if (TryResolveToSingleShardId(key, out shardId))
+			if (TryResolveToSingleShardId(key, out var shardId))
 			{
 				CurrentSubgraphShardId = shardId;
 				return shardsById[shardId].EstablishSession().Merge(entityName, obj);
 			}
 
-			IUniqueResult<object> persistent;
-			if (TryGet(key, null, out persistent))
+			if (TryGet(key, null, out var persistent))
 			{
 				return persistent.Shard.EstablishSession().Merge(entityName, obj);
 			}
@@ -1669,8 +1656,7 @@ namespace NHibernate.Shards.Session
 		{
 			var key = ExtractKey(entityName, obj);
 
-			ShardId shardId;
-			if (TryResolveToSingleShardId(key, out shardId))
+			if (TryResolveToSingleShardId(key, out var shardId))
 			{
 				CurrentSubgraphShardId = shardId;
 				return await shardsById[shardId].EstablishSession().MergeAsync(entityName, obj, cancellationToken);
@@ -1738,15 +1724,14 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			ShardId shardId;
-			if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
+			if (!TryGetShardIdForAttachedObject(entityName, obj, out var shardId))
 			{
 				// Detached object
 				shardId = SelectShardIdForNewEntity(entityName, obj);
 			}
 
 			CurrentSubgraphShardId = shardId;
-			Log.Debug(string.Format("Persisting object of type '{0}' to shard '{1}'", entityName, shardId));
+			Log.Debug($"Persisting object of type '{entityName}' to shard '{shardId}'");
 			shardsById[shardId].EstablishSession().Persist(entityName, obj);
 		}
 
@@ -1755,15 +1740,14 @@ namespace NHibernate.Shards.Session
 			Preconditions.CheckNotNull(obj);
 			if (entityName == null) entityName = GuessEntityName(obj);
 
-			ShardId shardId;
-			if (!TryGetShardIdForAttachedObject(entityName, obj, out shardId))
+			if (!TryGetShardIdForAttachedObject(entityName, obj, out var shardId))
 			{
 				// Detached object
 				shardId = SelectShardIdForNewEntity(entityName, obj);
 			}
 
 			CurrentSubgraphShardId = shardId;
-			Log.Debug(string.Format("Persisting object of type '{0}' to shard '{1}'", entityName, shardId));
+			Log.Debug($"Persisting object of type '{entityName}' to shard '{shardId}'");
 			return shardsById[shardId].EstablishSession().PersistAsync(entityName, obj, cancellationToken);
 		}
 
@@ -1772,7 +1756,7 @@ namespace NHibernate.Shards.Session
 		#region Delete
 
 		/// <summary>
-		/// Remove a persistent instance from the datastore.
+		/// Remove a persistent instance from the data store.
 		/// </summary>
 		/// <remarks>
 		/// The argument may be an instance associated with the receiving <c>ISession</c> or a
@@ -1791,8 +1775,7 @@ namespace NHibernate.Shards.Session
 
 		public void Delete(string entityName, object obj)
 		{
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				shard.EstablishSession().Delete(entityName, obj);
@@ -1824,8 +1807,7 @@ namespace NHibernate.Shards.Session
 				 * The only safe way to perform the delete is to load the object before
 				 * deleting.
 				 */
-				IUniqueResult<object> persistent;
-				if (TryGet(key, null, out persistent))
+				if (TryGet(key, null, out var persistent))
 				{
 					persistent.Shard.EstablishSession().Delete(entityName, persistent.Value);
 				}
@@ -1834,8 +1816,7 @@ namespace NHibernate.Shards.Session
 
 		public async Task DeleteAsync(string entityName, object obj, CancellationToken cancellationToken = new CancellationToken())
 		{
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// attached object
 				await shard.EstablishSession().DeleteAsync(entityName, obj, cancellationToken);
@@ -1899,7 +1880,7 @@ namespace NHibernate.Shards.Session
 		/// Delete all objects returned by the query.
 		/// </summary>
 		/// <param name="query">The query string</param>
-		/// <param name="value">A value to be written to a "?" placeholer in the query</param>
+		/// <param name="value">A value to be written to a "?" placeholder in the query</param>
 		/// <param name="type">The hibernate type of value.</param>
 		/// <returns>The number of instances deleted</returns>
 		public int Delete(string query, object value, IType type)
@@ -2046,8 +2027,7 @@ namespace NHibernate.Shards.Session
 		/// <param name="obj">A persistent instance</param>
 		public void Refresh(object obj)
 		{
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// Attached object
 				shard.EstablishSession().Refresh(obj);
@@ -2056,8 +2036,7 @@ namespace NHibernate.Shards.Session
 
 		public Task RefreshAsync(object obj, CancellationToken cancellationToken = new CancellationToken())
 		{
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// Attached object
 				return shard.EstablishSession().RefreshAsync(obj, cancellationToken);
@@ -2078,8 +2057,7 @@ namespace NHibernate.Shards.Session
 		/// <param name="lockMode">the lock mode to use</param>
 		public void Refresh(object obj, LockMode lockMode)
 		{
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// Attached object
 				shard.EstablishSession().Refresh(obj, lockMode);
@@ -2088,8 +2066,7 @@ namespace NHibernate.Shards.Session
 
 		public Task RefreshAsync(object obj, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
 		{
-			IShard shard;
-			if (TryGetShardForAttachedEntity(obj, out shard))
+			if (TryGetShardForAttachedEntity(obj, out var shard))
 			{
 				// Attached object
 				return shard.EstablishSession().RefreshAsync(obj, lockMode, cancellationToken);
@@ -2284,8 +2261,7 @@ namespace NHibernate.Shards.Session
 		{
 			foreach (IShard shard in shardsToConsider)
 			{
-				ISession session;
-				if (this.establishedSessionsByShard.TryGetValue(shard, out session))
+				if (this.establishedSessionsByShard.TryGetValue(shard, out var session))
 				{
 					var sessionImplementor = session.GetSessionImplementation();
 					if (sessionImplementor.PersistenceContext.GetCollectionEntryOrNull(collection) != null)
@@ -2339,7 +2315,7 @@ namespace NHibernate.Shards.Session
 
 		/// <summary>
 		/// An <see cref="IMultiCriteria"/> that can return a list of all the results
-		/// of all the criterias.
+		/// of all the criteria.
 		/// </summary>
 		/// <returns></returns>
 		public IMultiCriteria CreateMultiCriteria()
@@ -2384,25 +2360,25 @@ namespace NHibernate.Shards.Session
 		/// <returns>a persistent instance or null</returns>
 		public object Get(System.Type clazz, object id)
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
-		    return Get(key, null).Value;
+			var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			return Get(key, null).Value;
 		}
 
 		public async Task<object> GetAsync(System.Type clazz, object id, CancellationToken cancellationToken = new CancellationToken())
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			var key = new ShardedEntityKey(GuessEntityName(clazz), id);
 			return (await GetAsync(key, null, cancellationToken)).Value;
 		}
 
 		public object Get(string entityName, object id)
 		{
-		    var key = new ShardedEntityKey(entityName, id);
-		    return Get(key, null).Value;
+			var key = new ShardedEntityKey(entityName, id);
+			return Get(key, null).Value;
 		}
 
 		public async Task<object> GetAsync(string entityName, object id, CancellationToken cancellationToken = new CancellationToken())
 		{
-		    var key = new ShardedEntityKey(entityName, id);
+			var key = new ShardedEntityKey(entityName, id);
 			return (await GetAsync(key, null, cancellationToken)).Value;
 		}
 
@@ -2417,13 +2393,13 @@ namespace NHibernate.Shards.Session
 		/// <returns>a persistent instance or null</returns>
 		public object Get(System.Type clazz, object id, LockMode lockMode)
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			var key = new ShardedEntityKey(GuessEntityName(clazz), id);
 			return Get(key, lockMode).Value;
 		}
 
 		public async Task<object> GetAsync(System.Type clazz, object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(clazz), id);
+			var key = new ShardedEntityKey(GuessEntityName(clazz), id);
 			return (await GetAsync(key, lockMode, cancellationToken)).Value;
 		}
 
@@ -2432,13 +2408,13 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public T Get<T>(object id)
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
-		    return (T)Get(key, null).Value;
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return (T)Get(key, null).Value;
 		}
 
 		public async Task<T> GetAsync<T>(object id, CancellationToken cancellationToken = new CancellationToken())
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
 			return (T)(await GetAsync(key, null, cancellationToken)).Value;
 		}
 
@@ -2447,13 +2423,13 @@ namespace NHibernate.Shards.Session
 		/// </summary>
 		public T Get<T>(object id, LockMode lockMode)
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
-		    return (T)Get(key, lockMode).Value;
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			return (T)Get(key, lockMode).Value;
 		}
 
 		public async Task<T> GetAsync<T>(object id, LockMode lockMode, CancellationToken cancellationToken = new CancellationToken())
 		{
-		    var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
+			var key = new ShardedEntityKey(GuessEntityName(typeof(T)), id);
 			return (T)(await GetAsync(key, lockMode, cancellationToken)).Value;
 		}
 
@@ -2462,7 +2438,7 @@ namespace NHibernate.Shards.Session
 			// we're not letting people customize shard selection by lockMode
 			var shardOperation = new GetShardOperation(key, mode);
 			var exitStrategy = new UniqueResultExitStrategy<object>(null);
-		    this.shardedSessionFactory.ShardStrategy.ShardAccessStrategy.Apply(ResolveToShards(key), shardOperation, exitStrategy);
+			this.shardedSessionFactory.ShardStrategy.ShardAccessStrategy.Apply(ResolveToShards(key), shardOperation, exitStrategy);
 			return exitStrategy;
 		}
 
@@ -2477,11 +2453,11 @@ namespace NHibernate.Shards.Session
 
 		private bool TryGet(ShardedEntityKey key, LockMode lockMode, out IUniqueResult<object> result)
 		{
-		    if (key.IsNull)
-		    {
-		        result = null;
-		        return false;
-		    }
+			if (key.IsNull)
+			{
+				result = null;
+				return false;
+			}
 
 			result = Get(key, lockMode);
 			return result.Value != null;
@@ -2580,8 +2556,7 @@ namespace NHibernate.Shards.Session
 		  */
 		private ISession GetSessionForAttachedObject(object obj)
 		{
-			IShard shard;
-			return TryGetShardForAttachedEntity(obj, out shard)
+			return TryGetShardForAttachedEntity(obj, out var shard)
 				? shard.EstablishSession()
 				: AnySession;
 		}
@@ -2592,7 +2567,7 @@ namespace NHibernate.Shards.Session
 		/// Enable the named filter for this current session.
 		/// </summary>
 		/// <param name="filterName">The name of the filter to be enabled.</param>
-		/// <returns>The Filter instance representing the enabled fiter.</returns>
+		/// <returns>The Filter instance representing the enabled filter.</returns>
 		public IFilter EnableFilter(string filterName)
 		{
 			if (this.enabledFilters == null)
@@ -2621,11 +2596,10 @@ namespace NHibernate.Shards.Session
 		/// Retrieve a currently enabled filter by name.
 		/// </summary>
 		/// <param name="filterName">The name of the filter to be retrieved.</param>
-		/// <returns>The Filter instance representing the enabled fiter.</returns>
+		/// <returns>The Filter instance representing the enabled filter.</returns>
 		public IFilter GetEnabledFilter(string filterName)
 		{
-			IShardedFilter result;
-			return (this.enabledFilters != null && this.enabledFilters.TryGetValue(filterName, out result))
+			return (this.enabledFilters != null && this.enabledFilters.TryGetValue(filterName, out var result))
 				? result
 				: null;
 		}
@@ -2636,8 +2610,7 @@ namespace NHibernate.Shards.Session
 		/// <param name="filterName">The name of the filter to be disabled.</param>
 		public void DisableFilter(string filterName)
 		{
-			IShardedFilter filter;
-			if (this.enabledFilters != null && this.enabledFilters.TryGetValue(filterName, out filter))
+			if (this.enabledFilters != null && this.enabledFilters.TryGetValue(filterName, out var filter))
 			{
 				this.enabledFilters.Remove(filterName);
 				filter.Disable();
@@ -2666,7 +2639,7 @@ namespace NHibernate.Shards.Session
 		/// Gets the session implementation.
 		/// </summary>
 		/// <remarks>
-		/// This method is provided in order to get the <b>NHibernate</b> implementation of the session from wrapper implementions.
+		/// This method is provided in order to get the <b>NHibernate</b> implementation of the session from wrapper implementations.
 		/// Implementors of the <seealso cref="ISession"/> interface should return the NHibernate implementation of this method.
 		/// </remarks>
 		/// <returns>
@@ -2706,40 +2679,36 @@ namespace NHibernate.Shards.Session
 				}
 				catch (Exception e)
 				{
-				    Log.Warn(e, "Caught exception trying to close.");
-                }
-            }
+					Log.Warn(e, "Caught exception trying to close.");
+				}
+			}
 		}
 
-        #endregion
+		#endregion
 
-        #region Private methods
+		#region Private methods
 
-        private string GuessEntityName(object entity)
+		private string GuessEntityName(object entity)
 		{
-			var proxy = entity as INHibernateProxy;
-			if (proxy != null)
+			if (entity is INHibernateProxy proxy)
 			{
 				var initializer = proxy.HibernateLazyInitializer;
 				entity = initializer.GetImplementation();
 			}
 
-            var entityName = interceptor != null
-				? interceptor.GetEntityName(entity)
-				: null;
-		    return entityName ?? GuessEntityName(entity.GetType());
+			var entityName = interceptor?.GetEntityName(entity);
+			return entityName ?? GuessEntityName(entity.GetType());
 		}
 
-	    private string GuessEntityName(System.Type persistentClass)
-	    {
-	        return this.shardedSessionFactory.TryGetGuessEntityName(persistentClass)
-	               ?? persistentClass.AssemblyQualifiedName;
-	    }
-
-        private bool TryResolveToSingleShard(ShardedEntityKey key, out IShard result)
+		private string GuessEntityName(System.Type persistentClass)
 		{
-			ShardId shardId;
-			if (TryResolveToSingleShardId(key, out shardId))
+			return this.shardedSessionFactory.TryGetGuessEntityName(persistentClass)
+				   ?? persistentClass.AssemblyQualifiedName;
+		}
+
+		private bool TryResolveToSingleShard(ShardedEntityKey key, out IShard result)
+		{
+			if (TryResolveToSingleShardId(key, out var shardId))
 			{
 				result = this.shardsById[shardId];
 				return true;
@@ -2798,8 +2767,7 @@ namespace NHibernate.Shards.Session
 
 		private IEnumerable<ShardId> ResolveToShardIds(ShardedEntityKey key)
 		{
-			ShardId singleShardId;
-			if (!key.IsNull && this.shardedSessionFactory.TryExtractShardIdFromKey(key, out singleShardId))
+			if (!key.IsNull && this.shardedSessionFactory.TryExtractShardIdFromKey(key, out var singleShardId))
 			{
 				return new SingletonEnumerable<ShardId>(singleShardId);
 			}
