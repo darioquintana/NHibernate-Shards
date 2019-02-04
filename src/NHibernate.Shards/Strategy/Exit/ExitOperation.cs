@@ -109,7 +109,7 @@ namespace NHibernate.Shards.Strategy.Exit
 			}
 
 			return this.Aggregation != null
-				? new SingletonEnumerable<T>((T)this.Aggregation(result))
+				? new SingletonEnumerable<T>((T)Convert.ChangeType(this.Aggregation(result), typeof(T)))
 				: result;
 		}
 	}

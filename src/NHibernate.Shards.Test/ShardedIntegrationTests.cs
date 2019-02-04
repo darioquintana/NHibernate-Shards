@@ -105,7 +105,7 @@
 
         #endregion
 
-        #region Tests - criteria queries
+        #region Tests - Criteria queries
 
         [Test]
 		public void CanQueryWithCriteria()
@@ -443,11 +443,37 @@
 	        }
 	    }
 
-        #endregion
+	    [Test]
+	    public void CanBatchQueryWithHql()
+	    {
+		    var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+		    var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
 
-        #region Tests - Linq queries
+		    using (var session = SessionFactory.OpenSession())
+		    {
+			    using (session.BeginTransaction())
+			    {
+				    session.Save(person1);
+				    session.Save(person2);
+				    session.Flush();
+				    session.Clear();
 
-        [Test]
+				    var queries = session.CreateQueryBatch()
+					    .Add<long>(session.CreateQuery("select count(*) from Person p where p.LegalName.FirstName = 'Mary'"))
+					    .Add<Person>(session.CreateQuery("from Person p where p.LegalName.FirstName = 'Mary'"));
+				    var personCount = queries.GetResult<long>(0)[0];
+				    var persons = queries.GetResult<Person>(1);
+				    Assert.That(personCount, Is.EqualTo(1), "Query 1");
+				    Assert.That(persons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "Query 2");
+			    }
+		    }
+	    }
+
+		#endregion
+
+		#region Tests - Linq queries
+
+		[Test]
 		public void CanQueryWithLinq()
 		{
 			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
@@ -507,7 +533,7 @@
 		#region Tests - MultiQuery
 
 		[Test]
-		public void CanBatchQueryWithHql()
+		public void CanBatchQueryWithCriteria()
 		{
 			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
 			var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
@@ -522,9 +548,15 @@
 					session.Clear();
 
 					var queries = session.CreateQueryBatch()
-						.Add<Person>(session.CreateQuery("from Person p where p.LegalName.FirstName = 'Mary'"));
-					var persistentPersons = queries.GetResult<Person>(0);
-					Assert.That(persistentPersons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }));
+						.Add<int>(session.CreateCriteria<Person>()
+							.Add(Restrictions.Eq("LegalName.FirstName", "Mary"))
+							.SetProjection(Projections.RowCount()))
+						.Add<Person>(session.CreateCriteria<Person>()
+							.Add(Restrictions.Eq("LegalName.FirstName", "Mary")));
+					var personCount = queries.GetResult<int>(0)[0];
+					var persons = queries.GetResult<Person>(1);
+					Assert.That(personCount, Is.EqualTo(1), "Query 1");
+					Assert.That(persons, Has.Count.EqualTo(1) & Is.EquivalentTo(new[] { person2 }), "Query 2");
 				}
 			}
 		}

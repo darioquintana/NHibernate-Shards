@@ -5,6 +5,11 @@ namespace NHibernate.Shards.Multi
 	public interface IShardedQueryBatch : IQueryBatch
 	{
 		/// <summary>
+		/// Gets number of queries in his batch.
+		/// </summary>
+		int Count { get; }
+
+		/// <summary>
 		/// Returns an <see cref="IQueryBatch"/> instance that is associated with the
 		/// established session for a given shard.
 		/// </summary>

@@ -37,6 +37,11 @@ namespace NHibernate.Shards.Multi
 
 		#region Properties
 
+		public int Count
+		{
+			get { return this.shardedBatchItems.Count; }
+		}
+
 		private IQueryBatch AnyQueryBatch
 		{
 			get { return EstablishFor(this.session.AnyShard); }
@@ -95,19 +100,42 @@ namespace NHibernate.Shards.Multi
 		public IList<TResult> GetResult<TResult>(int queryIndex)
 		{
 			var shardedBatchItem = this.shardedBatchItems[queryIndex];
-			var shardOperation = new GetResultShardOperation<TResult>(this, queryIndex);
-			var exitStrategy = new ListExitStrategy<TResult>(shardedBatchItem.ExitOperationFactory);
-			return this.session.Execute(shardOperation, exitStrategy).ToList();
+
+			if (!(shardedBatchItem.ShardedQuery is IShardedQueryBatchItemImplementor<TResult> shardedQuery))
+			{
+				throw new ArgumentException("Invalid query result type.");
+			}
+
+			if (!shardedQuery.HasResults)
+			{
+				var shardOperation = new GetResultShardOperation<TResult>(this, queryIndex);
+				var exitStrategy = new ListExitStrategy<TResult>(shardedBatchItem.ExitOperationFactory);
+				var results = this.session.Execute(shardOperation, exitStrategy);
+				shardedQuery.ProcessResults(results.ToList());
+			}
+
+			return shardedQuery.GetResults();
 		}
 
 		/// <inheritdoc />
 		public async Task<IList<TResult>> GetResultAsync<TResult>(int queryIndex, CancellationToken cancellationToken = default)
 		{
 			var shardedBatchItem = this.shardedBatchItems[queryIndex];
-			var shardOperation = new GetResultShardOperation<TResult>(this, queryIndex);
-			var exitStrategy = new ListExitStrategy<TResult>(shardedBatchItem.ExitOperationFactory);
-			var result = await this.session.ExecuteAsync(shardOperation, exitStrategy, cancellationToken);
-			return result.ToList();
+
+			if (!(shardedBatchItem.ShardedQuery is IShardedQueryBatchItemImplementor<TResult> shardedQuery))
+			{
+				throw new ArgumentException("Invalid query result type.");
+			}
+
+			if (!shardedQuery.HasResults)
+			{
+				var shardOperation = new GetResultShardOperation<TResult>(this, queryIndex);
+				var exitStrategy = new ListExitStrategy<TResult>(shardedBatchItem.ExitOperationFactory);
+				var results = await this.session.ExecuteAsync(shardOperation, exitStrategy, cancellationToken).ConfigureAwait(false);
+				shardedQuery.ProcessResults(results.ToList());
+			}
+
+			return shardedQuery.GetResults();
 		}
 
 		/// <inheritdoc />
@@ -205,6 +233,16 @@ namespace NHibernate.Shards.Multi
 				this.ShardedQuery = shardedQuery;
 			}
 
+			public bool HasResults
+			{
+				get { return this.ShardedQuery.HasResults; }
+			}
+
+			public void ProcessResults<T>(IList<T> results)
+			{
+				((IShardedQueryBatchItemImplementor<T>)this.ShardedQuery).ProcessResults(results);
+			}
+
 			public IExitOperationFactory ExitOperationFactory
 			{
 				get {  return this.ShardedQuery.ExitOperationFactory; }
@@ -272,7 +310,7 @@ namespace NHibernate.Shards.Multi
 			public Func<CancellationToken, Task<IEnumerable<T>>> PrepareAsync(IShard shard)
 			{
 				var multiQuery = this.shardedQueryBatch.EstablishFor(shard);
-				return async ct => await multiQuery.GetResultAsync<T>(this.resultIndex, ct);
+				return async ct => await multiQuery.GetResultAsync<T>(this.resultIndex, ct).ConfigureAwait(false);
 			}
 
 			public string OperationName

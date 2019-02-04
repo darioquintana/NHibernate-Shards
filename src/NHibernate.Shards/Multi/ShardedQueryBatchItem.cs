@@ -1,11 +1,13 @@
-﻿namespace NHibernate.Shards.Multi
-{
-	using System;
-	using NHibernate.Multi;
-	using NHibernate.Shards.Query;
-	using NHibernate.Shards.Strategy.Exit;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using NHibernate.Multi;
+using NHibernate.Shards.Query;
+using NHibernate.Shards.Strategy.Exit;
 
-	internal class ShardedQueryBatchItem<T> : AbstractShardedQueryBatchItem
+namespace NHibernate.Shards.Multi
+{
+	internal class ShardedQueryBatchItem<T> : AbstractShardedQueryBatchItem<T>
 	{
 		private readonly ShardedQueryImpl shardedQuery;
 
@@ -34,6 +36,18 @@
 		public override void EstablishFor(IShard shard, string key, IQueryBatch queryBatch)
 		{
 			queryBatch.Add<T>(key, this.shardedQuery.EstablishFor(shard));
+		}
+
+		/// <inheritdoc />
+		public override void ExecuteNonBatched()
+		{
+			ProcessResults(this.shardedQuery.List<T>());
+		}
+
+		/// <inheritdoc />
+		public override async Task ExecuteNonBatchedAsync(CancellationToken cancellationToken)
+		{
+			ProcessResults(await this.shardedQuery.ListAsync<T>(cancellationToken).ConfigureAwait(false));
 		}
 
 		private static ShardedQueryImpl EnsureShardedQuery(IQuery query)
