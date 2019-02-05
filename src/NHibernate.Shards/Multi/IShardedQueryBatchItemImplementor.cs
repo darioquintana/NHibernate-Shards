@@ -1,19 +1,19 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Multi;
-using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Multi
 {
-	public interface IShardedQueryBatchItemImplementor : IQueryBatchItem
+	public interface IShardedQueryBatchItemImplementor
 	{
-		bool HasResults { get; }
-		IExitOperationFactory ExitOperationFactory { get; }
-		void EstablishFor(IShard shard, IQueryBatch queryBatch);
-		void EstablishFor(IShard shard, string key, IQueryBatch queryBatch);
+		void EstablishFor(IShard shard, IQueryBatch queryBatch, string key = null);
+		void ProcessResults(IShardedQueryBatchImplementor queryBatch, int queryIndex);
+		Task ProcessResultsAsync(IShardedQueryBatchImplementor queryBatch, int queryIndex, CancellationToken cancellationToken);
 	}
 
-	public interface IShardedQueryBatchItemImplementor<T> : IShardedQueryBatchItemImplementor, IQueryBatchItem<T>
+	public interface IShardedQueryBatchItemImplementor<T> : IShardedQueryBatchItemImplementor
 	{
-		void ProcessResults(IList<T> results);
+		IList<T> GetResults();
 	}
 }

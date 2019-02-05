@@ -342,7 +342,7 @@ namespace NHibernate.Shards.Session
 		/// <inheritdoc />
 		public IShardedQueryBatch CreateQueryBatch()
 		{
-			return new ShardedQueryBatchImpl(this);
+			return new ShardedBatch(this);
 		}
 
 

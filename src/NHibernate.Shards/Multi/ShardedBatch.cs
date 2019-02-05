@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NHibernate.Multi;
@@ -10,15 +9,15 @@ using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Multi
 {
-	public class ShardedQueryBatchImpl : IShardedQueryBatch
+	public class ShardedBatch : IShardedQueryBatch, IShardedQueryBatchImplementor
 	{
 		#region Instance fields
 
 		private readonly IShardedSessionImplementor session;
-
 		private readonly IDictionary<IShard, IQueryBatch> establishedQueryBatchesByShard = new Dictionary<IShard, IQueryBatch>();
 		private readonly ICollection<Action<IQueryBatch>> establishActions = new List<Action<IQueryBatch>>();
-		private readonly IList<ShardedBatchItem> shardedBatchItems = new List<ShardedBatchItem>();
+		private readonly IList<Entry> entries = new List<Entry>();
+		private bool executed;
 
 		#endregion
 
@@ -28,7 +27,7 @@ namespace NHibernate.Shards.Multi
 		/// Creates new <see cref="ShardedQueryImpl"/> instance.
 		/// </summary>
 		/// <param name="session">The Sharded session on which this query is to be executed.</param>
-		public ShardedQueryBatchImpl(IShardedSessionImplementor session)
+		public ShardedBatch(IShardedSessionImplementor session)
 		{
 			this.session = session;
 		}
@@ -39,7 +38,7 @@ namespace NHibernate.Shards.Multi
 
 		public int Count
 		{
-			get { return this.shardedBatchItems.Count; }
+			get { return this.entries.Count; }
 		}
 
 		private IQueryBatch AnyQueryBatch
@@ -54,7 +53,7 @@ namespace NHibernate.Shards.Multi
 		/// <inheritdoc />
 		public bool IsExecutedOrEmpty
 		{
-			get { return this.AnyQueryBatch.IsExecutedOrEmpty; }
+			get { return this.entries.Count == 0 || this.executed; }
 		}
 
 		/// <inheritdoc />
@@ -87,55 +86,59 @@ namespace NHibernate.Shards.Multi
 		/// <inheritdoc />
 		public void Execute()
 		{
+			this.executed = true;
 			this.session.Execute(new ExecuteShardOperation(this));
+
+			for (var queryIndex = 0; queryIndex < this.entries.Count; queryIndex++)
+			{
+				var entry = this.entries[queryIndex];
+				entry.ShardedBatchItem.ProcessResults(this, queryIndex);
+			}
 		}
 
 		/// <inheritdoc />
-		public Task ExecuteAsync(CancellationToken cancellationToken = default)
+		public async Task ExecuteAsync(CancellationToken cancellationToken = default)
 		{
-			return this.session.ExecuteAsync(new ExecuteShardOperation(this), cancellationToken);
+			this.executed = true;
+			await this.session.ExecuteAsync(new ExecuteShardOperation(this), cancellationToken).ConfigureAwait(false);
+
+			for (var queryIndex = 0; queryIndex < this.entries.Count; queryIndex++)
+			{
+				var entry = this.entries[queryIndex];
+				await entry.ShardedBatchItem.ProcessResultsAsync(this, queryIndex, cancellationToken).ConfigureAwait(false);
+			}
 		}
 
 		/// <inheritdoc />
 		public IList<TResult> GetResult<TResult>(int queryIndex)
 		{
-			var shardedBatchItem = this.shardedBatchItems[queryIndex];
-
-			if (!(shardedBatchItem.ShardedQuery is IShardedQueryBatchItemImplementor<TResult> shardedQuery))
+			var entry = this.entries[queryIndex];
+			if (!(entry.ShardedBatchItem is IShardedQueryBatchItemImplementor<TResult> shardedBatchItem))
 			{
 				throw new ArgumentException("Invalid query result type.");
 			}
 
-			if (!shardedQuery.HasResults)
+			if (!this.executed)
 			{
-				var shardOperation = new GetResultShardOperation<TResult>(this, queryIndex);
-				var exitStrategy = new ListExitStrategy<TResult>(shardedBatchItem.ExitOperationFactory);
-				var results = this.session.Execute(shardOperation, exitStrategy);
-				shardedQuery.ProcessResults(results.ToList());
+				Execute();
 			}
-
-			return shardedQuery.GetResults();
+			return shardedBatchItem.GetResults();
 		}
 
 		/// <inheritdoc />
 		public async Task<IList<TResult>> GetResultAsync<TResult>(int queryIndex, CancellationToken cancellationToken = default)
 		{
-			var shardedBatchItem = this.shardedBatchItems[queryIndex];
-
-			if (!(shardedBatchItem.ShardedQuery is IShardedQueryBatchItemImplementor<TResult> shardedQuery))
+			var entry = this.entries[queryIndex];
+			if (!(entry.ShardedBatchItem is IShardedQueryBatchItemImplementor<TResult> shardedBatchItem))
 			{
 				throw new ArgumentException("Invalid query result type.");
 			}
 
-			if (!shardedQuery.HasResults)
+			if (!this.executed)
 			{
-				var shardOperation = new GetResultShardOperation<TResult>(this, queryIndex);
-				var exitStrategy = new ListExitStrategy<TResult>(shardedBatchItem.ExitOperationFactory);
-				var results = await this.session.ExecuteAsync(shardOperation, exitStrategy, cancellationToken).ConfigureAwait(false);
-				shardedQuery.ProcessResults(results.ToList());
+				await ExecuteAsync(cancellationToken).ConfigureAwait(false);
 			}
-
-			return shardedQuery.GetResults();
+			return shardedBatchItem.GetResults();
 		}
 
 		/// <inheritdoc />
@@ -152,17 +155,37 @@ namespace NHibernate.Shards.Multi
 
 		#endregion
 
+		#region IShardedQueryBatchImplementor implementation
+
+		/// <inheritdoc />
+		public IList<TResult> GetResults<TResult>(int queryIndex, IListExitStrategy<TResult> exitStrategy)
+		{
+			var operation = new GetResultShardOperation<TResult>(this, queryIndex);
+			var results = this.session.Execute(operation, exitStrategy);
+			return results as IList<TResult> ?? new List<TResult>(results);
+		}
+
+		/// <inheritdoc />
+		public async Task<IList<TResult>> GetResultsAsync<TResult>(int queryIndex, IListExitStrategy<TResult> exitStrategy, CancellationToken cancellationToken = default)
+		{
+			var operation = new GetResultShardOperation<TResult>(this, queryIndex);
+			var results = await this.session.ExecuteAsync(operation, exitStrategy, cancellationToken).ConfigureAwait(false);
+			return results as IList<TResult> ?? new List<TResult>(results);
+		}
+
+		#endregion
+
 		#region Methods
 
-		public IQueryBatch EstablishFor(IShard shard)
+		private IQueryBatch EstablishFor(IShard shard)
 		{
 			if (!this.establishedQueryBatchesByShard.TryGetValue(shard, out var queryBatch))
 			{
 				queryBatch = shard.EstablishSession().CreateQueryBatch();
 
-				foreach (var shardedBatchItem in this.shardedBatchItems)
+				foreach (var entry in this.entries)
 				{
-					shardedBatchItem.EstablishFor(shard, queryBatch);
+					entry.ShardedBatchItem.EstablishFor(shard, queryBatch, entry.Key);
 				}
 
 				foreach (var action in this.establishActions)
@@ -192,7 +215,7 @@ namespace NHibernate.Shards.Multi
 				throw new ArgumentException($"An unsharded query cannot be added to a sharded query batch.", nameof(query));
 			}
 
-			this.shardedBatchItems.Add(new ShardedBatchItem(queryKey, shardedQuery));
+			this.entries.Add(new Entry(queryKey, shardedQuery));
 
 			foreach (var pair in this.establishedQueryBatchesByShard)
 			{
@@ -211,9 +234,9 @@ namespace NHibernate.Shards.Multi
 
 		private int GetQueryIndex(string queryKey)
 		{
-			for (var i = 0; i < this.shardedBatchItems.Count; i++)
+			for (var i = 0; i < this.entries.Count; i++)
 			{
-				if (this.shardedBatchItems[i].Key == queryKey) return i;
+				if (this.entries[i].Key == queryKey) return i;
 			}
 			throw new KeyNotFoundException($"No query found with key '{queryKey}'.");
 		}
@@ -222,50 +245,23 @@ namespace NHibernate.Shards.Multi
 
 		#region Inner classes
 
-		private struct ShardedBatchItem
+		private struct Entry
 		{
 			public readonly string Key;
-			public readonly IShardedQueryBatchItemImplementor ShardedQuery;
+			public readonly IShardedQueryBatchItemImplementor ShardedBatchItem;
 
-			public ShardedBatchItem(string key, IShardedQueryBatchItemImplementor shardedQuery)
+			public Entry(string key, IShardedQueryBatchItemImplementor shardedBatchItem)
 			{
 				this.Key = key;
-				this.ShardedQuery = shardedQuery;
-			}
-
-			public bool HasResults
-			{
-				get { return this.ShardedQuery.HasResults; }
-			}
-
-			public void ProcessResults<T>(IList<T> results)
-			{
-				((IShardedQueryBatchItemImplementor<T>)this.ShardedQuery).ProcessResults(results);
-			}
-
-			public IExitOperationFactory ExitOperationFactory
-			{
-				get {  return this.ShardedQuery.ExitOperationFactory; }
-			}
-
-			public void EstablishFor(IShard shard, IQueryBatch queryBatch)
-			{
-				if (this.Key == null)
-				{
-					this.ShardedQuery.EstablishFor(shard, queryBatch);
-				}
-				else
-				{
-					this.ShardedQuery.EstablishFor(shard, this.Key, queryBatch);
-				}
+				this.ShardedBatchItem = shardedBatchItem;
 			}
 		}
 
 		private class ExecuteShardOperation : IShardOperation, IAsyncShardOperation
 		{
-			private readonly IShardedQueryBatch shardedQueryBatch;
+			private readonly ShardedBatch shardedQueryBatch;
 
-			public ExecuteShardOperation(IShardedQueryBatch shardedQueryBatch)
+			public ExecuteShardOperation(ShardedBatch shardedQueryBatch)
 			{
 				this.shardedQueryBatch = shardedQueryBatch;
 			}
@@ -291,31 +287,31 @@ namespace NHibernate.Shards.Multi
 
 		private class GetResultShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>
 		{
-			private readonly IShardedQueryBatch shardedQueryBatch;
-			private readonly int resultIndex;
+			private readonly ShardedBatch shardedQueryBatch;
+			private readonly int queryIndex;
 
-			public GetResultShardOperation(IShardedQueryBatch shardedQueryBatch, int resultIndex)
+			public GetResultShardOperation(ShardedBatch shardedQueryBatch, int queryIndex)
 			{
 				this.shardedQueryBatch = shardedQueryBatch;
-				this.resultIndex = resultIndex;
+				this.queryIndex = queryIndex;
 			}
 
 			public Func<IEnumerable<T>> Prepare(IShard shard)
 			{
 				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
 				var multiQuery = this.shardedQueryBatch.EstablishFor(shard);
-				return () => multiQuery.GetResult<T>(this.resultIndex);
+				return () => multiQuery.GetResult<T>(this.queryIndex);
 			}
 
 			public Func<CancellationToken, Task<IEnumerable<T>>> PrepareAsync(IShard shard)
 			{
 				var multiQuery = this.shardedQueryBatch.EstablishFor(shard);
-				return async ct => await multiQuery.GetResultAsync<T>(this.resultIndex, ct).ConfigureAwait(false);
+				return async ct => await multiQuery.GetResultAsync<T>(this.queryIndex, ct).ConfigureAwait(false);
 			}
 
 			public string OperationName
 			{
-				get { return $"GetResult({this.resultIndex})"; }
+				get { return $"GetResult({this.queryIndex})"; }
 			}
 		}
 

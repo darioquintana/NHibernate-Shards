@@ -27,8 +27,7 @@ namespace NHibernate.Shards.Query
 	        this.unshardedQueryExpressionPlan = unshardedQueryExpressionPlan;
 		    this.exitOperationBuilder = exitOperationBuilder;
 
-		    var linqExpression = unshardedQueryExpressionPlan.QueryExpression as NhLinqExpression;
-		    this.parameterValuesByName = linqExpression != null
+		    this.parameterValuesByName = unshardedQueryExpressionPlan.QueryExpression is NhLinqExpression linqExpression
 			    ? new Dictionary<string, Tuple<object, IType>>(linqExpression.ParameterValuesByName)
 			    : new Dictionary<string, Tuple<object, IType>>();
 	    }
@@ -74,8 +73,7 @@ namespace NHibernate.Shards.Query
 		    var entityName = sessionFactory.TryGetGuessEntityName(this.Type);
 		    if (entityName == null)
 		    {
-		        var rootEntityType = this.unshardedQueryExpressionPlan.ReturnMetadata.ReturnTypes[0] as EntityType;
-		        if (rootEntityType != null)
+			    if (this.unshardedQueryExpressionPlan.ReturnMetadata.ReturnTypes[0] is EntityType rootEntityType)
 		        {
 		            entityName = rootEntityType.GetAssociatedEntityName(sessionFactory);
 
@@ -138,7 +136,7 @@ namespace NHibernate.Shards.Query
 					{
 					    var nextChildCopy = nextChild.DupNode();
 					    unfinishedCopy.Node.AddChild(nextChildCopy);
-					    if (copyTransformer != null) copyTransformer(nextChildCopy);
+					    copyTransformer?.Invoke(nextChildCopy);
 					}
 					else
 					{
@@ -160,13 +158,11 @@ namespace NHibernate.Shards.Query
 				case HqlSqlWalker.SKIP:
 					child = node.GetFirstChild();
 
-					string skipParameterName;
-					int firstResult;
-					if (TryGetParameterName(child, out skipParameterName))
+					if (TryGetParameterName(child, out var skipParameterName))
 					{
 						this.exitOperationBuilder.FirstResult = (int)namedParameters[skipParameterName].Item1;
 					}
-					else if (TryGetInt32(child, out firstResult))
+					else if (TryGetInt32(child, out var firstResult))
 					{										  
 						this.exitOperationBuilder.FirstResult = firstResult;
 					}
@@ -175,13 +171,11 @@ namespace NHibernate.Shards.Query
 				case HqlSqlWalker.TAKE:
 					child = node.GetFirstChild();
 
-					string takeParameterName;
-					int maxResults;
-					if (TryGetParameterName(child, out takeParameterName))
+					if (TryGetParameterName(child, out var takeParameterName))
 					{
 						this.exitOperationBuilder.MaxResults = (int)namedParameters[takeParameterName].Item1;
 					}
-					else if (TryGetInt32(child, out maxResults))
+					else if (TryGetInt32(child, out var maxResults))
 					{
 						this.exitOperationBuilder.MaxResults = maxResults;
 					}
@@ -254,13 +248,9 @@ namespace NHibernate.Shards.Query
 
 	    private Func<object, object> GetFieldSelector(int fieldIndex)
 	    {
-            return o =>
-            {
-                var array = o as object[];
-                return array != null && array.Length > fieldIndex
-                    ? array[fieldIndex]
-                    : null;
-            };
+            return o => o is object[] array && array.Length > fieldIndex
+	            ? array[fieldIndex]
+	            : null;
 	    }
 
 	    private static void ThrowIfAggregationInComplexSelectList(IASTNode node)
@@ -338,9 +328,9 @@ namespace NHibernate.Shards.Query
 
 	    private class UnfinishedNodeCopy
 	    {
-            public IASTNode Node { get; private set; }
-	        public IEnumerator<IASTNode> Children { get; private set; }
-            public Action<IASTNode> Transformer { get; private set; }
+            public IASTNode Node { get; }
+	        public IEnumerator<IASTNode> Children { get; }
+            public Action<IASTNode> Transformer { get; }
 
 	        public UnfinishedNodeCopy(IASTNode node, Action<IASTNode> transformer)
 	        {
@@ -351,10 +341,7 @@ namespace NHibernate.Shards.Query
 
 	        public void Complete()
 	        {
-	            if (this.Transformer != null)
-	            {
-	                this.Transformer(this.Node);
-	            }
+		        Transformer?.Invoke(this.Node);
 	        }
 
 	        private static IEnumerator<IASTNode> GetChildren(IASTNode parent)

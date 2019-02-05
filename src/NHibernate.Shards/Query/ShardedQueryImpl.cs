@@ -16,7 +16,7 @@ namespace NHibernate.Shards.Query
 	using System.Threading.Tasks;
 	using NHibernate.Engine.Query;
 
-    /// <summary>
+	/// <summary>
 	/// Concrete implementation of ShardedQuery provided by Hibernate Shards. This
 	/// implementation introduces limits to the HQL language; mostly around
 	/// limits and aggregation. Its approach is simply to execute the query on
@@ -32,7 +32,7 @@ namespace NHibernate.Shards.Query
 	{
 		private readonly IShardedSessionImplementor session;
 		private readonly Func<ISession, IQuery> queryFactory;
-	    private readonly IQueryExpressionPlan unshardedQueryExpressionPlan;
+		private readonly IQueryExpressionPlan unshardedQueryExpressionPlan;
 		private ShardedQueryExpression queryExpression;
 
 		private readonly IDictionary<IShard, IQuery> establishedQueriesByShard = new Dictionary<IShard, IQuery>();
@@ -50,7 +50,7 @@ namespace NHibernate.Shards.Query
 			var anySessionImplementor = (AbstractSessionImpl)session.AnyShard.EstablishSession();
 			var unshardedQueryExpression = new StringQueryExpression(hql);
 			var unshardedQueryPlan = anySessionImplementor.Factory.QueryPlanCache.GetHQLQueryPlan(
-                unshardedQueryExpression, false, anySessionImplementor.EnabledFilters);
+				unshardedQueryExpression, false, anySessionImplementor.EnabledFilters);
 			return new ShardedQueryImpl(session, unshardedQueryPlan);
 		}
 
@@ -101,19 +101,24 @@ namespace NHibernate.Shards.Query
 			return query;
 		}
 
-		public ShardedQueryExpression QueryExpression
+		public IShardedSessionImplementor Session
 		{
-		    get
-		    {
-		        if (this.queryExpression == null && this.unshardedQueryExpressionPlan != null)
-		        {
-		            this.queryExpression = new ShardedQueryExpression(this.unshardedQueryExpressionPlan, this.exitOperationBuilder);
-		        }
-		        return this.queryExpression;
-		    }
+			get { return this.session; }
 		}
 
-        public bool IsReadOnly
+		public ShardedQueryExpression QueryExpression
+		{
+			get
+			{
+				if (this.queryExpression == null && this.unshardedQueryExpressionPlan != null)
+				{
+					this.queryExpression = new ShardedQueryExpression(this.unshardedQueryExpressionPlan, this.exitOperationBuilder);
+				}
+				return this.queryExpression;
+			}
+		}
+
+		public bool IsReadOnly
 		{
 			get { return this.SomeQuery.IsReadOnly; }
 		}
@@ -725,7 +730,7 @@ namespace NHibernate.Shards.Query
 			return this.exitOperationBuilder.BuildListOperation();
 		}
 
-	    private class UniqueResultShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>
+		private class UniqueResultShardOperation<T> : IShardOperation<T>, IAsyncShardOperation<T>
 		{
 			private readonly IShardedQuery shardedQuery;
 
@@ -784,7 +789,7 @@ namespace NHibernate.Shards.Query
 
 		private class FutureShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>, IFutureEnumerable<T>
 		{
-		    private IEnumerable<T> results;
+			private IEnumerable<T> results;
 			private readonly ShardedQueryImpl shardedQuery;
 			private readonly IDictionary<IShard, IFutureEnumerable<T>> futuresByShard;
 
@@ -812,25 +817,25 @@ namespace NHibernate.Shards.Query
 
 			public async Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-			    if (this.results == null)
-			    {
-                    var exitStrategy = new ListExitStrategy<T>(this.shardedQuery);
-			        this.results = await this.shardedQuery.session.ExecuteAsync(this, exitStrategy, cancellationToken).ConfigureAwait(false);
-			    }
+				if (this.results == null)
+				{
+					var exitStrategy = new ListExitStrategy<T>(this.shardedQuery);
+					this.results = await this.shardedQuery.session.ExecuteAsync(this, exitStrategy, cancellationToken).ConfigureAwait(false);
+				}
 				return this.results;
 			}
 
 			public IEnumerable<T> GetEnumerable()
 			{
-			    if (this.results == null)
-			    {
-			        var exitStrategy = new ListExitStrategy<T>(this.shardedQuery);
-			        this.results = this.shardedQuery.session.Execute(this, exitStrategy);
-			    }
-			    return this.results;
+				if (this.results == null)
+				{
+					var exitStrategy = new ListExitStrategy<T>(this.shardedQuery);
+					this.results = this.shardedQuery.session.Execute(this, exitStrategy);
+				}
+				return this.results;
 			}
 
-            public IEnumerator<T> GetEnumerator()
+			public IEnumerator<T> GetEnumerator()
 			{
 				return GetEnumerable().GetEnumerator();
 			}
@@ -870,16 +875,16 @@ namespace NHibernate.Shards.Query
 
 			public T Value
 			{
-			    get
-			    {
-			        var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedQuery);
-                    return this.shardedQuery.session.Execute(this, exitStrategy);
-			    }
+				get
+				{
+					var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedQuery);
+					return this.shardedQuery.session.Execute(this, exitStrategy);
+				}
 			}
 
 			public Task<T> GetValueAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-			    var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedQuery);
+				var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedQuery);
 				return this.shardedQuery.session.ExecuteAsync(this, exitStrategy, cancellationToken);
 			}
 		}
