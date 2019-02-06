@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NHibernate.Engine;
 using NHibernate.Multi;
+using NHibernate.Shards.Strategy.Exit;
 using NHibernate.SqlCommand;
 
 namespace NHibernate.Shards.Multi
@@ -72,7 +73,6 @@ namespace NHibernate.Shards.Multi
 
 		#region IQueryBatchItem<T> implementation
 
-		/// <inheritdoc />
 		public IList<TResult> GetResults()
 		{
 			return this.finalResults;
@@ -94,15 +94,27 @@ namespace NHibernate.Shards.Multi
 		/// <inheritdoc />
 		public abstract Task ExecuteNonBatchedAsync(CancellationToken cancellationToken);
 
-		/// <inheritdoc />
-		public abstract void ProcessResults(IShardedQueryBatchImplementor queryBatch, int queryIndex);
+		public void ProcessResults(IShardedQueryBatchImplementor queryBatch, int queryIndex)
+		{
+			var exitStrategy = BuildListExitStrategy();
+			var operation = new GetResultShardOperation(queryBatch, queryIndex);
+			var results = queryBatch.Session.Execute(operation, exitStrategy);
+			ProcessFinalResults(results as IList<TSource> ?? new List<TSource>(results));
+		}
 
-		/// <inheritdoc />
-		public abstract Task ProcessResultsAsync(IShardedQueryBatchImplementor queryBatch, int queryIndex, CancellationToken cancellationToken);
+		public async Task ProcessResultsAsync(IShardedQueryBatchImplementor queryBatch, int queryIndex, CancellationToken cancellationToken)
+		{
+			var exitStrategy = BuildListExitStrategy();
+			var operation = new GetResultShardOperation(queryBatch, queryIndex);
+			var results = await queryBatch.Session.ExecuteAsync(operation, exitStrategy, cancellationToken).ConfigureAwait(false);
+			ProcessFinalResults(results as IList<TSource> ?? new List<TSource>(results));
+		}
 
 		#endregion
 
 		#region Protected methods
+
+		protected abstract IListExitStrategy<TSource> BuildListExitStrategy();
 
 		protected void ProcessFinalResults(IList<TSource> results)
 		{
@@ -112,6 +124,40 @@ namespace NHibernate.Shards.Multi
 		}
 
 		protected abstract IList<TResult> TransformResults(IList<TSource> results);
+
+		#endregion
+
+		#region Inner classes
+
+		private class GetResultShardOperation : IShardOperation<IEnumerable<TSource>>, IAsyncShardOperation<IEnumerable<TSource>>
+		{
+			private readonly IShardedQueryBatchImplementor shardedQueryBatch;
+			private readonly int queryIndex;
+
+			public GetResultShardOperation(IShardedQueryBatchImplementor shardedQueryBatch, int queryIndex)
+			{
+				this.shardedQueryBatch = shardedQueryBatch;
+				this.queryIndex = queryIndex;
+			}
+
+			public Func<IEnumerable<TSource>> Prepare(IShard shard)
+			{
+				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
+				var multiQuery = this.shardedQueryBatch.EstablishFor(shard);
+				return () => multiQuery.GetResult<TSource>(this.queryIndex);
+			}
+
+			public Func<CancellationToken, Task<IEnumerable<TSource>>> PrepareAsync(IShard shard)
+			{
+				var multiQuery = this.shardedQueryBatch.EstablishFor(shard);
+				return async ct => await multiQuery.GetResultAsync<TSource>(this.queryIndex, ct).ConfigureAwait(false);
+			}
+
+			public string OperationName
+			{
+				get { return $"GetResult({this.queryIndex})"; }
+			}
+		}
 
 		#endregion
 	}

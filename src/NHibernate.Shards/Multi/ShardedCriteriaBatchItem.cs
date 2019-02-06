@@ -46,20 +46,9 @@ namespace NHibernate.Shards.Multi
 			ProcessFinalResults(await this.shardedCriteria.ListAsync<T>(cancellationToken).ConfigureAwait(false));
 		}
 
-		/// <inheritdoc />
-		public override void ProcessResults(IShardedQueryBatchImplementor queryBatch, int queryIndex)
+		protected override IListExitStrategy<T> BuildListExitStrategy()
 		{
-			var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
-			var results = queryBatch.GetResults(queryIndex, exitStrategy);
-			ProcessFinalResults(results);
-		}
-
-		/// <inheritdoc />
-		public override async Task ProcessResultsAsync(IShardedQueryBatchImplementor queryBatch, int queryIndex, CancellationToken cancellationToken)
-		{
-			var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
-			var results = await queryBatch.GetResultsAsync(queryIndex, exitStrategy, cancellationToken).ConfigureAwait(false);
-			ProcessFinalResults(results);
+			return new ListExitStrategy<T>(this.shardedCriteria);
 		}
 
 		private static ShardedCriteriaImpl EnsureShardedCriteria(ICriteria criteria)

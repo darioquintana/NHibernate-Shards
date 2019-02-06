@@ -89,7 +89,7 @@ namespace NHibernate.Multi
 		/// <returns>The batch instance for method chain.</returns>
 		public static IShardedQueryBatch Add<TResult>(this IShardedQueryBatch shardedBatch, IQueryable<TResult> query, Action<IList<TResult>> afterLoad = null)
 		{
-			shardedBatch.Add(new ShardedLinqBatchItem<TResult>(query) { AfterLoadCallback = afterLoad });
+			shardedBatch.Add(new ShardedQueryBatchItem<TResult>(ToShardedQuery(query)) { AfterLoadCallback = afterLoad });
 			return shardedBatch;
 		}
 
@@ -105,7 +105,7 @@ namespace NHibernate.Multi
 		/// <returns>The batch instance for method chain.</returns>
 		public static IShardedQueryBatch Add<TResult>(this IShardedQueryBatch shardedBatch, string key, IQueryable<TResult> query)
 		{
-			shardedBatch.Add(key, new ShardedLinqBatchItem<TResult>(query));
+			shardedBatch.Add(key, new ShardedQueryBatchItem<TResult>(ToShardedQuery(query)));
 			return shardedBatch;
 		}
 
@@ -161,7 +161,7 @@ namespace NHibernate.Multi
 		/// <returns>A future query which execution will be handled by the batch.</returns>
 		public static IFutureEnumerable<TResult> AddAsFuture<TResult>(this IShardedQueryBatch shardedBatch, IQueryable<TResult> query)
 		{
-			return AddAsFuture(shardedBatch, new ShardedLinqBatchItem<TResult>(query));
+			return AddAsFuture(shardedBatch, new ShardedQueryBatchItem<TResult>(ToShardedQuery(query)));
 		}
 
 		/// <summary>
@@ -173,7 +173,7 @@ namespace NHibernate.Multi
 		/// <returns>A future query which execution will be handled by the batch.</returns>
 		public static IFutureValue<TResult> AddAsFutureValue<TResult>(this IShardedQueryBatch shardedBatch, IQueryable<TResult> query)
 		{
-			return AddAsFutureValue(shardedBatch, new ShardedLinqBatchItem<TResult>(query));
+			return AddAsFutureValue(shardedBatch, new ShardedQueryBatchItem<TResult>(ToShardedQuery(query)));
 		}
 
 		/// <summary>
@@ -189,6 +189,19 @@ namespace NHibernate.Multi
 			IQueryable<TSource> query, Expression<Func<IQueryable<TSource>, TResult>> selector)
 		{
 			return AddAsFutureValue(shardedBatch, new ShardedQueryBatchItem<TResult>(ToShardedQuery(query, selector)));
+		}
+
+		private static ShardedQueryImpl ToShardedQuery<TResult>(IQueryable<TResult> query)
+		{
+			switch (query)
+			{
+				case null:
+					throw new ArgumentNullException(nameof(query));
+				case NhQueryable<TResult> nhQueryable when nhQueryable.Provider is ShardedQueryProvider shardedProvider:
+					return (ShardedQueryImpl)shardedProvider.GetPreparedQuery(query.Expression, out _);
+				default:
+					throw new ArgumentException("Cannot add unsharded Linq query to sharded query batch", nameof(query));
+			}
 		}
 
 		private static ShardedQueryImpl ToShardedQuery<TSource, TResult>(IQueryable<TSource> query, Expression<Func<IQueryable<TSource>, TResult>> selector)

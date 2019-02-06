@@ -157,27 +157,12 @@ namespace NHibernate.Shards.Multi
 
 		#region IShardedQueryBatchImplementor implementation
 
-		/// <inheritdoc />
-		public IList<TResult> GetResults<TResult>(int queryIndex, IListExitStrategy<TResult> exitStrategy)
+		public IShardedSessionImplementor Session
 		{
-			var operation = new GetResultShardOperation<TResult>(this, queryIndex);
-			var results = this.session.Execute(operation, exitStrategy);
-			return results as IList<TResult> ?? new List<TResult>(results);
+			get { return this.session; }
 		}
 
-		/// <inheritdoc />
-		public async Task<IList<TResult>> GetResultsAsync<TResult>(int queryIndex, IListExitStrategy<TResult> exitStrategy, CancellationToken cancellationToken = default)
-		{
-			var operation = new GetResultShardOperation<TResult>(this, queryIndex);
-			var results = await this.session.ExecuteAsync(operation, exitStrategy, cancellationToken).ConfigureAwait(false);
-			return results as IList<TResult> ?? new List<TResult>(results);
-		}
-
-		#endregion
-
-		#region Methods
-
-		private IQueryBatch EstablishFor(IShard shard)
+		public IQueryBatch EstablishFor(IShard shard)
 		{
 			if (!this.establishedQueryBatchesByShard.TryGetValue(shard, out var queryBatch))
 			{
@@ -197,6 +182,11 @@ namespace NHibernate.Shards.Multi
 			}
 			return queryBatch;
 		}
+
+		#endregion
+
+		#region Methods
+
 
 		#endregion
 
@@ -282,36 +272,6 @@ namespace NHibernate.Shards.Multi
 			public string OperationName
 			{
 				get { return "Execute()"; }
-			}
-		}
-
-		private class GetResultShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>
-		{
-			private readonly ShardedBatch shardedQueryBatch;
-			private readonly int queryIndex;
-
-			public GetResultShardOperation(ShardedBatch shardedQueryBatch, int queryIndex)
-			{
-				this.shardedQueryBatch = shardedQueryBatch;
-				this.queryIndex = queryIndex;
-			}
-
-			public Func<IEnumerable<T>> Prepare(IShard shard)
-			{
-				// NOTE: Establish action is not thread-safe and therefore must not be performed by returned delegate.
-				var multiQuery = this.shardedQueryBatch.EstablishFor(shard);
-				return () => multiQuery.GetResult<T>(this.queryIndex);
-			}
-
-			public Func<CancellationToken, Task<IEnumerable<T>>> PrepareAsync(IShard shard)
-			{
-				var multiQuery = this.shardedQueryBatch.EstablishFor(shard);
-				return async ct => await multiQuery.GetResultAsync<T>(this.queryIndex, ct).ConfigureAwait(false);
-			}
-
-			public string OperationName
-			{
-				get { return $"GetResult({this.queryIndex})"; }
 			}
 		}
 
