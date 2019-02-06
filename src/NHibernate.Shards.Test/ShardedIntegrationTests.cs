@@ -4,7 +4,6 @@
 	using System.Collections.Generic;
 	using System.Linq;
 	using NHibernate.Criterion;
-	using NHibernate.Linq;
 	using NHibernate.Mapping.ByCode;
 	using NHibernate.Mapping.ByCode.Conformist;
 	using NHibernate.Multi;
@@ -558,9 +557,71 @@
 			}
 		}
 
-		#endregion
+		[Test]
+		public void CanCountRowsWithLinq()
+		{
+			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" } };
+			var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" } };
 
-		#region Tests - MultiQuery
+			using (var session = SessionFactory.OpenSession())
+			{
+				using (session.BeginTransaction())
+				{
+					session.Save(person1);
+					session.Save(person2);
+					session.Flush();
+					session.Clear();
+
+					var rowCount = (from p in session.Query<Person>() select p).Count();
+					Assert.That(rowCount, Is.EqualTo(2), "RowCount");
+
+					var rowCountInt64 = session.QueryOver<Person>().RowCountInt64();
+					Assert.That(rowCountInt64, Is.EqualTo(2), "RowCountInt64");
+				}
+			}
+		}
+
+		[Test]
+		public void CanCalulateMinWithLinq()
+		{
+			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" }, DateOfBirth = new DateTime(1970, 1, 1) };
+			var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" }, DateOfBirth = new DateTime(1968, 12, 31) };
+
+			using (var session = SessionFactory.OpenSession())
+			{
+				using (session.BeginTransaction())
+				{
+					session.Save(person1);
+					session.Save(person2);
+					session.Flush();
+					session.Clear();
+
+					var minAge = (from p in session.Query<Person>() select p).Min(p => p.DateOfBirth.Value);
+					Assert.That(minAge, Is.EqualTo(person2.DateOfBirth));
+				}
+			}
+		}
+
+		[Test]
+		public void CanCalulateAverageWithLinq()
+		{
+			var person1 = new Person { LegalName = new PersonName { FirstName = "John", LastName = "Doe" }, DateOfBirth = new DateTime(1970, 1, 1) };
+			var person2 = new Person { LegalName = new PersonName { FirstName = "Mary", LastName = "Jane" }, DateOfBirth = new DateTime(1968, 12, 31) };
+
+			using (var session = SessionFactory.OpenSession())
+			{
+				using (session.BeginTransaction())
+				{
+					session.Save(person1);
+					session.Save(person2);
+					session.Flush();
+					session.Clear();
+
+					var avgAge = (from p in session.Query<Person>() select p).Average(p => p.DateOfBirth.Value.Year);
+					Assert.That(avgAge, Is.EqualTo(1969));
+				}
+			}
+		}
 
 		[Test]
 		public void CanBatchQueryWithLinq()
@@ -588,6 +649,11 @@
 				}
 			}
 		}
+
+		#endregion
+
+		#region Tests - MultiQuery
+
 
 		#endregion
 

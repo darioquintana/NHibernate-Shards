@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using NHibernate.Shards.Util;
 
 namespace NHibernate.Shards.Strategy.Exit
 {
-
     /// <summary>
 	/// Thread-safe ExitStrategy that concatenates all the lists that are added.
 	/// </summary>

@@ -2,6 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using NHibernate.Engine.Query;
 using NHibernate.Hql;
 using NHibernate.Impl;
 using NHibernate.Shards.Engine;
@@ -12,9 +15,7 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Query
 {
-	using System.Threading;
-	using System.Threading.Tasks;
-	using NHibernate.Engine.Query;
+	using System.Globalization;
 
 	/// <summary>
 	/// Concrete implementation of ShardedQuery provided by Hibernate Shards. This
@@ -155,24 +156,69 @@ namespace NHibernate.Shards.Query
 		 */
 		public virtual IList List()
 		{
-			var result = CreateListResult();
-			List(result);
-			return result;
+			IList results;
+
+			var resultType = this.queryExpression?.Type;
+			if (this.exitOperationBuilder.Aggregation == null)
+			{
+				results = CreateListResult(resultType);
+				List(results);
+			}
+			else
+			{
+				var aggregationResults = List<object>();
+				if (resultType == null)
+				{
+					results = (IList) aggregationResults;
+				}
+				else
+				{
+					var aggregationResultType = aggregationResults[0].GetType();
+					results = CreateListResult(resultType);
+					results.Add(resultType.IsAssignableFrom(aggregationResultType)
+						? aggregationResults[0]
+						: Convert.ChangeType(aggregationResults[0], resultType, CultureInfo.InvariantCulture));
+				}
+			}
+
+			return results;
 		}
 
 		public async Task<IList> ListAsync(CancellationToken cancellationToken = new CancellationToken())
 		{
-			var result = CreateListResult();
-			await ListAsync(result, cancellationToken);
-			return result;
+			IList results;
+
+			var resultType = this.queryExpression?.Type;
+			if (this.exitOperationBuilder.Aggregation == null)
+			{
+				results = CreateListResult(resultType);
+				await ListAsync(results, cancellationToken).ConfigureAwait(false);
+			}
+			else
+			{
+				var aggregationResults = await ListAsync<object>(cancellationToken).ConfigureAwait(false);
+				if (resultType == null)
+				{
+					results = (IList)aggregationResults;
+				}
+				else
+				{
+					var aggregationResultType = aggregationResults[0].GetType();
+					results = CreateListResult(resultType);
+					results.Add(resultType.IsAssignableFrom(aggregationResultType)
+						? aggregationResults[0]
+						: Convert.ChangeType(aggregationResults[0], resultType, CultureInfo.InvariantCulture));
+				}
+			}
+
+			return results;
 		}
 
-		private IList CreateListResult()
+		private IList CreateListResult(System.Type elementType = null)
 		{
-			var result = this.queryExpression != null
-				? (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(this.queryExpression.Type))
+			return elementType != null && elementType != typeof(object)
+				? (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType))
 				: new List<object>();
-			return result;
 		}
 
 

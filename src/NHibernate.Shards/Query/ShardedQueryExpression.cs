@@ -242,7 +242,10 @@ namespace NHibernate.Shards.Query
 	        count.Text = "count";
             count.AddChild(star);
 
-	        average.Text = "sum";
+            while (average.Parent.Type != HqlSqlWalker.SELECT)
+            {
+	            average = average.Parent;
+            }
             average.AddSibling(count);
 	    }
 
