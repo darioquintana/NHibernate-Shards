@@ -14,17 +14,20 @@ using NHibernate.Transform;
 
 namespace NHibernate.Shards.Criteria
 {
-    /// <summary>
+	using NHibernate.Impl;
+	using NHibernate.Linq.ReWriters;
+
+	/// <summary>
 	/// Concrete implementation of <see cref="IShardedCriteria"/> interface.
 	/// </summary>
 	public class ShardedCriteriaImpl : IShardedCriteria
 	{
-        private static readonly Logger Log = new Logger(typeof(ShardedCriteriaImpl));
+		private static readonly Logger Log = new Logger(typeof(ShardedCriteriaImpl));
 
-        #region Instance fields
+		#region Instance fields
 
-        private readonly IShardedSessionImplementor session;
-	    private readonly string entityName;
+		private readonly IShardedSessionImplementor session;
+		private readonly string entityName;
 		private readonly Func<ISession, ICriteria> criteriaFactory;
 		private readonly ExitOperationBuilder exitOperationBuilder;
 
@@ -34,17 +37,17 @@ namespace NHibernate.Shards.Criteria
 		private readonly Dictionary<string, ICriteria> subcriteriaByAlias;
 		private readonly Dictionary<string, Subcriteria> subcriteriaByPath;
 
-        #endregion
+		#endregion
 
-        #region Constructor(s)
+		#region Constructor(s)
 
-        public ShardedCriteriaImpl(IShardedSessionImplementor session, string entityName, Func<ISession, ICriteria> criteriaFactory)
+		public ShardedCriteriaImpl(IShardedSessionImplementor session, string entityName, Func<ISession, ICriteria> criteriaFactory)
 		{
 			Preconditions.CheckNotNull(session);
-		    Preconditions.CheckNotNull(entityName);
+			Preconditions.CheckNotNull(entityName);
 			Preconditions.CheckNotNull(criteriaFactory);
 			this.session = session;
-		    this.entityName= entityName;
+			this.entityName = entityName;
 			this.criteriaFactory = criteriaFactory;
 			this.exitOperationBuilder = new ExitOperationBuilder();
 			this.establishActions = new List<Action<ICriteria>>();
@@ -68,9 +71,9 @@ namespace NHibernate.Shards.Criteria
 
 		#region Properties
 
-        /// <summary>
-        /// Gets arbitrary criteria implementation for a single shard.
-        /// </summary>
+		/// <summary>
+		/// Gets arbitrary criteria implementation for a single shard.
+		/// </summary>
 		internal ICriteria SomeCriteria
 		{
 			get
@@ -113,11 +116,10 @@ namespace NHibernate.Shards.Criteria
 		{
 			if (projection is ProjectionList)
 			{
-				throw new NotSupportedException("Projection lists are not (yet) supported.");
+				throw new NotSupportedException("Projection lists are not (yet) supported in sharded criteria.");
 			}
 
-			var distinct = projection as Distinct;
-			if (distinct != null)
+			if (projection is Distinct)
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
 				this.exitOperationBuilder.Distinct = true;
@@ -146,7 +148,7 @@ namespace NHibernate.Shards.Criteria
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
 				this.exitOperationBuilder.Aggregation = c => AggregationUtil.Sum(c, GetFieldSelector(0));
-                return this;
+				return this;
 			}
 
 			if (aggregationName.StartsWith("count", StringComparison.OrdinalIgnoreCase))
@@ -167,7 +169,7 @@ namespace NHibernate.Shards.Criteria
 			{
 				ApplyActionToShards(c => c.SetProjection(projection));
 				this.exitOperationBuilder.Aggregation = c => AggregationUtil.Max(c, GetFieldSelector(0));
-                return this;
+				return this;
 			}
 
 			var message = string.Format(
@@ -180,21 +182,21 @@ namespace NHibernate.Shards.Criteria
 
 		private static Func<object, object> GetFieldSelector(int fieldIndex)
 		{
-		    return o => GetFieldAt(o, fieldIndex);
+			return o => GetFieldAt(o, fieldIndex);
 		}
 
 		private static object GetFieldAt(object valueOrArray, int index)
 		{
 			var array = valueOrArray as object[];
-		    if (array == null)
-		    {
-		        if (index == 0) return valueOrArray;
-		    }
-            else if (array.Length <= index)
-		    {
-		        return array[index];
-		    }
-		    return null;
+			if (array == null)
+			{
+				if (index == 0) return valueOrArray;
+			}
+			else if (array.Length <= index)
+			{
+				return array[index];
+			}
+			return null;
 		}
 
 		public ICriteria Add(ICriterion criterion)
@@ -240,17 +242,17 @@ namespace NHibernate.Shards.Criteria
 						CultureInfo.InvariantCulture,
 						"Order '{0}' specifies invalid order direction '{1}'.",
 						orderClause, orderDirection),
-					"order");
+					nameof(order));
 			}
 
-		    var rootClassMetadata = this.session.AnyShard.SessionFactory.GetClassMetadata(this.entityName);
-		    return new SortOrder(
+			var rootClassMetadata = this.session.AnyShard.SessionFactory.GetClassMetadata(this.entityName);
+			return new SortOrder(
 				o => rootClassMetadata.GetPropertyValue(o, propertyPath), 
 				isDescending);
 		}
 
 		[Obsolete("Use Fetch instead")]
-	    public ICriteria SetFetchMode(string associationPath, FetchMode fetchMode)
+		public ICriteria SetFetchMode(string associationPath, FetchMode fetchMode)
 		{
 			ApplyActionToShards(c => c.SetFetchMode(associationPath, fetchMode));
 			return this;
@@ -465,7 +467,7 @@ namespace NHibernate.Shards.Criteria
 
 		public T UniqueResult<T>()
 		{
-            return this.session.Execute(new UniqueResultOperation<T>(this), new UniqueResultExitStrategy<T>(this));
+			return this.session.Execute(new UniqueResultOperation<T>(this), new UniqueResultExitStrategy<T>(this));
 		}
 
 		public Task<T> UniqueResultAsync<T>(CancellationToken cancellationToken = new CancellationToken())
@@ -490,16 +492,14 @@ namespace NHibernate.Shards.Criteria
 
 		public ICriteria GetCriteriaByPath(string path)
 		{
-			Subcriteria result;
-			return (subcriteriaByPath.TryGetValue(path, out result))
+			return (subcriteriaByPath.TryGetValue(path, out var result))
 				? result
 				: null;
 		}
 
 		public ICriteria GetCriteriaByAlias(string alias)
 		{
-			ICriteria result;
-			return (subcriteriaByAlias.TryGetValue(alias, out result))
+			return (subcriteriaByAlias.TryGetValue(alias, out var result))
 				? result
 				: null;
 		}
@@ -530,8 +530,7 @@ namespace NHibernate.Shards.Criteria
 
 		public ICriteria EstablishFor(IShard shard)
 		{
-			ICriteria result;
-			if (!establishedCriteriaByShard.TryGetValue(shard, out result))
+			if (!establishedCriteriaByShard.TryGetValue(shard, out var result))
 			{
 				result = this.criteriaFactory(shard.EstablishSession());
 				foreach (var subcriteria in this.subcriteriaByPath.Values)
@@ -548,11 +547,11 @@ namespace NHibernate.Shards.Criteria
 			return result;
 		}
 
-        #endregion
+		#endregion
 
-        #region Inner classes
+		#region Inner classes
 
-        private class ListShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>
+		private class ListShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>
 		{
 			private readonly IShardedCriteria shardedCriteria;
 
@@ -610,7 +609,7 @@ namespace NHibernate.Shards.Criteria
 
 		private class FutureShardOperation<T> : IShardOperation<IEnumerable<T>>, IAsyncShardOperation<IEnumerable<T>>, IFutureEnumerable<T>
 		{
-		    private IEnumerable<T> results;
+			private IEnumerable<T> results;
 			private readonly ShardedCriteriaImpl shardedCriteria;
 			private readonly IDictionary<IShard, IFutureEnumerable<T>> futuresByShard;
 
@@ -636,29 +635,29 @@ namespace NHibernate.Shards.Criteria
 				return this.futuresByShard[shard].GetEnumerableAsync;
 			}
 
-		    public async Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
-		    {
-		        if (this.results == null)
-		        {
-		            var session = this.shardedCriteria.session;
-		            var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
-		            this.results = await session.ExecuteAsync(this, exitStrategy, cancellationToken).ConfigureAwait(false);
-		        }
-		        return this.results;
-		    }
+			public async Task<IEnumerable<T>> GetEnumerableAsync(CancellationToken cancellationToken = new CancellationToken())
+			{
+				if (this.results == null)
+				{
+					var session = this.shardedCriteria.session;
+					var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
+					this.results = await session.ExecuteAsync(this, exitStrategy, cancellationToken).ConfigureAwait(false);
+				}
+				return this.results;
+			}
 
-		    public IEnumerable<T> GetEnumerable()
-		    {
-		        if (this.results == null)
-		        {
-		            var session = this.shardedCriteria.session;
-		            var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
-		            this.results = session.Execute(this, exitStrategy);
-		        }
-		        return this.results;
-		    }
+			public IEnumerable<T> GetEnumerable()
+			{
+				if (this.results == null)
+				{
+					var session = this.shardedCriteria.session;
+					var exitStrategy = new ListExitStrategy<T>(this.shardedCriteria);
+					this.results = session.Execute(this, exitStrategy);
+				}
+				return this.results;
+			}
 
-            public IEnumerator<T> GetEnumerator()
+			public IEnumerator<T> GetEnumerator()
 			{
 				return GetEnumerable().GetEnumerator();
 			}
@@ -698,16 +697,16 @@ namespace NHibernate.Shards.Criteria
 
 			public T Value
 			{
-			    get
-			    {
-			        var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedCriteria);
-                    return this.shardedCriteria.session.Execute(this, exitStrategy);
-			    }
+				get
+				{
+					var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedCriteria);
+					return this.shardedCriteria.session.Execute(this, exitStrategy);
+				}
 			}
 
 			public Task<T> GetValueAsync(CancellationToken cancellationToken = new CancellationToken())
 			{
-			    var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedCriteria);
+				var exitStrategy = new UniqueResultExitStrategy<T>(this.shardedCriteria);
 				return this.shardedCriteria.session.ExecuteAsync(this, exitStrategy, cancellationToken);
 			}
 		}
@@ -976,9 +975,7 @@ namespace NHibernate.Shards.Criteria
 
 			public void EstablishFor(IShard shard, ICriteria parent)
 			{
-				ICriteria result;
-
-				if (!this.establishedSubcriteriaByShard.TryGetValue(shard, out result))
+				if (!this.establishedSubcriteriaByShard.TryGetValue(shard, out var result))
 				{
 					result = this.subcriteriaFactory(parent);
 					foreach (var action in this.establishActions)
