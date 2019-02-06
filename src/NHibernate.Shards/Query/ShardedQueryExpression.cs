@@ -129,8 +129,7 @@ namespace NHibernate.Shards.Query
 				}
 
 				var nextChild = unfinishedCopy.Children.Current;
-			    Action<IASTNode> copyTransformer;
-				if (CanCopy(nextChild, out copyTransformer))
+				if (CanCopy(nextChild, out var copyTransformer))
 				{
 					if (nextChild.ChildCount == 0)
 					{

@@ -1,21 +1,21 @@
-﻿namespace NHibernate.Shards.Criteria
-{
-    using System;
-    using NHibernate.Criterion;
-    using NHibernate.Engine;
-    using NHibernate.Impl;
+﻿using System;
+using NHibernate.Criterion;
+using NHibernate.Engine;
+using NHibernate.Impl;
 
-    public class ShardedQueryOver<TRoot> : QueryOver<TRoot, TRoot>, IQueryOver<TRoot>, ICloneable
+namespace NHibernate.Shards.Criteria
+{
+    public class ShardedQueryOver<TRoot> : QueryOver<TRoot, TRoot>, IQueryOver<TRoot>, ICloneable, IShardedQueryOverImplementor
     {
         protected internal ShardedQueryOver(ShardedCriteriaImpl shardedCriteria)
             : base((CriteriaImpl)shardedCriteria.SomeCriteria, shardedCriteria)
         {}
 
         protected internal ShardedQueryOver(ShardedQueryOver<TRoot> other)
-            : this((ShardedCriteriaImpl)other.ShardedCriteria.Clone())
+            : this((ShardedCriteriaImpl)other.ShardedRootCriteria.Clone())
         { }
 
-        private IShardedCriteria ShardedCriteria
+        public IShardedCriteria ShardedRootCriteria
         {
             get { return (IShardedCriteria)this.criteria; }
         }

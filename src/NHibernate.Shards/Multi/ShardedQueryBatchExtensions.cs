@@ -5,15 +5,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using NHibernate.Linq;
+using NHibernate.Shards.Linq;
 using NHibernate.Shards.Multi;
+using NHibernate.Shards.Query;
+using Remotion.Linq.Parsing.ExpressionVisitors;
 
 namespace NHibernate.Multi
 {
-	using NHibernate.Linq;
-	using NHibernate.Shards.Linq;
-	using NHibernate.Shards.Query;
-	using Remotion.Linq.Parsing.ExpressionVisitors;
-
 	public static class ShardedQueryBatchExtensions
 	{
 		#region Extension methods - HQL batching
@@ -268,6 +267,122 @@ namespace NHibernate.Multi
 		public static IFutureValue<TResult> AddAsFutureValue<TResult>(this IShardedQueryBatch shardedBatch, ICriteria query)
 		{
 			return AddAsFutureValue(shardedBatch, new ShardedCriteriaBatchItem<TResult>(query));
+		}
+
+		#endregion
+
+		#region Extension methods - Queryover batching
+
+		/// <summary>
+		/// Adds a query to the sharded batch.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="query">The query.</param>
+		/// <param name="afterLoad">Callback to execute when query is loaded. Loaded results are provided as action parameter.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <exception cref="InvalidOperationException">Thrown if the batch has already been executed.</exception>
+		/// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> is <see langword="null"/>.</exception>
+		/// <returns>The batch instance for method chain.</returns>
+		public static IShardedQueryBatch Add<TResult>(this IShardedQueryBatch shardedBatch, IQueryOver query, Action<IList<TResult>> afterLoad = null)
+		{
+			shardedBatch.Add(new ShardedQueryOverBatchItem<TResult>(query) { AfterLoadCallback = afterLoad });
+			return shardedBatch;
+		}
+
+		/// <summary>
+		/// Adds a query to the sharded batch.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="key">A key for retrieval of the query result.</param>
+		/// <param name="query">The query.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <exception cref="InvalidOperationException">Thrown if the batch has already been executed.</exception>
+		/// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> is <see langword="null"/>.</exception>
+		/// <returns>The batch instance for method chain.</returns>
+		public static IShardedQueryBatch Add<TResult>(this IShardedQueryBatch shardedBatch, string key, IQueryOver query)
+		{
+			shardedBatch.Add(key, new ShardedQueryOverBatchItem<TResult>(query));
+			return shardedBatch;
+		}
+
+		/// <summary>
+		/// Adds a query to the sharded batch.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="query">The query.</param>
+		/// <param name="afterLoad">Callback to execute when query is loaded. Loaded results are provided as action parameter.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <exception cref="InvalidOperationException">Thrown if the batch has already been executed.</exception>
+		/// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> is <see langword="null"/>.</exception>
+		/// <returns>The batch instance for method chain.</returns>
+		public static IShardedQueryBatch Add<TResult>(this IShardedQueryBatch shardedBatch, IQueryOver<TResult> query, Action<IList<TResult>> afterLoad = null)
+		{
+			shardedBatch.Add(new ShardedQueryOverBatchItem<TResult>(query) { AfterLoadCallback = afterLoad });
+			return shardedBatch;
+		}
+
+		/// <summary>
+		/// Adds a query to the sharded batch.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="key">A key for retrieval of the query result.</param>
+		/// <param name="query">The query.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <exception cref="InvalidOperationException">Thrown if the batch has already been executed.</exception>
+		/// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> is <see langword="null"/>.</exception>
+		/// <returns>The batch instance for method chain.</returns>
+		public static IShardedQueryBatch Add<TResult>(this IShardedQueryBatch shardedBatch, string key, IQueryOver<TResult> query)
+		{
+			shardedBatch.Add(key, new ShardedQueryOverBatchItem<TResult>(query));
+			return shardedBatch;
+		}
+
+		/// <summary>
+		/// Adds a query to the sharded batch, returning it as an <see cref="IFutureEnumerable{T}"/>.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="query">The query.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <returns>A future query which execution will be handled by the batch.</returns>
+		public static IFutureEnumerable<TResult> AddAsFuture<TResult>(this IShardedQueryBatch shardedBatch, IQueryOver query)
+		{
+			return AddAsFuture(shardedBatch, new ShardedQueryOverBatchItem<TResult>(query));
+		}
+
+		/// <summary>
+		/// Adds a query to the sharded batch, returning it as an <see cref="IFutureEnumerable{T}"/>.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="query">The query.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <returns>A future query which execution will be handled by the batch.</returns>
+		public static IFutureEnumerable<TResult> AddAsFuture<TResult>(this IShardedQueryBatch shardedBatch, IQueryOver<TResult> query)
+		{
+			return AddAsFuture(shardedBatch, new ShardedQueryOverBatchItem<TResult>(query));
+		}
+
+		/// <summary>
+		/// Adds a query to the sharded batch, returning it as an <see cref="IFutureValue{T}"/>.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="query">The query.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <returns>A future query which execution will be handled by the batch.</returns>
+		public static IFutureValue<TResult> AddAsFutureValue<TResult>(this IShardedQueryBatch shardedBatch, IQueryOver query)
+		{
+			return AddAsFutureValue(shardedBatch, new ShardedQueryOverBatchItem<TResult>(query));
+		}
+
+		/// <summary>
+		/// Adds a query to the sharded batch, returning it as an <see cref="IFutureValue{T}"/>.
+		/// </summary>
+		/// <param name="shardedBatch">The batch.</param>
+		/// <param name="query">The query.</param>
+		/// <typeparam name="TResult">The type of the query result elements.</typeparam>
+		/// <returns>A future query which execution will be handled by the batch.</returns>
+		public static IFutureValue<TResult> AddAsFutureValue<TResult>(this IShardedQueryBatch shardedBatch, IQueryOver<TResult> query)
+		{
+			return AddAsFutureValue(shardedBatch, new ShardedQueryOverBatchItem<TResult>(query));
 		}
 
 		#endregion
