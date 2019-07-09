@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using NHibernate.Multi;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Query;
-using NHibernate.Shards.Strategy.Exit;
 
 namespace NHibernate.Shards.Multi
 {
@@ -15,7 +14,7 @@ namespace NHibernate.Shards.Multi
 
 		private readonly IShardedSessionImplementor session;
 		private readonly IDictionary<IShard, IQueryBatch> establishedQueryBatchesByShard = new Dictionary<IShard, IQueryBatch>();
-		private readonly ICollection<Action<IQueryBatch>> establishActions = new List<Action<IQueryBatch>>();
+		private Action<IQueryBatch> establishActions;
 		private readonly IList<Entry> entries = new List<Entry>();
 		private bool executed;
 
@@ -173,11 +172,7 @@ namespace NHibernate.Shards.Multi
 					entry.ShardedBatchItem.EstablishFor(shard, queryBatch, entry.Key);
 				}
 
-				foreach (var action in this.establishActions)
-				{
-					action(queryBatch);
-				}
-
+				this.establishActions?.Invoke(queryBatch);
 				this.establishedQueryBatchesByShard.Add(shard, queryBatch);
 			}
 			return queryBatch;
@@ -202,7 +197,7 @@ namespace NHibernate.Shards.Multi
 			var shardedQuery = query as IShardedQueryBatchItemImplementor;
 			if (shardedQuery == null)
 			{
-				throw new ArgumentException($"An unsharded query cannot be added to a sharded query batch.", nameof(query));
+				throw new ArgumentException("An unsharded query cannot be added to a sharded query batch.", nameof(query));
 			}
 
 			this.entries.Add(new Entry(queryKey, shardedQuery));
@@ -215,7 +210,7 @@ namespace NHibernate.Shards.Multi
 
 		private void ApplyActionToShards(Action<IQueryBatch> action)
 		{
-			this.establishActions.Add(action);
+			this.establishActions += action;
 			foreach (var queryBatch in this.establishedQueryBatchesByShard.Values)
 			{
 				action(queryBatch);

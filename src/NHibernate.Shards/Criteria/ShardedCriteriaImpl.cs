@@ -14,9 +14,6 @@ using NHibernate.Transform;
 
 namespace NHibernate.Shards.Criteria
 {
-	using NHibernate.Impl;
-	using NHibernate.Linq.ReWriters;
-
 	/// <summary>
 	/// Concrete implementation of <see cref="IShardedCriteria"/> interface.
 	/// </summary>
@@ -32,7 +29,7 @@ namespace NHibernate.Shards.Criteria
 		private readonly ExitOperationBuilder exitOperationBuilder;
 
 		private readonly Dictionary<IShard, ICriteria> establishedCriteriaByShard = new Dictionary<IShard, ICriteria>();
-		private readonly List<Action<ICriteria>> establishActions;
+		private Action<ICriteria> establishActions;
 
 		private readonly Dictionary<string, ICriteria> subcriteriaByAlias;
 		private readonly Dictionary<string, Subcriteria> subcriteriaByPath;
@@ -50,7 +47,6 @@ namespace NHibernate.Shards.Criteria
 			this.entityName = entityName;
 			this.criteriaFactory = criteriaFactory;
 			this.exitOperationBuilder = new ExitOperationBuilder();
-			this.establishActions = new List<Action<ICriteria>>();
 			this.subcriteriaByAlias = new Dictionary<string, ICriteria> { { CriteriaSpecification.RootAlias, this } };
 			this.subcriteriaByPath = new Dictionary<string, Subcriteria>();
 		}
@@ -62,7 +58,7 @@ namespace NHibernate.Shards.Criteria
 			this.session = other.session;
 			this.criteriaFactory = other.criteriaFactory;
 			this.exitOperationBuilder = new ExitOperationBuilder(other.exitOperationBuilder);
-			this.establishActions = new List<Action<ICriteria>>(other.establishActions);
+			this.establishActions = other.establishActions;
 			this.subcriteriaByAlias = new Dictionary<string, ICriteria>(other.subcriteriaByAlias);
 			this.subcriteriaByPath = new Dictionary<string, Subcriteria>(other.subcriteriaByPath);
 		}
@@ -521,7 +517,7 @@ namespace NHibernate.Shards.Criteria
 
 		protected void ApplyActionToShards(Action<ICriteria> action)
 		{
-			this.establishActions.Add(action);
+			this.establishActions += action;
 			foreach (var criteria in this.establishedCriteriaByShard.Values)
 			{
 				action(criteria);
@@ -537,11 +533,8 @@ namespace NHibernate.Shards.Criteria
 				{
 					subcriteria.EstablishFor(shard, result);
 				}
-				foreach (Action<ICriteria> action in this.establishActions)
-				{
-					action(result);
-				}
 
+				this.establishActions?.Invoke(result);
 				establishedCriteriaByShard.Add(shard, result);
 			}
 			return result;

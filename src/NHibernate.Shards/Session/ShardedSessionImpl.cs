@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -23,6 +24,7 @@ using NHibernate.Persister.Entity;
 using NHibernate.Proxy;
 using NHibernate.Shards.Criteria;
 using NHibernate.Shards.Engine;
+using NHibernate.Shards.Multi;
 using NHibernate.Shards.Query;
 using NHibernate.Shards.Stat;
 using NHibernate.Shards.Strategy.Exit;
@@ -35,10 +37,6 @@ using NHibernate.Util;
 
 namespace NHibernate.Shards.Session
 {
-	using System.Diagnostics.CodeAnalysis;
-	using NHibernate.Multi;
-	using NHibernate.Shards.Multi;
-
 	/// <summary>
 	/// Concrete implementation of a ShardedSession, and also the central component of
 	/// Hibernate Shards' internal implementation. This class exposes two interfaces;
@@ -66,7 +64,7 @@ namespace NHibernate.Shards.Session
 		// All sessions that have been opened  within the scope of this sharded session.
 		private readonly IDictionary<IShard, ISession> establishedSessionsByShard = new Dictionary<IShard, ISession>();
 		// Actions that are to be applied to newly opened sessions.
-		private readonly IList<Action<ISession>> establishActions = new List<Action<ISession>>();
+		private Action<ISession> establishActions;
 
 		// Partial ISessionImplementor implementation to intercept queries
 		private ISessionImplementor sessionImpl;
@@ -193,7 +191,7 @@ namespace NHibernate.Shards.Session
 		/// </remarks>
 		public void ApplyActionToShards(Action<ISession> action)
 		{
-			this.establishActions.Add(action);
+			this.establishActions += action;
 			foreach (var session in this.establishedSessionsByShard.Values)
 			{
 				action(session);
@@ -215,11 +213,7 @@ namespace NHibernate.Shards.Session
 					? this.shardedSessionBuilder.OpenSessionFor(shard, this.interceptor)
 					: shard.SessionFactory.OpenSession();
 
-				foreach (var action in establishActions)
-				{
-					action(result);
-				}
-
+				this.establishActions?.Invoke(result);
 				lock (this.transactionLock)
 				{
 					this.transaction?.Enlist(result);
@@ -483,7 +477,7 @@ namespace NHibernate.Shards.Session
 		{
 			Exception firstException = null;
 
-			foreach (var session in establishedSessionsByShard.Values)
+			foreach (var session in this.establishedSessionsByShard.Values)
 			{
 				try
 				{
@@ -499,12 +493,12 @@ namespace NHibernate.Shards.Session
 				}
 			}
 
-			establishActions.Clear();
-			establishedSessionsByShard.Clear();
-			shards.Clear();
-			shardsById.Clear();
+			this.establishActions = null;
+			this.establishedSessionsByShard.Clear();
+			this.shards.Clear();
+			this.shardsById.Clear();
 
-			closed = true;
+			this.closed = true;
 
 			if (firstException != null) throw firstException;
 			return null;
@@ -2584,13 +2578,13 @@ namespace NHibernate.Shards.Session
 			if (this.enabledFilters == null)
 			{
 				this.enabledFilters = new Dictionary<string, IShardedFilter>();
-				this.establishActions.Add(s =>
+				this.establishActions += s =>
 				{
 					foreach (var f in this.enabledFilters.Values)
 					{
 						f.EnableFor(s);
 					}
-				});
+				};
 			}
 
 			var result = new ShardedFilterImpl(this, filterName);

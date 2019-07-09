@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Strategy.Exit;
 using NHibernate.Transform;
@@ -9,9 +11,6 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Query
 {
-	using System.Threading;
-	using System.Threading.Tasks;
-
 	[Obsolete]
 	public class ShardedMultiQueryImpl: IShardedMultiQuery
 	{
@@ -20,8 +19,8 @@ namespace NHibernate.Shards.Query
 		private readonly IShardedSessionImplementor session;
 
 		private readonly IDictionary<IShard, IMultiQuery> establishedMultiQueriesByShard = new Dictionary<IShard, IMultiQuery>();
-		private readonly ICollection<Action<IMultiQuery>> establishActions = new List<Action<IMultiQuery>>();
 		private readonly IList<QueryEntry> entries = new List<QueryEntry>();
+		private Action<IMultiQuery> establishActions;
 
 		private IList queryResult;
 
@@ -399,11 +398,7 @@ namespace NHibernate.Shards.Query
 					multiQuery.Add(entry.ShardedQuery.EstablishFor(shard));
 				}
 				
-				foreach (var action in establishActions)
-				{
-					action(multiQuery);
-				}
-				
+				this.establishActions?.Invoke(multiQuery);
 				this.establishedMultiQueriesByShard.Add(shard, multiQuery);
 			}
 			return multiQuery;
@@ -421,7 +416,7 @@ namespace NHibernate.Shards.Query
 
 		private void ApplyActionToShards(Action<IMultiQuery> action)
 		{
-			establishActions.Add(action);
+			this.establishActions += action;
 			foreach (var multiQuery in this.establishedMultiQueriesByShard.Values)
 			{
 				action(multiQuery);

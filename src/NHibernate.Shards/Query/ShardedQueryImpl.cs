@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,8 +16,6 @@ using NHibernate.Type;
 
 namespace NHibernate.Shards.Query
 {
-	using System.Globalization;
-
 	/// <summary>
 	/// Concrete implementation of ShardedQuery provided by Hibernate Shards. This
 	/// implementation introduces limits to the HQL language; mostly around
@@ -37,7 +36,7 @@ namespace NHibernate.Shards.Query
 		private ShardedQueryExpression queryExpression;
 
 		private readonly IDictionary<IShard, IQuery> establishedQueriesByShard = new Dictionary<IShard, IQuery>();
-		private readonly ICollection<Action<IQuery>> establishActions = new List<Action<IQuery>>();
+		private Action<IQuery> establishActions;
 
 		private readonly ExitOperationBuilder exitOperationBuilder = new ExitOperationBuilder();
 
@@ -720,7 +719,7 @@ namespace NHibernate.Shards.Query
 
 		protected void ApplyActionToShards(Action<IQuery> action)
 		{
-			establishActions.Add(action);
+			this.establishActions += action;
 			foreach (var query in this.establishedQueriesByShard.Values)
 			{
 				action(query);
@@ -758,14 +757,10 @@ namespace NHibernate.Shards.Query
 
 		public IQuery EstablishFor(IShard shard)
 		{
-			IQuery result;
-			if (!establishedQueriesByShard.TryGetValue(shard, out result))
+			if (!establishedQueriesByShard.TryGetValue(shard, out var result))
 			{
 				result = this.queryFactory(shard.EstablishSession());
-				foreach (var action in establishActions)
-				{
-					action(result);
-				}
+				this.establishActions?.Invoke(result);
 				establishedQueriesByShard.Add(shard, result);
 			}
 			return result;

@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NHibernate.Criterion;
 using NHibernate.Shards.Engine;
 using NHibernate.Shards.Strategy.Exit;
@@ -9,8 +11,7 @@ using NHibernate.Transform;
 
 namespace NHibernate.Shards.Criteria
 {
-	using System.Threading;
-	using System.Threading.Tasks;
+	using System.Diagnostics.CodeAnalysis;
 
 	[Obsolete]
 	public class ShardedMultiCriteriaImpl: IShardedMultiCriteria
@@ -21,7 +22,7 @@ namespace NHibernate.Shards.Criteria
 		private readonly IList<CriteriaEntry> entries = new List<CriteriaEntry>();
 
 		private readonly IDictionary<IShard, IMultiCriteria> establishedMultiCriteriaByShard = new Dictionary<IShard, IMultiCriteria>();
-		private readonly ICollection<Action<IMultiCriteria>> establishActions = new List<Action<IMultiCriteria>>();
+		private Action<IMultiCriteria> establishActions;
 
 		private IList criteriaResult;
 
@@ -165,6 +166,7 @@ namespace NHibernate.Shards.Criteria
 			throw QueryOverNotSupportedException();
 		}
 
+		[SuppressMessage("ReSharper", "InconsistentNaming")]
 		public IMultiCriteria Add<U>(IQueryOver queryOver)
 		{
 			throw QueryOverNotSupportedException();
@@ -175,6 +177,7 @@ namespace NHibernate.Shards.Criteria
 			throw QueryOverNotSupportedException();
 		}
 
+		[SuppressMessage("ReSharper", "InconsistentNaming")]
 		public IMultiCriteria Add<U>(string key, IQueryOver queryOver)
 		{
 			throw QueryOverNotSupportedException();
@@ -185,7 +188,7 @@ namespace NHibernate.Shards.Criteria
 			// IQueryOver<,>.GetExecutableCriteria(session) will fail because
 			// it tries to map the session to an ISessionImplementor interface. This 
 			// interface is near impossible to implement for sharded sessions. 
-			return new NotSupportedException("QuerOver is not (yet) supported by sharded multi criteria.");
+			return new NotSupportedException("QueryOver is not (yet) supported by sharded multi criteria.");
 		}
 
 		private static IShardedCriteria ToShardedCriteria(ICriteria criteria)
@@ -193,7 +196,7 @@ namespace NHibernate.Shards.Criteria
 			var shardedCriteria = criteria as IShardedCriteria;
 			if (shardedCriteria == null)
 			{
-				throw new ArgumentException("Criteria must be a sharded criteria.", "criteria");
+				throw new ArgumentException("Criteria must be a sharded criteria.", nameof(criteria));
 			}
 			return shardedCriteria;
 		}
@@ -252,10 +255,8 @@ namespace NHibernate.Shards.Criteria
 				{
 					multiCriteria.Add(entry.ShardedCriteria.EstablishFor(shard));
 				}
-				foreach (var action in establishActions)
-				{
-					action(multiCriteria);
-				}
+
+				this.establishActions?.Invoke(multiCriteria);
 				this.establishedMultiCriteriaByShard.Add(shard, multiCriteria);
 			}
 			return multiCriteria;
@@ -263,7 +264,7 @@ namespace NHibernate.Shards.Criteria
 
 		private void ApplyActionToShards(Action<IMultiCriteria> action)
 		{
-			establishActions.Add(action);
+			this.establishActions += action;
 			foreach (var multiCriteria in this.establishedMultiCriteriaByShard.Values)
 			{
 				action(multiCriteria);
