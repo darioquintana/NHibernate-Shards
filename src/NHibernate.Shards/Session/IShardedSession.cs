@@ -1,5 +1,6 @@
 namespace NHibernate.Shards.Session
 {
+	using System.Collections.Generic;
 	using NHibernate.Multi;
 	using NHibernate.Shards.Multi;
 
@@ -12,6 +13,11 @@ namespace NHibernate.Shards.Session
 	public interface IShardedSession : ISession
 	{
 		/// <summary>
+		/// Immutable collection of <see cref="ShardId"/>s for shards that are accessible via this session.
+		/// </summary>
+		ICollection<ShardId> ShardIds { get; }
+
+		/// <summary>
 		/// Gets the non-sharded session with which the objects is associated.
 		/// </summary>
 		/// <param name="obj">the object for which we want the Session</param>
@@ -20,6 +26,15 @@ namespace NHibernate.Shards.Session
 		/// object is not associated with a session belonging to this ShardedSession
 		/// </returns>
 		ISession GetSessionForObject(object obj);
+
+		/// <summary>
+		/// Gets the non-sharded session for a given ShardId.
+		/// </summary>
+		/// <param name="shardId">A shard identifier</param>
+		/// <returns>
+		///	The session for the given <paramref name="shardId"/>.
+		/// </returns>
+		ISession GetSessionForShardId(ShardId shardId);
 
 		/// <summary>
 		///  Gets the ShardId of the shard with which the objects is associated.

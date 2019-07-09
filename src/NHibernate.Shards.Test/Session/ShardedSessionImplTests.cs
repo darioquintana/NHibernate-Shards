@@ -2,7 +2,10 @@
 
 namespace NHibernate.Shards.Test.Session
 {
-    [TestFixture]
+	using System.Linq;
+	using NHibernate.Shards.Session;
+
+	[TestFixture]
 	public class ShardedSessionImplTests: ShardedTestCase
 	{
         [Test]
@@ -38,5 +41,15 @@ namespace NHibernate.Shards.Test.Session
 	        var sharedShardedSession = sessionBuilder.OpenSession();
 	        Assert.That(sharedShardedSession, Is.Not.Null, nameof(sessionBuilder.OpenSession));
 	    }
-    }
+
+	    [Test]
+	    public void CanGetSessionByShardId()
+	    {
+		    var shardedSession = this.SessionFactory.OpenSession();
+
+		    var firstShardId = shardedSession.ShardIds.First();
+		    var shardLocalSession = shardedSession.GetSessionForShardId(firstShardId);
+			Assert.That(shardLocalSession, Is.Not.InstanceOf<IShardedSession>());
+	    }
+	}
 }

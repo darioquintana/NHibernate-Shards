@@ -1,7 +1,7 @@
+using System;
+
 namespace NHibernate.Shards
 {
-	using System;
-
 	/// <summary>
 	/// Uniquely identifies a virtual shard.
 	/// </summary>

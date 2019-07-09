@@ -145,6 +145,15 @@ namespace NHibernate.Shards.Session
 			set { currentSubgraphShardId.Value = value; }
 		}
 
+		/// <inheritdoc />
+		public ICollection<ShardId> ShardIds
+		{
+			get { return this.shardsById.Keys; }
+		}
+
+		/// <summary>
+		/// Gets arbitrary shard, primarily intended for reflection or metadata lookup purposes.
+		/// </summary>
 		public IShard AnyShard
 		{
 			get
@@ -240,15 +249,7 @@ namespace NHibernate.Shards.Session
 				crossShardRelationshipDetector, defaultInterceptor);
 		}
 
-		/// <summary>
-		/// Gets the session for the shard with which a given object is associated.
-		/// </summary>
-		/// <param name="obj">the object for which we want the session.</param>
-		/// <returns>
-		/// The session for the shard with which this object is associated, or
-		/// <c>null</c> if the object is not associated with a session belonging
-		/// to this <see cref="IShardedSession"/>.
-		/// </returns>
+		/// <inheritdoc />
 		public ISession GetSessionForObject(object obj)
 		{
 			foreach (var session in establishedSessionsByShard.Values)
@@ -258,15 +259,13 @@ namespace NHibernate.Shards.Session
 			return null;
 		}
 
-		/// <summary>
-		/// Gets the ShardId of the shard with which a given object is associated.
-		/// </summary>
-		/// <param name="obj">A persistent object.</param>
-		/// <returns>
-		/// The <see cref="ShardId"/> of the shard with which this object is associated, or
-		/// <c>null</c> if the object is not associated with a shard belonging
-		/// to this <see cref="IShardedSession"/>.
-		/// </returns>
+		/// <inheritdoc />
+		public ISession GetSessionForShardId(ShardId shardId)
+		{
+			return EstablishFor(this.shardsById[shardId]);
+		}
+
+		/// <inheritdoc />
 		public ShardId GetShardIdForObject(object obj)
 		{
 			return obj != null

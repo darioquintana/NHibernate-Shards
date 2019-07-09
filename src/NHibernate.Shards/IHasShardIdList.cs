@@ -8,7 +8,7 @@ namespace NHibernate.Shards
 	public interface IHasShardIdList
 	{
 		/// <summary>
-		/// Unmodifiable list of <see cref="ShardId"/>s
+		/// Immutable list of <see cref="ShardId"/>s
 		/// </summary>
 		IList<ShardId> ShardIds { get; }
 	}
