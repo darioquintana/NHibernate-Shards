@@ -11,7 +11,7 @@
     <VersionLabel></VersionLabel>
     <VersionRevision>4000</VersionRevision>
     <VersionSuffix Condition="'$(VersionLabel)' != ''">$(VersionLabel)$(VersionRevision)</VersionSuffix>
-    <FileVersion>5.2.3.4000</FileVersion>
+    <FileVersion>5.2.5.4000</FileVersion>
     <AssemblyVersion>5.2.0.0</AssemblyVersion>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>NHibernate.Shards.snk</AssemblyOriginatorKeyFile>
@@ -20,16 +20,17 @@
     <IncludeSource>True</IncludeSource>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\NHibernate.Shards.xml</DocumentationFile>
     <NoWarn>1591;1701;1702;1705</NoWarn>
-    <PackageReleaseNotes>Added sharded batch query support for Criteria, QueryOver, Hql and Linq queries.
+    <PackageReleaseNotes>Added IShardedSession.GetSessionForShardId(ShardId) method to simplify single-tenant session access.
+Added sharded batch query support for Criteria, QueryOver, Hql and Linq queries.
 Added DetachedCriteriaExtensions.GetExecuteCriteria() extension method to transform DetachedCriteria into sharded criteria.
 Linq queries now support min, max and avg aggregation functions.</PackageReleaseNotes>
     <LangVersion>latest</LangVersion>
-    <Version>5.2.3</Version>
+    <Version>5.2.5</Version>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net461|AnyCPU'" />
 
   <ItemGroup>
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.5.3" />
-    <PackageReference Include="NHibernate" Version="5.2.3" />
+    <PackageReference Include="NHibernate" Version="5.2.5" />
   </ItemGroup>
 </Project>
