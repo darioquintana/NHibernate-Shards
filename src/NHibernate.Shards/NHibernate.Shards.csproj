@@ -25,12 +25,12 @@ Added sharded batch query support for Criteria, QueryOver, Hql and Linq queries.
 Added DetachedCriteriaExtensions.GetExecuteCriteria() extension method to transform DetachedCriteria into sharded criteria.
 Linq queries now support min, max and avg aggregation functions.</PackageReleaseNotes>
     <LangVersion>latest</LangVersion>
-    <Version>5.2.5</Version>
+    <Version>5.2.6</Version>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net461|AnyCPU'" />
 
   <ItemGroup>
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.5.3" />
-    <PackageReference Include="NHibernate" Version="5.2.5" />
+    <PackageReference Include="NHibernate" Version="5.2.6" />
   </ItemGroup>
 </Project>
